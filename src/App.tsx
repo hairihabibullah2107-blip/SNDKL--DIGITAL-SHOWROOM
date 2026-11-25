@@ -319,7 +319,7 @@ export default function App() {
           colorHex,
           size,
           quantity,
-          unitPrice: product.price,
+          unitPrice: product.price + (product.variantPrices?.[`${colorName.toLowerCase()}::${size}`] || 0),
           estimatedDays: 2,
         },
       ];
