@@ -423,22 +423,35 @@ export default function App() {
       };
       const order = {
         id: data.order_number,
-        customerName: '',
-        customerEmail: '',
-        customerPhone: '',
-        shippingAddress: '',
+        customerName: data.showroom_customers?.name || '',
+        customerEmail: data.showroom_customers?.email || '',
+        customerPhone: data.showroom_customers?.whatsapp || '',
+        shippingAddress: data.showroom_customers?.address || '',
         shippingCity: '',
-        shippingCourier: '',
+        shippingCourier: 'Konfirmasi melalui WhatsApp',
         shippingEtaDays: 0,
-        items: [],
-        subtotal: 0,
+        items: (data.items || []).map((item: any) => {
+          const variants = item.showroom_order_variants || [];
+          const spec = item.specification || {};
+          const quantity = Number(item.quantity || 0);
+          return {
+            id: item.id, type: Array.isArray(spec.dtf_prints) && spec.dtf_prints.length ? 'custom_dtf' : 'catalog',
+            productId: item.product_id, sku: String(item.product_id || '').slice(0, 8),
+            name: item.product_name_snapshot, image: HERO_IMAGE,
+            colorName: variants[0]?.color || spec.color || '-', colorHex: '#777777',
+            size: variants.map((variant: any) => variant.size + '×' + variant.quantity).join(', '),
+            quantity, unitPrice: quantity ? Number(item.subtotal || 0) / quantity : 0,
+            fabricName: item.material_snapshot || undefined,
+          };
+        }),
+        subtotal: Number(data.subtotal || 0),
         shippingCost: 0,
         discount: 0,
-        total: 0,
+        total: Number(data.total_amount || 0),
         paymentMethod: 'qris',
         paymentLabel: 'Pembayaran manual',
         paymentReference: '',
-        paymentStatus: 'pending',
+        paymentStatus: data.payment_status === 'paid' ? 'paid' : 'pending',
         stage: statusMap[data.status] || 'Menunggu Pembayaran',
         trackingNumber: trackingCode,
         timeline: (data.history || []).map((event: any) => ({
@@ -449,11 +462,31 @@ export default function App() {
         })),
         createdAt: data.created_at,
         updatedAt: data.created_at,
+        designs: (data.designs || []).map((design: any) => ({
+          id: design.id,
+          productName: design.product_name,
+          approvalStatus: design.approval_status,
+          designVersion: Number(design.design_version || 1),
+          designConfiguration: design.design_configuration || {},
+          previewUrl: design.preview_url || null,
+        })),
+        designApprovalOpen: data.status === 'waiting_customer_approval',
       } as Order;
       setRecentOrders((prev) => [order, ...prev.filter((entry) => entry.id !== order.id)]);
       return { order, emails: [] };
     } catch {
       return null;
+    }
+  };
+
+  const handleDesignDecision = async (trackingCode: string, designId: string, decision: 'approved' | 'revision_requested', notes: string): Promise<boolean> => {
+    try {
+      await invokeShowroom({ action: 'design_decision', tracking_code: trackingCode, design_id: designId, decision, notes });
+      showToast(decision === 'approved' ? 'Desain disetujui. Terima kasih.' : 'Permintaan revisi dikirim ke SANDIKALE.');
+      return true;
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Keputusan desain gagal dikirim.');
+      return false;
     }
   };
 
@@ -704,6 +737,8 @@ export default function App() {
           recentOrders={recentOrders}
           emailOutbox={emailOutbox}
           onTrackOrder={handleTrackOrder}
+          onDesignDecision={handleDesignDecision}
+          adminWhatsapp={adminWhatsapp}
         />
       </main>
 

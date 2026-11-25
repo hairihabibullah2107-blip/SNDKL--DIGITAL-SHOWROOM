@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { jsPDF } from 'jspdf';
 import { supabase } from '../lib/supabase';
 
 type Profile = { id: string; full_name: string; email: string | null; role: string; is_active: boolean };
@@ -20,6 +19,8 @@ const money = (value: number) => new Intl.NumberFormat('id-ID', { style: 'curren
 const STATUS: Record<string, { status: string; production: string }> = {
   'Menunggu Pembayaran': { status: 'waiting_payment', production: 'new' },
   'Verifikasi Desain DTF': { status: 'waiting_design_review', production: 'design_confirmation' },
+  'Kirim Desain ke Pelanggan': { status: 'waiting_customer_approval', production: 'design_confirmation' },
+  'Revisi Diminta': { status: 'revision_requested', production: 'design_confirmation' },
   'Proses Cetak DTF': { status: 'in_production', production: 'printing' },
   'Heat Press & QC': { status: 'quality_control', production: 'quality_control' },
   'Siap Diserahkan': { status: 'ready', production: 'ready_for_pickup' },
@@ -193,6 +194,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     if (!profile) return;
     setBusy(true);
     try {
+      const { jsPDF } = await import('jspdf');
       const doc = new jsPDF();
       doc.setFillColor(8, 8, 8); doc.rect(0, 0, 210, 34, 'F');
       doc.setTextColor(255, 255, 255); doc.setFontSize(21); doc.text('SANDIKALE', 14, 15);
