@@ -130,6 +130,7 @@ export interface CartItem {
   quantity: number;
   unitPrice: number;
   fabricName?: string;
+  fabricId?: string;
   estimatedDays?: number;
   customModel?: string;
   customPlacements?: CustomDesignPlacement[];
