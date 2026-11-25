@@ -26,6 +26,7 @@ interface NavbarProps {
   isOnline: boolean;
   showAnnouncement: boolean;
   announcementText: string;
+  brandName: string;
   onDismissAnnouncement: () => void;
 }
 
@@ -42,6 +43,7 @@ export function Navbar({
   isOnline,
   showAnnouncement,
   announcementText,
+  brandName,
   onDismissAnnouncement,
 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -93,7 +95,7 @@ export function Navbar({
               onClick={() => handleNav('hero')}
               className="font-display text-2xl md:text-3xl font-extrabold tracking-wider uppercase text-[#080808] dark:text-white whitespace-nowrap shrink-0 cursor-pointer"
             >
-              SANDIKALE
+              {brandName}
             </button>
 
             {/* Zone 2: 5 Clean Single-Line Nav Links */}
