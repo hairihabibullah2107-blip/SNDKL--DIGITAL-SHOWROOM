@@ -422,7 +422,7 @@ export function CartCheckoutDrawer({
                       <span>Simulasi Pembayaran Tercatat!</span>
                     </div>
                     <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                      Ringkasan pesanan dikirim ke email <strong>{createdOrder.customerEmail}</strong> dan berstatus <strong>{createdOrder.stage}</strong> sambil menunggu file desain Anda di WhatsApp Admin.
+                      Pesanan tersimpan di database dan berstatus <strong>{createdOrder.stage}</strong> sambil menunggu file desain Anda di WhatsApp Admin.
                     </p>
                     <button
                       type="button"
