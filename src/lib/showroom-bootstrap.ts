@@ -16,7 +16,7 @@ function asNumber(value: unknown, fallback = 0): number {
 }
 
 export async function loadShowroomBootstrap() {
-  const [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, settingsResult] =
+  const [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult] =
     await Promise.all([
       supabase.from('showroom_categories').select('id,name,slug,description,image_path,sort_order,is_active').eq('is_active', true).order('sort_order'),
       supabase.from('showroom_products').select('id,category_id,name,slug,description,base_price,long_sleeve_price,model,weight_description,is_featured,is_best_seller,is_published,available_colors,size_surcharges,material_id,showroom_materials(name,description,surcharge)').eq('is_published', true).order('created_at', { ascending: false }),
@@ -24,10 +24,9 @@ export async function loadShowroomBootstrap() {
       supabase.from('showroom_product_variants').select('id,product_id,color,size,sku,price_adjustment,stock_quantity,is_available').eq('is_available', true),
       supabase.from('showroom_product_images').select('id,product_id,storage_path,alt_text,sort_order,is_primary').order('sort_order'),
       supabase.from('showroom_dtf_prices').select('id,size_code,label,width_cm,height_cm,price,is_active,sort_order').eq('is_active', true).order('sort_order'),
-      supabase.from('showroom_settings').select('key,value'),
     ]);
 
-  for (const result of [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, settingsResult]) {
+  for (const result of [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult]) {
     if (result.error) throw result.error;
   }
 
@@ -37,7 +36,6 @@ export async function loadShowroomBootstrap() {
   const variants = variantResult.data ?? [];
   const images = imageResult.data ?? [];
   const dtfPrices = dtfResult.data ?? [];
-  const settings = Object.fromEntries((settingsResult.data ?? []).map((row) => [row.key, row.value as Record<string, unknown>]));
 
   const categories: Category[] = categoriesRaw.map((row) => ({
     id: row.id,
@@ -117,11 +115,10 @@ export async function loadShowroomBootstrap() {
     maxWidthCm: asNumber(row.width_cm),
     maxHeightCm: asNumber(row.height_cm),
     price: asNumber(row.price),
-    view: 'front',
-    box: { x: 30, y: 24, w: 40, h: 40 },
+    view: row.size_code === 'A3' ? 'back' : row.size_code === 'A5' ? 'sleeve' : 'front',
+    box: row.size_code === 'A6' ? { x: 18, y: 24, w: 22, h: 22 } : row.size_code === 'A5' ? { x: 12, y: 38, w: 18, h: 18 } : row.size_code === 'A3' ? { x: 25, y: 20, w: 50, h: 52 } : { x: 25, y: 22, w: 50, h: 50 },
   }));
 
-  const whatsapp = settings.whatsapp as { number?: string } | undefined;
   const payment: PaymentMethodConfig[] = [{
     id: 'qris',
     label: 'Pembayaran manual — konfirmasi admin',
@@ -146,7 +143,7 @@ export async function loadShowroomBootstrap() {
     paymentMethods: payment,
     shippingOriginCity: 'Sesaot, Narmada, Lombok Barat',
     shippingCouriers: shipping,
-    adminWhatsapp: whatsapp?.number ?? '6282266412844',
+    adminWhatsapp: '6282266412844',
     dtfZones,
     reviews: [],
     chatMessages: [],
