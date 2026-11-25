@@ -15,6 +15,7 @@ import type {
   CartItem,
   Category,
   BulkDiscountRule,
+  PrintingMethodOption,
   ChatMessage,
   DtfZonePrice,
   EmailNotification,
@@ -69,6 +70,7 @@ export default function App() {
   const [adminWhatsapp, setAdminWhatsapp] = useState('6281234567890');
   const [dtfZones, setDtfZones] = useState<DtfZonePrice[]>([]);
   const [bulkDiscounts, setBulkDiscounts] = useState<BulkDiscountRule[]>([{minQuantity:6,discountPercent:6},{minQuantity:12,discountPercent:12}]);
+  const [printingMethods, setPrintingMethods] = useState<PrintingMethodOption[]>([]);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
@@ -227,6 +229,7 @@ export default function App() {
       setAdminWhatsapp(data.adminWhatsapp);
       setDtfZones(data.dtfZones);
       setBulkDiscounts(data.bulkDiscounts || []);
+      setPrintingMethods(data.printingMethods || []);
       setReviews(data.reviews);
       setChatMessages(data.chatMessages);
       try { localStorage.setItem(CACHE_BOOTSTRAP_KEY, JSON.stringify(data)); } catch { /* optional offline cache */ }
@@ -248,6 +251,7 @@ export default function App() {
           setAdminWhatsapp(data.adminWhatsapp || '6282266412844');
           setDtfZones(data.dtfZones || []);
           setBulkDiscounts(data.bulkDiscounts || []);
+          setPrintingMethods(data.printingMethods || []);
           setReviews(data.reviews || []);
         }
       } catch { /* ignore invalid cache */ }
@@ -713,6 +717,7 @@ export default function App() {
           shippingCouriers={shippingCouriers}
           dtfZones={dtfZones}
           bulkDiscounts={bulkDiscounts}
+          printingMethods={printingMethods}
           preselectedProduct={studioProduct}
           onAddCustomToCart={handleAddCustomToCart}
           onToast={showToast}
