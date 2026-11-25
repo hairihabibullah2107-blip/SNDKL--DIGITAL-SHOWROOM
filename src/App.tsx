@@ -96,8 +96,9 @@ export default function App() {
 
   useEffect(() => {
     let alive = true;
-    const applySession = (session: { user: { id: string; email?: string; user_metadata?: Record<string, unknown>; created_at: string }; access_token: string } | null) => {
-      if (!alive || !session) return;
+    const applySession = (session: any) => {
+      if (!alive) return;
+      if (!session) { setCustomerToken(null); setCustomerUser(null); return; }
       setCustomerToken(session.access_token);
       setCustomerUser({
         id: session.user.id,
@@ -471,7 +472,7 @@ export default function App() {
   };
 
   const handleSendChat = async (text: string, senderName: string) => {
-    const message = ['Halo Admin SANDIKALE, saya ' + senderName + '.', '', text].join('\\n');
+    const message = ['Halo Admin SANDIKALE, saya ' + senderName + '.', '', text].join(String.fromCharCode(10));
     const url = `https://wa.me/${adminWhatsapp}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
