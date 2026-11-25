@@ -132,11 +132,11 @@ body {
 
 
 /* Admin-managed storefront palette overrides */
-[class~="text-[#FF4D00]"] { color: var(--brand-accent) !important; }
-[class~="bg-[#FF4D00]"] { background-color: var(--brand-accent) !important; }
-[class~="border-[#FF4D00]"] { border-color: var(--brand-accent) !important; }
-[class~="hover:border-[#FF4D00]"]:hover { border-color: var(--brand-accent) !important; }
-[class~="focus-visible:outline-[#FF4D00]"]:focus-visible { outline-color: var(--brand-accent) !important; }
+[class~="text-[#7A1F2B]"] { color: var(--brand-accent) !important; }
+[class~="bg-[#7A1F2B]"] { background-color: var(--brand-accent) !important; }
+[class~="border-[#7A1F2B]"] { border-color: var(--brand-accent) !important; }
+[class~="hover:border-[#7A1F2B]"]:hover { border-color: var(--brand-accent) !important; }
+[class~="focus-visible:outline-[#7A1F2B]"]:focus-visible { outline-color: var(--brand-accent) !important; }
 
 .hero-subtitle-marquee { display:inline-block; animation:heroTextDrift 16s ease-in-out infinite alternate; }
 @keyframes heroTextDrift { from { transform:translateX(0); } to { transform:translateX(12px); } }
