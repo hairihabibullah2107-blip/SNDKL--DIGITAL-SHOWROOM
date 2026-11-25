@@ -1,4 +1,4 @@
-import { ArrowRight, Bell, Bug, CheckCircle2, HelpCircle, Layers, Lock, Shield, Sparkles, Truck, X } from 'lucide-react';
+import { ArrowRight, Bell, Bug, CheckCircle2, HelpCircle, Layers, Shield, Sparkles, Truck, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AdminDashboardSupabase } from './components/AdminDashboardSupabase';
 import { CartCheckoutDrawer } from './components/CartCheckoutDrawer';
@@ -60,7 +60,6 @@ export default function App() {
   // Auth tokens strictly kept in React memory
   const [customerUser, setCustomerUser] = useState<UserProfile | null>(null);
   const [customerToken, setCustomerToken] = useState<string | null>(null);
-  const [adminToken, setAdminToken] = useState<string | null>(null);
 
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
@@ -86,11 +85,6 @@ export default function App() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [bugOpen, setBugOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
-  const [adminModalOpen, setAdminModalOpen] = useState(false);
-  const [adminPasscode, setAdminPasscode] = useState('');
-  const [adminAuthError, setAdminAuthError] = useState('');
-  const [adminConfigured, setAdminConfigured] = useState(true);
-  const [adminSubmitting, setAdminSubmitting] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
@@ -502,39 +496,6 @@ export default function App() {
     setIsAdminRoute(true);
   };
 
-  const handleAdminLockSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdminAuthError('');
-    setAdminSubmitting(true);
-    try {
-      const endpoint = adminConfigured ? '/api/admin/login' : '/api/admin/bootstrap';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passcode: adminPasscode }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setAdminAuthError(data.error || 'Autentikasi admin gagal.');
-        return;
-      }
-      setAdminConfigured(true);
-      setAdminToken(data.token);
-      setAdminPasscode('');
-      setAdminModalOpen(false);
-      try {
-        window.history.pushState({}, '', '/admin');
-      } catch {
-        // ignore history error in restricted frame
-      }
-      setIsAdminRoute(true);
-      showToast('Masuk ke Portal Admin SANDIKALE.');
-    } catch {
-      setAdminAuthError('Gagal terhubung ke server autentikasi.');
-    } finally {
-      setAdminSubmitting(false);
-    }
-  };
 
   const exitAdminPortal = () => {
     try {
@@ -805,68 +766,6 @@ export default function App() {
         </div>
       </footer>
 
-      {adminModalOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Login Admin SANDIKALE"
-        >
-          <div className="w-full max-w-sm bg-white dark:bg-[#141414] border border-black/10 dark:border-white/15 rounded-xl p-6 space-y-4 shadow-2xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-neutral-500">
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>Akses Terkunci</span>
-                </div>
-                <h3 className="font-display text-2xl font-bold uppercase tracking-tight">
-                  {adminConfigured ? 'Login Admin SANDIKALE' : 'Buat Passcode Admin'}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAdminModalOpen(false)}
-                aria-label="Tutup login admin"
-                className="p-1.5 rounded-md text-neutral-500 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              {adminConfigured
-                ? 'Masukkan passcode admin untuk membuka pengaturan ekspedisi, kain, warna, metode pembayaran, dan laporan.'
-                : 'Tetapkan passcode admin pertama (minimal 6 karakter) untuk mengamankan dashboard.'}
-            </p>
-
-            {adminAuthError && (
-              <div className="p-2.5 rounded-md bg-red-500/10 border border-red-500/30 text-xs text-red-500">
-                {adminAuthError}
-              </div>
-            )}
-
-            <form onSubmit={handleAdminLockSubmit} className="space-y-3">
-              <input
-                type="password"
-                required
-                minLength={6}
-                autoFocus
-                placeholder={adminConfigured ? 'Masukkan passcode admin...' : 'Buat passcode baru (min. 6 karakter)'}
-                value={adminPasscode}
-                onChange={(e) => setAdminPasscode(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-md text-xs bg-neutral-50 dark:bg-[#1A1A1A] border border-black/15 dark:border-white/15"
-              />
-              <button
-                type="submit"
-                disabled={adminSubmitting}
-                className="w-full h-11 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#FF4D00] dark:hover:bg-[#FF4D00] dark:hover:text-white text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {adminSubmitting ? 'Memverifikasi...' : adminConfigured ? 'Masuk Admin' : 'Simpan & Masuk'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
       <ProductQuickViewModal
         product={quickViewProduct}
@@ -921,6 +820,7 @@ export default function App() {
           showToast(`Selamat datang kembali, ${u.name}!`);
         }}
         onLogout={() => {
+          void supabase.auth.signOut();
           setCustomerUser(null);
           setCustomerToken(null);
           showToast('Anda telah keluar dari akun.');
