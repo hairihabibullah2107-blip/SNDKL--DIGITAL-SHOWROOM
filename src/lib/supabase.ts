@@ -33,7 +33,7 @@ export function dataUrlToBase64(value: string): string {
 }
 
 export async function artworkForUpload(dataUrl: string, fileName: string): Promise<{ design_base64: string; design_name: string }> {
-  const isSvg = /\\.svg$/i.test(fileName) || dataUrl.startsWith('data:image/svg+xml');
+  const isSvg = fileName.toLowerCase().endsWith('.svg') || dataUrl.startsWith('data:image/svg+xml');
   if (!isSvg) return { design_base64: dataUrlToBase64(dataUrl), design_name: fileName || 'artwork.png' };
   const image = new Image();
   image.src = dataUrl;
@@ -44,5 +44,6 @@ export async function artworkForUpload(dataUrl: string, fileName: string): Promi
   const context = canvas.getContext('2d');
   if (!context) throw new Error('Browser tidak dapat memproses file SVG.');
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  return { design_base64: dataUrlToBase64(canvas.toDataURL('image/png')), design_name: (fileName || 'artwork').replace(/\\.svg$/i, '.png') };
+  const pngName = fileName.toLowerCase().endsWith('.svg') ? fileName.slice(0, -4) + '.png' : 'artwork.png';
+  return { design_base64: dataUrlToBase64(canvas.toDataURL('image/png')), design_name: pngName };
 }
