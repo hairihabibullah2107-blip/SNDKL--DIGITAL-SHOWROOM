@@ -182,8 +182,11 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
   };
 
   const moderateReview = async (review: ReviewRow, approved: boolean) => {
-    const { error: e } = await supabase.from('showroom_product_reviews').update({ is_approved: approved }).eq('id', review.id);
-    if (e) { onToast(e.message); return; } await load(); onToast(approved ? 'Ulasan diterbitkan.' : 'Ulasan ditolak.');
+    const result = approved
+      ? await supabase.from('showroom_product_reviews').update({ is_approved: true }).eq('id', review.id)
+      : await supabase.from('showroom_product_reviews').delete().eq('id', review.id);
+    if (result.error) { onToast(result.error.message); return; }
+    await load(); onToast(approved ? 'Ulasan diterbitkan.' : 'Ulasan ditolak dan dihapus.');
   };
 
   const generateSpk = async (order: OrderRow) => {
