@@ -390,12 +390,6 @@ export function CustomDtfStudio({
   });
 
   const activeZoneMeta = dtfZones.find((z) => z.id === selectedZoneId);
-  const currentProductImage = !selectedProduct ? '' : activeView === 'sleeve'
-    ? selectedProduct.images[2]
-    : activeView === 'back'
-      ? selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
-      : selectedProduct.frontImage || selectedProduct.images[0];
-
   return (
     <section id="studio" className="py-14 md:py-20 bg-neutral-100/70 dark:bg-[#0E0E0E] border-b border-black/10 dark:border-white/10">
       <div className="max-w-[1360px] mx-auto px-4 md:px-6 space-y-8">
