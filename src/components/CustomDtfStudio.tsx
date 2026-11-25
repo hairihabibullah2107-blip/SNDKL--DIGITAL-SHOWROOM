@@ -48,7 +48,7 @@ const SAMPLE_STAMPS = [
     dataUrl:
       'data:image/svg+xml;utf8,' +
       encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240"><rect width="240" height="240" fill="none"/><rect x="18" y="18" width="204" height="204" stroke="#FF4D00" stroke-width="8" fill="none"/><text x="120" y="108" font-family="Arial Black, sans-serif" font-size="36" fill="#FFFFFF" text-anchor="middle">SANDI</text><text x="120" y="150" font-family="Arial Black, sans-serif" font-size="36" fill="#FF4D00" text-anchor="middle">KALE</text><text x="120" y="185" font-family="monospace" font-size="14" fill="#FFFFFF" text-anchor="middle">STREETWEAR LAB</text></svg>`
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240"><rect width="240" height="240" fill="none"/><rect x="18" y="18" width="204" height="204" stroke="#7A1F2B" stroke-width="8" fill="none"/><text x="120" y="108" font-family="Arial Black, sans-serif" font-size="36" fill="#FFFFFF" text-anchor="middle">SANDI</text><text x="120" y="150" font-family="Arial Black, sans-serif" font-size="36" fill="#FF4D00" text-anchor="middle">KALE</text><text x="120" y="185" font-family="monospace" font-size="14" fill="#FFFFFF" text-anchor="middle">STREETWEAR LAB</text></svg>`
       ),
   },
   {
@@ -400,7 +400,7 @@ export function CustomDtfStudio({
       <div className="max-w-[1360px] mx-auto px-4 md:px-6 space-y-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF4D00]">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7A1F2B]">
               Direct-To-Film Configurator
             </p>
             <h2 className="font-display text-3xl md:text-5xl font-bold uppercase tracking-tight mt-1">
@@ -449,7 +449,7 @@ export function CustomDtfStudio({
                   <button
                     type="button"
                     onClick={handleLoadDraft}
-                    className="h-8 px-3 rounded-md border border-black/15 dark:border-white/15 hover:border-[#FF4D00] text-xs font-medium cursor-pointer"
+                    className="h-8 px-3 rounded-md border border-black/15 dark:border-white/15 hover:border-[#7A1F2B] text-xs font-medium cursor-pointer"
                   >
                     Muat Draf
                   </button>
@@ -457,7 +457,7 @@ export function CustomDtfStudio({
                 <button
                   type="button"
                   onClick={handleSaveDraft}
-                  className="h-8 px-3 rounded-md border border-black/15 dark:border-white/15 hover:border-[#FF4D00] text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+                  className="h-8 px-3 rounded-md border border-black/15 dark:border-white/15 hover:border-[#7A1F2B] text-xs font-medium flex items-center gap-1.5 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>Simpan Draf</span>
@@ -622,7 +622,7 @@ export function CustomDtfStudio({
                       height: `${zMeta.box.h}%`,
                     }}
                     className={`absolute flex items-center justify-center border ${
-                      isSelected ? 'border-dashed border-[#FF4D00] bg-[#FF4D00]/5' : 'border-dashed border-white/35'
+                      isSelected ? 'border-dashed border-[#FF4D00] bg-[#7A1F2B]/5' : 'border-dashed border-white/35'
                     }`}
                   >
                     <div
@@ -922,9 +922,9 @@ export function CustomDtfStudio({
                       Background dihapus otomatis ke PNG transparan saat diunggah (PNG/JPG/SVG maks 5MB)
                     </div>
                   </div>
-                  <label className="h-9 px-4 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#FF4D00] dark:hover:bg-[#FF4D00] dark:hover:text-white text-xs font-semibold uppercase tracking-wider inline-flex items-center gap-2 cursor-pointer shrink-0 transition-colors">
+                  <label className="h-9 px-4 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#7A1F2B] dark:hover:bg-[#FF4D00] dark:hover:text-white text-xs font-semibold uppercase tracking-wider inline-flex items-center gap-2 cursor-pointer shrink-0 transition-colors">
                     <Upload className="w-3.5 h-3.5" />
-                    <span>Pilih File</span>
+                    <span>Unggah Desain</span>
                     <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" onChange={handleFileUpload} className="hidden" />
                   </label>
                 </div>
