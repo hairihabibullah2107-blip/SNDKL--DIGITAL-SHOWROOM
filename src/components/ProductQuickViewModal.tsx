@@ -121,13 +121,31 @@ export function ProductQuickViewModal({
         <div className="p-5 md:p-7 grid grid-cols-1 md:grid-cols-2 gap-7">
           {/* Left Gallery with swipe/navigation */}
           <div className="space-y-3">
-            <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-neutral-100 dark:bg-[#171717]" style={{ backgroundColor: activeColor?.hex || undefined }}>
+            <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-neutral-100 dark:bg-[#171717]">
               <img
                 src={activeImage}
                 alt={product.name}
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-contain mix-blend-multiply"
+                className="w-full h-full object-contain"
               />
+              {activeColor && activeImage && (
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    backgroundColor: activeColor.hex,
+                    WebkitMaskImage: `url("${activeImage}")`,
+                    maskImage: `url("${activeImage}")`,
+                    WebkitMaskSize: 'contain',
+                    maskSize: 'contain',
+                    WebkitMaskPosition: 'center',
+                    maskPosition: 'center',
+                    WebkitMaskRepeat: 'no-repeat',
+                    maskRepeat: 'no-repeat',
+                    mixBlendMode: 'multiply',
+                  }}
+                />
+              )}
               {galleryImages.length > 1 && (
                 <>
                   <button
