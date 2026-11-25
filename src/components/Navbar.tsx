@@ -25,6 +25,7 @@ interface NavbarProps {
   onToggleDark: () => void;
   isOnline: boolean;
   showAnnouncement: boolean;
+  announcementText: string;
   onDismissAnnouncement: () => void;
 }
 
@@ -40,6 +41,7 @@ export function Navbar({
   onToggleDark,
   isOnline,
   showAnnouncement,
+  announcementText,
   onDismissAnnouncement,
 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -62,7 +64,7 @@ export function Navbar({
         {showAnnouncement && (
           <div className="h-8 bg-[#FF4D00] text-white px-4 flex items-center justify-between text-xs font-medium">
             <span className="truncate mx-auto">
-              Gratis ongkir seluruh Indonesia untuk order di atas Rp 500.000 · Produksi DTF 2–3 hari kerja
+              {announcementText}
             </span>
             <button
               type="button"
