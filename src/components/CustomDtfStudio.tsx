@@ -17,6 +17,7 @@ import type {
   CustomDesignPlacement,
   DtfZonePrice,
   BulkDiscountRule,
+  PrintingMethodOption,
   FabricOption,
   GarmentColorOption,
   Product,
@@ -33,6 +34,7 @@ interface CustomDtfStudioProps {
   shippingCouriers: ShippingCourierConfig[];
   dtfZones: DtfZonePrice[];
   bulkDiscounts: BulkDiscountRule[];
+  printingMethods: PrintingMethodOption[];
   preselectedProduct?: Product | null;
   onAddCustomToCart: (item: CartItem) => void;
   onToast: (msg: string) => void;
@@ -69,6 +71,7 @@ export function CustomDtfStudio({
   shippingCouriers,
   dtfZones,
   bulkDiscounts,
+  printingMethods,
   preselectedProduct,
   onAddCustomToCart,
   onToast,
@@ -869,6 +872,7 @@ export function CustomDtfStudio({
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {printingMethods.length>0&&<div className="mb-4 rounded-xl border border-black/10 dark:border-white/10 p-3 space-y-2"><div className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">Teknik produksi tersedia</div><div className="flex flex-wrap gap-2">{printingMethods.map(method=><span key={method.id} title={method.description} className="rounded-full border border-black/10 dark:border-white/15 px-3 py-1.5 text-[11px]">{method.name}<span className="ml-1.5 text-neutral-400">{method.pricingType==='quote'?'· Penawaran admin':'· Tersedia'}</span></span>)}</div><p className="text-[10px] text-neutral-500">Pemesanan online saat ini menghitung tarif DTF. Teknik lain dapat dikonsultasikan dengan admin.</p></div>}
                 {dtfZones.map((zone) => {
                   const isAdded = placements.some((p) => p.zoneId === zone.id);
                   const isFocused = selectedZoneId === zone.id;
