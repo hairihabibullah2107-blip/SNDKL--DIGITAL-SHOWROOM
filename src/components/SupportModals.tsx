@@ -345,23 +345,16 @@ export function BugReportModal({ open, onClose, userEmail, onSubmitted }: BugRep
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/bugs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        reporterEmail: email || userEmail || 'pelanggan@sandikale.id',
-        title,
-        description,
-        severity,
-        viewport: `${window.innerWidth}x${window.innerHeight}`,
-      }),
-    });
-    if (res.ok) {
-      setTitle('');
-      setDescription('');
-      onSubmitted();
-      onClose();
-    }
+    const message = [
+      'LAPORAN KENDALA WEBSITE SANDIKALE',
+      `Email: ${email || userEmail || '-'}`,
+      `Prioritas: ${severity}`,
+      `Judul: ${title}`,
+      `Detail: ${description}`,
+      `Perangkat: ${window.innerWidth}x${window.innerHeight}`,
+    ].join('\\n');
+    window.open(`https://wa.me/6282266412844?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+    setTitle(''); setDescription(''); onSubmitted(); onClose();
   };
 
   return (
@@ -461,9 +454,9 @@ const TUTORIAL_STEPS = [
   },
   {
     title: '4. Lacak Produksi Real-Time & Live Chat',
-    subtitle: 'Pantau 6 tahap cetak DTF hingga barang tiba',
+    subtitle: 'Pantau tahapan desain, produksi, QC, dan penyelesaian pesanan',
     description:
-      'Masukkan nomor pesanan (misal: SDK-2026-1042) pada bagian Lacak Pesanan untuk melihat progres verifikasi desain, cetak DTF, heat press QC, hingga nomor resi pengiriman.',
+      'Masukkan kode tracking pribadi yang tampil setelah checkout pada bagian Lacak Pesanan untuk melihat progres verifikasi desain, cetak DTF, heat press QC, hingga nomor resi pengiriman.',
     tips: 'Butuh bantuan desain atau stok? Klik tombol Live Chat di pojok kanan bawah untuk terhubung langsung dengan tim produksi.',
     targetSection: 'lacak',
     ctaLabel: 'Coba Lacak Pesanan',
