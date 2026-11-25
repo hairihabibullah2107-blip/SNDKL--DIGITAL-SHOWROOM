@@ -55,11 +55,19 @@ export async function loadShowroomBootstrap() {
     const productImages = images.filter((v) => v.product_id === row.id);
     const productReviews = reviews.filter((review) => review.productId === row.id);
     const colorNames = Array.isArray(row.available_colors) ? row.available_colors : [];
-    const colors: ProductColor[] = colorNames.map((entry) => {
+    const colorMapForProduct = new Map<string, ProductColor>();
+    for (const entry of colorNames) {
       const name = typeof entry === 'string' ? entry : String((entry as { name?: string })?.name ?? 'Default');
       const hex = typeof entry === 'object' && entry !== null && 'hex' in entry ? String((entry as { hex?: string }).hex || '#777777') : '#777777';
-      return { name, hex };
-    });
+      colorMapForProduct.set(name.toLowerCase(), { name, hex });
+    }
+    for (const variant of productVariants) {
+      const key = variant.color.toLowerCase();
+      if (!colorMapForProduct.has(key)) colorMapForProduct.set(key, { name: variant.color, hex: '#777777' });
+    }
+    const colors: ProductColor[] = [...colorMapForProduct.values()];
+    const variantPrices: Record<string, number> = {};
+    for (const variant of productVariants) variantPrices[`${variant.color.toLowerCase()}::${variant.size}`] = asNumber(variant.price_adjustment);
     const category = categoriesRaw.find((c) => c.id === row.category_id);
     const sizes: Record<string, number> = {};
     for (const variant of productVariants) {
@@ -90,6 +98,7 @@ export async function loadShowroomBootstrap() {
       sizes,
       isCustomBase: true,
       madeToOrder: row.stock_mode === 'made_to_order',
+      variantPrices,
       featured: Boolean(row.is_featured || row.is_best_seller),
       rating: productReviews.length ? productReviews.reduce((sum, review) => sum + Number(review.rating), 0) / productReviews.length : 0,
       reviewCount: productReviews.length,
