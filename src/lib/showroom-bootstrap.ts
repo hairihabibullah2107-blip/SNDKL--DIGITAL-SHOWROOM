@@ -143,8 +143,17 @@ export async function loadShowroomBootstrap() {
     etaDays: asNumber(row.etaDays), cost: asNumber(row.cost), enabled: row.enabled !== false,
   })) : [{ id: 'confirm-shipping', name: 'Konfirmasi ongkir via WhatsApp', serviceArea: 'Indonesia', etaLabel: 'Dikonfirmasi admin', etaDays: 0, cost: 0, enabled: true }];
   const whatsapp = settings.whatsapp || {};
+  const storefront = settings.storefront || {};
 
   return {
+    siteContent: {
+      announcement: String(storefront.announcement || 'Custom apparel & DTF printing · Made to order in Sesaot'),
+      heroEyebrow: String(storefront.hero_eyebrow || 'SANDIKALE DIGITAL SHOWROOM & DTF LAB'),
+      heroTitle: String(storefront.hero_title || 'OWN YOUR STREET. PRINT YOUR IDENTITY.'),
+      heroSubtitle: String(storefront.hero_subtitle || 'Kaos custom dan studio sablon DTF dengan pilihan bahan, visualisasi desain, serta pelacakan produksi dalam satu tempat.'),
+      primaryCta: String(storefront.primary_cta || 'Custom Your Style'),
+      secondaryCta: String(storefront.secondary_cta || 'Shop Collection'),
+    },
     categories,
     products,
     fabrics,
