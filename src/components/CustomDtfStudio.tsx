@@ -11,7 +11,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type {
   CartItem,
   CustomDesignPlacement,
@@ -124,28 +124,27 @@ export function CustomDtfStudio({
     }
   }, [fabrics, fabricId]);
 
-  useEffect(() => {
-    if (colorId && !garmentColors.some((c) => c.id === colorId)) {
-      setColorId('');
-    }
-  }, [garmentColors, colorId]);
-
   const selectedProduct = selectedProductId
     ? customBaseProducts.find((p) => p.id === selectedProductId) || null
     : null;
+  const availableColors = useMemo<GarmentColorOption[]>(() => selectedProduct?.colors?.length
+    ? selectedProduct.colors.map((color) => ({ id: color.name.toLowerCase(), name: color.name, hex: color.hex, publishedByAdmin: true }))
+    : garmentColors, [selectedProduct, garmentColors]);
+  useEffect(() => {
+    if (colorId && !availableColors.some((color) => color.id === colorId)) setColorId('');
+  }, [availableColors, colorId]);
   const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
   const selectedFabric = fabricId ? fabrics.find((f) => f.id === fabricId) || null : null;
-  const selectedColor = colorId ? garmentColors.find((c) => c.id === colorId) || null : null;
+  const selectedColor = colorId ? availableColors.find((c) => c.id === colorId) || null : null;
   const activeColorHex = selectedColor?.hex || '#27272A';
   const activePlacement = placements.find((p) => p.zoneId === selectedZoneId) || null;
 
   const isStudioReady = Boolean(selectedProduct && selectedFabric && selectedColor && size && placements.length > 0);
 
   const dtfTotalPerShirt = placements.reduce((sum, p) => sum + p.price, 0);
-  const baseGarmentPrice = activeSilhouette === 'longsleeve' ? (selectedProduct?.longSleevePrice ?? selectedProduct?.price ?? 0) : (selectedProduct?.price || 0);
-  const selectedVariantAdjustment = selectedProduct?.variantPrices?.[`${selectedColor?.name.toLowerCase() || ''}::${size}`] || 0;
+  const baseGarmentPrice = selectedProduct?.price || 0;
   const selectedSizeSurcharge = selectedProduct?.sizeSurcharges?.[size] || 0;
-  const rawUnitPrice = baseGarmentPrice + (selectedFabric?.priceModifier || 0) + dtfTotalPerShirt + selectedVariantAdjustment + selectedSizeSurcharge;
+  const rawUnitPrice = baseGarmentPrice + dtfTotalPerShirt + selectedSizeSurcharge;
   const activeBulkDiscount = [...bulkDiscounts].sort((a,b)=>b.minQuantity-a.minQuantity).find((rule)=>quantity>=rule.minQuantity);
   const bulkDiscountRate = Math.max(0,Math.min(100,activeBulkDiscount?.discountPercent||0))/100;
   const unitPrice = Math.round(rawUnitPrice * (1 - bulkDiscountRate));
@@ -813,7 +812,7 @@ export function CustomDtfStudio({
                         </div>
                         <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">{fab.feel}</div>
                         <div className="text-[11px] font-mono-tabular mt-1">
-                          {fab.priceModifier > 0 ? `+${formatRupiah(fab.priceModifier)}` : 'Termasuk'} · Produksi {fab.productionDays} hari
+                          Pilihan bahan · Harga kaos tetap
                         </div>
                       </button>
                     ))}
@@ -826,13 +825,13 @@ export function CustomDtfStudio({
                   <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
                     Warna: <span className="text-[#080808] dark:text-white">{selectedColor?.name || 'Belum tersedia'}</span>
                   </div>
-                  {garmentColors.length === 0 ? (
+                  {availableColors.length === 0 ? (
                     <div className="p-2.5 rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 text-[11px] text-amber-700 dark:text-amber-300">
                       Pilihan warna belum diisi oleh Admin.
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {garmentColors.map((c) => (
+                      {availableColors.map((c) => (
                         <button
                           key={c.id}
                           type="button"
