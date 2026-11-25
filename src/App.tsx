@@ -379,13 +379,12 @@ export default function App() {
   };
 
   const handleConfirmPayment = async (orderId: string): Promise<Order | null> => {
-    const res = await fetch(`/api/orders/${orderId}/pay`, { method: 'POST' });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.order) {
-      setRecentOrders((prev) => prev.map((o) => (o.id === data.order.id ? data.order : o)));
-    }
-    return data.order || null;
+    const order = recentOrders.find((entry) => entry.id === orderId);
+    if (!order) return null;
+    const simulated = { ...order, paymentStatus: 'paid' as const, updatedAt: new Date().toISOString() };
+    setRecentOrders((prev) => prev.map((entry) => entry.id === orderId ? simulated : entry));
+    showToast('Simulasi pembayaran tercatat di tampilan ini. Konfirmasi pembayaran sebenarnya tetap melalui admin SANDIKALE.');
+    return simulated;
   };
 
   const handleTrackOrder = async (trackingCode: string) => {
