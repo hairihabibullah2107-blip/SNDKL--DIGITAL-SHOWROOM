@@ -224,7 +224,7 @@ export function CartCheckoutDrawer({
           {step === 'checkout' && (
             <form id="checkout-form" onSubmit={handleCheckoutSubmit} className="space-y-4">
               <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-200">
-                <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#FF4D00]" />
+                <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#7A1F2B]" />
                 <div>
                   <strong>Informasi Penting:</strong> Website ini merupakan sarana gambaran katalog &amp; simulasi desain bagi publik. Setelah checkout, silakan <strong>kirimkan file desain asli melalui WhatsApp Admin</strong> agar memudahkan revisi, pengecekan resolusi, dan konfirmasi cetak.
                 </div>
@@ -282,7 +282,7 @@ export function CartCheckoutDrawer({
               {/* Admin-permitted Payment Methods ONLY */}
               <div className="space-y-2 pt-2 border-t border-black/10 dark:border-white/10">
                 <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 flex items-center gap-1.5">
-                  <CreditCard className="w-3.5 h-3.5 text-[#FF4D00]" />
+                  <CreditCard className="w-3.5 h-3.5 text-[#7A1F2B]" />
                   <span>Metode Pembayaran (Diizinkan Admin)</span>
                 </div>
                 {paymentMethods.length === 0 ? (
@@ -307,7 +307,7 @@ export function CartCheckoutDrawer({
                             name="paymentMethod"
                             checked={paymentMethod === opt.id}
                             onChange={() => setPaymentMethod(opt.id)}
-                            className="accent-[#FF4D00]"
+                            className="accent-[#7A1F2B]"
                           />
                           {opt.label}
                         </span>
@@ -352,7 +352,7 @@ export function CartCheckoutDrawer({
                   </div>
                   <div className="flex items-center justify-between text-sm font-bold pt-2 border-t border-black/10 dark:border-white/10">
                     <span>Estimasi Total</span>
-                    <span className="font-mono-tabular text-[#FF4D00]">{formatRupiah(createdOrder.total)}</span>
+                    <span className="font-mono-tabular text-[#7A1F2B]">{formatRupiah(createdOrder.total)}</span>
                   </div>
                 </div>
 
@@ -402,14 +402,14 @@ export function CartCheckoutDrawer({
                 ) : (
                   <div className="space-y-2.5 pt-2 border-t border-black/10 dark:border-white/10">
                     <div className="p-3 rounded-lg border border-black/10 dark:border-white/10 text-xs flex items-center gap-2 text-neutral-500 dark:text-neutral-300">
-                      <ShieldCheck className="w-4 h-4 text-[#FF4D00] shrink-0" />
+                      <ShieldCheck className="w-4 h-4 text-[#7A1F2B] shrink-0" />
                       <span>Opsional: Klik tombol di bawah untuk mencatat simulasi pembayaran di sistem pelacakan setelah konfirmasi WhatsApp.</span>
                     </div>
                     <button
                       type="button"
                       disabled={submitting}
                       onClick={handlePayNow}
-                      className="w-full h-10 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#7A1F2B] dark:hover:bg-[#FF4D00] dark:hover:text-white text-xs font-bold uppercase tracking-widest cursor-pointer transition-colors"
+                      className="w-full h-10 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#7A1F2B] dark:hover:bg-[#7A1F2B] dark:hover:text-white text-xs font-bold uppercase tracking-widest cursor-pointer transition-colors"
                     >
                       {submitting ? 'Memproses...' : `Catat Simulasi Pembayaran (${formatRupiah(createdOrder.total)})`}
                     </button>
@@ -432,7 +432,7 @@ export function CartCheckoutDrawer({
               </div>
               <div className="flex justify-between text-sm font-bold pt-1.5 border-t border-black/10 dark:border-white/10">
                 <span>Total</span>
-                <span className="font-mono-tabular text-[#FF4D00]">{formatRupiah(total)}</span>
+                <span className="font-mono-tabular text-[#7A1F2B]">{formatRupiah(total)}</span>
               </div>
             </div>
 
@@ -440,7 +440,7 @@ export function CartCheckoutDrawer({
               <button
                 type="button"
                 onClick={() => setStep('checkout')}
-                className="w-full h-11 rounded-md bg-[#FF4D00] hover:bg-[#641923] text-white text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
+                className="w-full h-11 rounded-md bg-[#7A1F2B] hover:bg-[#641923] text-white text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
               >
                 Lanjut ke Checkout
               </button>
@@ -457,7 +457,7 @@ export function CartCheckoutDrawer({
                   type="submit"
                   form="checkout-form"
                   disabled={submitting || !canSubmitCheckout}
-                  className="flex-1 h-11 rounded-md bg-[#FF4D00] hover:bg-[#e04400] text-white text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-45"
+                  className="flex-1 h-11 rounded-md bg-[#7A1F2B] hover:bg-[#e04400] text-white text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-45"
                 >
                   {submitting ? 'Memproses...' : 'Buat Invoice Pembayaran'}
                 </button>
