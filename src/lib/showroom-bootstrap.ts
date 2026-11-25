@@ -16,7 +16,7 @@ function asNumber(value: unknown, fallback = 0): number {
 }
 
 export async function loadShowroomBootstrap() {
-  const [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, reviewResult] =
+  const [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, reviewResult, settingsResult] =
     await Promise.all([
       supabase.from('showroom_categories').select('id,name,slug,description,image_path,sort_order,is_active').eq('is_active', true).order('sort_order'),
       supabase.from('showroom_products').select('id,category_id,name,slug,description,base_price,long_sleeve_price,model,weight_description,is_featured,is_best_seller,is_published,stock_mode,available_colors,size_surcharges,material_id,showroom_materials(name,description,surcharge)').eq('is_published', true).order('created_at', { ascending: false }),
@@ -25,9 +25,10 @@ export async function loadShowroomBootstrap() {
       supabase.from('showroom_product_images').select('id,product_id,storage_path,alt_text,sort_order,is_primary').order('sort_order'),
       supabase.from('showroom_dtf_prices').select('id,size_code,label,width_cm,height_cm,price,is_active,sort_order').eq('is_active', true).order('sort_order'),
       supabase.from('showroom_product_reviews').select('id,product_id,author_name,rating,comment,verified_purchase,created_at').eq('is_approved', true).order('created_at', { ascending: false }),
+      supabase.from('showroom_settings').select('key,value'),
     ]);
 
-  for (const result of [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, reviewResult]) {
+  for (const result of [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, reviewResult, settingsResult]) {
     if (result.error) throw result.error;
   }
 
@@ -126,21 +127,21 @@ export async function loadShowroomBootstrap() {
     box: row.size_code === 'A6' ? { x: 18, y: 24, w: 22, h: 22 } : row.size_code === 'A5' ? { x: 12, y: 38, w: 18, h: 18 } : row.size_code === 'A3' ? { x: 25, y: 20, w: 50, h: 52 } : { x: 25, y: 22, w: 50, h: 50 },
   }));
 
-  const payment: PaymentMethodConfig[] = [{
-    id: 'qris',
-    label: 'Pembayaran manual — konfirmasi admin',
-    group: 'Manual',
-    enabled: true,
-  }];
-  const shipping: ShippingCourierConfig[] = [{
-    id: 'confirm-shipping',
-    name: 'Konfirmasi ongkir via WhatsApp',
-    serviceArea: 'Indonesia',
-    etaLabel: 'Dikonfirmasi admin',
-    etaDays: 0,
-    cost: 0,
-    enabled: true,
-  }];
+  const settings = Object.fromEntries((settingsResult.data || []).map((row) => [row.key, row.value || {}])) as Record<string, Record<string, unknown>>;
+  const paymentSetting = settings.payment || {};
+  const shippingSetting = settings.shipping || {};
+  const paymentRows = Array.isArray(paymentSetting.methods) ? paymentSetting.methods as Array<Record<string, unknown>> : [];
+  const shippingRows = Array.isArray(shippingSetting.couriers) ? shippingSetting.couriers as Array<Record<string, unknown>> : [];
+  const payment: PaymentMethodConfig[] = paymentRows.length ? paymentRows.map((row) => ({
+    id: String(row.id || 'qris') as PaymentMethodConfig['id'], label: String(row.label || 'Pembayaran manual'),
+    group: String(row.group || 'Manual'), enabled: row.enabled !== false,
+  })) : [{ id: 'qris', label: 'Pembayaran manual — konfirmasi admin', group: 'Manual', enabled: true }];
+  const shipping: ShippingCourierConfig[] = shippingRows.length ? shippingRows.map((row) => ({
+    id: String(row.id || 'manual'), name: String(row.name || 'Konfirmasi via WhatsApp'),
+    serviceArea: String(row.serviceArea || 'Indonesia'), etaLabel: String(row.etaLabel || 'Dikonfirmasi admin'),
+    etaDays: asNumber(row.etaDays), cost: asNumber(row.cost), enabled: row.enabled !== false,
+  })) : [{ id: 'confirm-shipping', name: 'Konfirmasi ongkir via WhatsApp', serviceArea: 'Indonesia', etaLabel: 'Dikonfirmasi admin', etaDays: 0, cost: 0, enabled: true }];
+  const whatsapp = settings.whatsapp || {};
 
   return {
     categories,
@@ -148,9 +149,9 @@ export async function loadShowroomBootstrap() {
     fabrics,
     garmentColors: [...colorMap.values()],
     paymentMethods: payment,
-    shippingOriginCity: 'Sesaot, Narmada, Lombok Barat',
+    shippingOriginCity: String(shippingSetting.origin_city || 'Sesaot, Narmada, Lombok Barat'),
     shippingCouriers: shipping,
-    adminWhatsapp: '6282266412844',
+    adminWhatsapp: String(whatsapp.number || '6282266412844'),
     dtfZones,
     reviews,
     chatMessages: [],
