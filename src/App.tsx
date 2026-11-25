@@ -471,7 +471,7 @@ export default function App() {
   };
 
   const handleSendChat = async (text: string, senderName: string) => {
-    const message = `Halo Admin SANDIKALE, saya ${senderName}.\\n\\n${text}`;
+    const message = ['Halo Admin SANDIKALE, saya ' + senderName + '.', '', text].join('\\n');
     const url = `https://wa.me/${adminWhatsapp}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
