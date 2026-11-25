@@ -57,7 +57,7 @@ function SettingEditor({row,onClose,onSave,busy}:{row:Row;onClose:()=>void;onSav
   brand:[{key:'name',label:'Nama brand'},{key:'tagline',label:'Tagline'}],
   whatsapp:[{key:'number',label:'Nomor WhatsApp (format internasional tanpa +)'},{key:'display',label:'Nomor tampilan'}],
   instagram:[{key:'url',label:'URL Instagram'},{key:'handle',label:'Username Instagram'}],
-  storefront:[{key:'announcement',label:'Teks pengumuman'},{key:'hero_eyebrow',label:'Label kecil hero'},{key:'hero_title',label:'Headline hero',hint:'Pisahkan baris aksen dengan karakter |'},{key:'hero_subtitle',label:'Deskripsi hero',kind:'textarea'},{key:'primary_cta',label:'Tombol utama'},{key:'secondary_cta',label:'Tombol kedua'}],
+  storefront:[{key:'announcement',label:'Teks pengumuman'},{key:'store_address',label:'Alamat toko'},{key:'hero_eyebrow',label:'Label kecil hero'},{key:'hero_title',label:'Headline hero',hint:'Pisahkan baris aksen dengan karakter |'},{key:'hero_subtitle',label:'Deskripsi hero',kind:'textarea'},{key:'primary_cta',label:'Tombol utama'},{key:'secondary_cta',label:'Tombol kedua'}],
   shipping:[{key:'origin_city',label:'Kota asal pengiriman'},{key:'couriers',label:'Daftar kurir (JSON)',kind:'json',hint:'Array objek dengan id, name, serviceArea, etaLabel, etaDays, cost, enabled.'}],
   payment:[{key:'mode',label:'Mode pembayaran'},{key:'verification',label:'Verifikasi'},{key:'methods',label:'Metode pembayaran (JSON)',kind:'json',hint:'Array objek dengan id, label, group, enabled.'}],
  };
