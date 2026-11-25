@@ -77,6 +77,8 @@ export type PaymentMethodId =
   | 'ewallet_gopay'
   | 'intl_card_wise';
 
+export interface PrintingMethodOption { id: string; name: string; description: string; pricingType: string; basePrice: number }
+
 export interface BulkDiscountRule { minQuantity: number; discountPercent: number }
 
 export interface PaymentMethodConfig {
