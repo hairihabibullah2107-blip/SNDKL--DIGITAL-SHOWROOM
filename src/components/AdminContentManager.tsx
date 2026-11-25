@@ -37,7 +37,7 @@ export function AdminContentManager({onToast}:{onToast:(message:string)=>void}) 
       .on('postgres_changes',{event:'*',schema:'public',table:'showroom_settings'},()=>void load()).subscribe();
     return ()=>{void supabase.removeChannel(ch);};
   },[load]);
-  const act=async(label:string,run:()=>Promise<{error:any}>)=>{
+  const act=async(label:string,run:()=>PromiseLike<{error:any}>)=>{
     setBusy(true); try{const r=await run();if(r.error)throw r.error;await load();onToast(label+' berhasil disimpan.');}
     catch(e){onToast(e instanceof Error?e.message:'Operasi gagal.');}finally{setBusy(false);}
   };
