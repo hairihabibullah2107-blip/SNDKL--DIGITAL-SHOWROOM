@@ -8,7 +8,7 @@ type OrderRow = {
   payment_status: string; subtotal: number; total_amount: number; deposit_amount: number;
   created_at: string; estimated_completion: string | null; notes: string | null; version: number; design_notes: string | null; production_notes: string | null; finishing_instructions: string | null;
   showroom_customers?: { name: string; whatsapp: string; address?: string | null; email?: string | null } | null;
-  showroom_order_items?: Array<{ id: string; product_name_snapshot: string; quantity: number; subtotal: number; specification: Record<string, unknown> }>;
+  showroom_order_items?: Array<{ id: string; product_name_snapshot: string; quantity: number; subtotal: number; specification: Record<string, unknown>; showroom_order_variants?: Array<{ size: string; color: string; quantity: number }> }>;
 };
 type ProductRow = { id: string; name: string; slug: string; base_price: number; is_published: boolean; is_featured: boolean; description: string | null };
 type CategoryRow = { id: string; name: string; slug: string; is_active: boolean };
@@ -56,7 +56,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
 
   const load = useCallback(async () => {
     const [o, p, c, d, r, m] = await Promise.all([
-      supabase.from('showroom_orders').select('id,order_number,spk_number,status,production_status,payment_status,subtotal,total_amount,deposit_amount,created_at,estimated_completion,notes,version,design_notes,production_notes,finishing_instructions,showroom_customers(name,whatsapp,address,email),showroom_order_items(id,product_name_snapshot,quantity,subtotal,specification)').order('created_at', { ascending: false }).limit(100),
+      supabase.from('showroom_orders').select('id,order_number,spk_number,status,production_status,payment_status,subtotal,total_amount,deposit_amount,created_at,estimated_completion,notes,version,design_notes,production_notes,finishing_instructions,showroom_customers(name,whatsapp,address,email),showroom_order_items(id,product_name_snapshot,quantity,subtotal,specification,showroom_order_variants(size,color,quantity))').order('created_at', { ascending: false }).limit(100),
       supabase.from('showroom_products').select('id,name,slug,base_price,is_published,is_featured,description').order('created_at', { ascending: false }),
       supabase.from('showroom_categories').select('id,name,slug,is_active').order('sort_order'),
       supabase.from('showroom_dtf_prices').select('id,size_code,label,price,width_cm,height_cm,is_active').order('sort_order'),
@@ -210,7 +210,13 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
       for (const item of order.showroom_order_items || []) {
         if (y > 260) { doc.addPage(); y = 20; }
         doc.setFont('helvetica', 'normal'); doc.text(String(item.product_name_snapshot).slice(0, 60), 14, y);
-        doc.text(String(item.quantity), 130, y); doc.text(money(Number(item.subtotal)), 150, y); y += 7;
+        doc.text(String(item.quantity), 130, y); doc.text(money(Number(item.subtotal)), 150, y);
+        const spec = item.specification || {};
+        const sizeText = (item.showroom_order_variants || []).map((variant) => `${variant.size}×${variant.quantity}`).join(', ');
+        const printRows = Array.isArray(spec.dtf_prints) ? spec.dtf_prints as Array<{ position?: string; size_label?: string }> : [];
+        const printText = printRows.map((print) => `${print.position || ''} ${print.size_label ? '(' + print.size_label + ')' : ''}`).join(', ') || String(spec.placement || 'Tanpa cetak');
+        const detail = `Warna: ${String(spec.color || item.showroom_order_variants?.[0]?.color || '-')} · Ukuran: ${sizeText || '-'} · DTF: ${printText}`;
+        doc.setFontSize(8); doc.text(detail.slice(0, 115), 18, y + 4); doc.setFontSize(9); y += 13;
       }
       y += 8; doc.setFontSize(10); doc.setFont('helvetica', 'bold');
       doc.text(`Subtotal: ${money(Number(order.subtotal))}`, 14, y); y += 7;
