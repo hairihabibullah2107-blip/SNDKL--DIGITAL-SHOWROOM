@@ -310,8 +310,6 @@ export default function App() {
     quantity: number;
   }) => {
     const { product, colorName, colorHex, size, quantity } = payload;
-    const baseUnitPrice = /long|lengan panjang/i.test(product.silhouette) ? (product.longSleevePrice ?? product.price) : product.price;
-    const variantAdjustment = product.variantPrices?.[`${colorName.toLowerCase()}::${size}`] || 0;
     const sizeSurcharge = product.sizeSurcharges?.[size] || 0;
     setCart((prev) => {
       const existing = prev.find(
@@ -333,8 +331,7 @@ export default function App() {
           colorHex,
           size,
           quantity,
-          unitPrice: product.price + (product.variantPrices?.[`${colorName.toLowerCase()}::${size}`] || 0),
-          estimatedDays: 2,
+          unitPrice: product.price + sizeSurcharge,
         },
       ];
     });
