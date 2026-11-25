@@ -379,6 +379,8 @@ export function CustomDtfStudio({
 
   const activeZoneMeta = dtfZones.find((z) => z.id === selectedZoneId);
   const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
+  const mockupType = activeSilhouette === 'longsleeve' ? 'long' : 'short';
+  const selectedMockup = selectedColor?.mockups?.find((item) => item.garmentType === mockupType);
 
   return (
     <section id="studio" className="py-14 md:py-20 bg-neutral-100/70 dark:bg-[#0E0E0E] border-b border-black/10 dark:border-white/10">
@@ -456,8 +458,8 @@ export function CustomDtfStudio({
                   <img
                     src={
                       activeView === 'back'
-                        ? selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
-                        : selectedProduct.frontImage || selectedProduct.images[0]
+                        ? selectedMockup?.backImage || selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
+                        : selectedMockup?.frontImage || selectedProduct.frontImage || selectedProduct.images[0]
                     }
                     alt={selectedProduct.name}
                     referrerPolicy="no-referrer"
