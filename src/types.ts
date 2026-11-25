@@ -51,6 +51,8 @@ export interface Product {
   isCustomBase: boolean;
   madeToOrder?: boolean;
   variantPrices?: Record<string, number>;
+  sizeSurcharges?: Record<string, number>;
+  longSleevePrice?: number;
   featured: boolean;
   rating: number;
   reviewCount: number;
