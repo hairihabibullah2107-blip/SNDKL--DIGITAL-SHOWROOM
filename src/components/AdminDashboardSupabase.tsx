@@ -11,6 +11,7 @@ type OrderRow = {
 };
 type ProductRow = { id: string; name: string; slug: string; base_price: number; is_published: boolean; is_featured: boolean; description: string | null };
 type CategoryRow = { id: string; name: string; slug: string; is_active: boolean };
+type ReviewRow = { id: string; product_id: string; author_name: string; rating: number; comment: string; created_at: string; is_approved: boolean };
 type PriceRow = { id: string; size_code: string; label: string; price: number; width_cm: number; height_cm: number; is_active: boolean };
 
 const money = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value || 0));
@@ -29,11 +30,12 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<'orders' | 'products' | 'categories' | 'pricing'>('orders');
+  const [tab, setTab] = useState<'orders' | 'products' | 'categories' | 'pricing' | 'reviews'>('orders');
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [prices, setPrices] = useState<PriceRow[]>([]);
+  const [reviews, setReviews] = useState<ReviewRow[]>([]);
   const [categoryName, setCategoryName] = useState('');
   const [productName, setProductName] = useState('');
   const [productPrice, setProductPrice] = useState('85000');
@@ -42,18 +44,20 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
   const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
-    const [o, p, c, d] = await Promise.all([
+    const [o, p, c, d, r] = await Promise.all([
       supabase.from('showroom_orders').select('id,order_number,spk_number,status,production_status,payment_status,subtotal,total_amount,deposit_amount,created_at,estimated_completion,notes,showroom_customers(name,whatsapp),showroom_order_items(id,product_name_snapshot,quantity,subtotal,specification)').order('created_at', { ascending: false }).limit(100),
       supabase.from('showroom_products').select('id,name,slug,base_price,is_published,is_featured,description').order('created_at', { ascending: false }),
       supabase.from('showroom_categories').select('id,name,slug,is_active').order('sort_order'),
       supabase.from('showroom_dtf_prices').select('id,size_code,label,price,width_cm,height_cm,is_active').order('sort_order'),
+      supabase.from('showroom_product_reviews').select('id,product_id,author_name,rating,comment,created_at,is_approved').order('created_at', { ascending: false }).limit(100),
     ]);
-    const failure = [o.error, p.error, c.error, d.error].find(Boolean);
+    const failure = [o.error, p.error, c.error, d.error, r.error].find(Boolean);
     if (failure) throw failure;
     setOrders((o.data || []) as unknown as OrderRow[]);
     setProducts((p.data || []) as ProductRow[]);
     setCategories((c.data || []) as CategoryRow[]);
     setPrices((d.data || []) as PriceRow[]);
+    setReviews((r.data || []) as ReviewRow[]);
   }, []);
 
   const verifySession = useCallback(async () => {
@@ -144,6 +148,11 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     if (e) { onToast(e.message); return; } await load();
   };
 
+  const moderateReview = async (review: ReviewRow, approved: boolean) => {
+    const { error: e } = await supabase.from('showroom_product_reviews').update({ is_approved: approved }).eq('id', review.id);
+    if (e) { onToast(e.message); return; } await load(); onToast(approved ? 'Ulasan diterbitkan.' : 'Ulasan ditolak.');
+  };
+
   const savePrice = async (price: PriceRow) => {
     const next = Number(priceDraft[price.id]);
     if (!Number.isFinite(next) || next < 0) { onToast('Harga DTF tidak valid.'); return; }
@@ -174,7 +183,8 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
           <div><div className="text-xs tracking-[.3em] uppercase text-[#FF4D00]">SANDIKALE · CONTROL ROOM</div><h1 className="text-2xl md:text-3xl font-bold mt-1">Dashboard Showroom</h1><p className="text-xs text-white/50 mt-1">{profile.full_name} · {profile.role}</p></div>
           <div className="flex gap-2"><button onClick={() => void load()} className="border border-white/15 rounded-lg px-4 py-2 text-sm">Muat ulang</button><button onClick={signOut} className="bg-white text-black rounded-lg px-4 py-2 text-sm font-semibold">Keluar</button></div>
         </header>
-        <nav className="flex flex-wrap gap-2">{(['orders','products','categories','pricing'] as const).map((key) => <button key={key} onClick={() => setTab(key)} className={`px-4 py-2 rounded-lg text-sm capitalize ${tab === key ? 'bg-[#FF4D00] text-white' : 'bg-white/5 text-white/65'}`}>{({orders:'Pesanan',products:'Produk',categories:'Kategori',pricing:'Harga DTF'} as Record<string,string>)[key]}</button>)}</nav>
+        <nav className="flex flex-wrap gap-2">{(['orders','products','categories','pricing','reviews'] as const).map((key) => <button key={key} onClick={() => setTab(key)} className={`px-4 py-2 rounded-lg text-sm capitalize ${tab === key ? 'bg-[#FF4D00] text-white' : 'bg-white/5 text-white/65'}`}>{({orders:'Pesanan',products:'Produk',categories:'Kategori',pricing:'Harga DTF',reviews:'Ulasan'} as Record<string,string>)[key]}</button>)}</nav>
+        {tab === 'reviews' && <section className="space-y-3"><h2 className="text-xl font-bold">Moderasi ulasan ({reviews.length})</h2>{reviews.map((r) => <article key={r.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 space-y-2"><div className="flex justify-between gap-3"><strong>{r.author_name} · {'★'.repeat(r.rating)}</strong><span className="text-xs text-white/50">{r.is_approved ? 'Terbit' : 'Menunggu'}</span></div><p className="text-sm text-white/75">{r.comment}</p><div className="flex gap-2"><button onClick={() => void moderateReview(r, true)} className="bg-[#FF4D00] rounded px-3 py-2 text-xs">Terbitkan</button><button onClick={() => void moderateReview(r, false)} className="border border-white/15 rounded px-3 py-2 text-xs">Tolak</button></div></article>)}</section>}
         {tab === 'orders' && <section className="space-y-4"><div className="flex flex-wrap justify-between gap-3"><h2 className="text-xl font-bold">Pesanan masuk ({orders.length})</h2><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nomor / nama / WhatsApp" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm" /></div>
           {visibleOrders.map((order) => <article key={order.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 md:p-5 space-y-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="font-bold">{order.order_number}</div><div className="text-xs text-white/50">{order.spk_number} · {new Date(order.created_at).toLocaleString('id-ID')}</div></div><div className="text-right"><div className="font-bold">{money(Number(order.total_amount))}</div><div className="text-xs text-white/50">DP {money(Number(order.deposit_amount))} · {order.payment_status}</div></div></div><div className="text-sm">{order.showroom_customers?.name || 'Pelanggan'} · {order.showroom_customers?.whatsapp || '—'}</div><div className="text-xs text-white/60">{(order.showroom_order_items || []).map((item) => `${item.product_name_snapshot} × ${item.quantity}`).join(' · ')}</div><div className="flex flex-wrap items-center gap-3"><span className="text-xs text-white/50">Status: {order.status}</span><select disabled={busy || !['owner','admin','staff'].includes(profile.role)} defaultValue="" onChange={(e) => { if (e.target.value) void updateStage(order, e.target.value); }} className="bg-black border border-white/15 rounded-lg px-3 py-2 text-sm"><option value="">Ubah status produksi…</option>{Object.keys(STATUS).map((s) => <option key={s} value={s}>{s}</option>)}</select><a className="text-xs text-[#FF6A32]" href={`https://wa.me/${order.showroom_customers?.whatsapp || ''}`} target="_blank" rel="noreferrer">Hubungi pelanggan via WhatsApp</a></div></article>)}
           {!visibleOrders.length && <p className="text-sm text-white/50">Belum ada pesanan yang cocok.</p>}</section>}
