@@ -5,6 +5,7 @@ import type {
   FabricOption,
   GarmentColorOption,
   PaymentMethodConfig,
+  BulkDiscountRule,
   Product,
   ProductColor,
   ShippingCourierConfig,
@@ -167,8 +168,12 @@ export async function loadShowroomBootstrap() {
   const storefront = settings.storefront || {};
   const brand = settings.brand || {};
   const instagram = settings.instagram || {};
+  const pricing = settings.pricing || {};
+  const bulkDiscountRows = Array.isArray(pricing.bulk_discounts) ? pricing.bulk_discounts as Array<Record<string, unknown>> : [];
+  const bulkDiscounts: BulkDiscountRule[] = bulkDiscountRows.map((row) => ({ minQuantity: Math.max(1, asNumber(row.min_quantity, 1)), discountPercent: Math.max(0, Math.min(100, asNumber(row.discount_percent))) }));
 
   return {
+    bulkDiscounts,
     siteContent: {
       brandName: String(brand.name || 'SANDIKALE'),
       brandTagline: String(brand.tagline || 'Design & Productions'),
