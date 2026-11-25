@@ -16,7 +16,7 @@ function asNumber(value: unknown, fallback = 0): number {
 }
 
 export async function loadShowroomBootstrap() {
-  const [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult] =
+  const [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, reviewResult] =
     await Promise.all([
       supabase.from('showroom_categories').select('id,name,slug,description,image_path,sort_order,is_active').eq('is_active', true).order('sort_order'),
       supabase.from('showroom_products').select('id,category_id,name,slug,description,base_price,long_sleeve_price,model,weight_description,is_featured,is_best_seller,is_published,available_colors,size_surcharges,material_id,showroom_materials(name,description,surcharge)').eq('is_published', true).order('created_at', { ascending: false }),
@@ -24,9 +24,10 @@ export async function loadShowroomBootstrap() {
       supabase.from('showroom_product_variants').select('id,product_id,color,size,sku,price_adjustment,stock_quantity,is_available').eq('is_available', true),
       supabase.from('showroom_product_images').select('id,product_id,storage_path,alt_text,sort_order,is_primary').order('sort_order'),
       supabase.from('showroom_dtf_prices').select('id,size_code,label,width_cm,height_cm,price,is_active,sort_order').eq('is_active', true).order('sort_order'),
+      supabase.from('showroom_product_reviews').select('id,product_id,author_name,rating,comment,verified_purchase,created_at').eq('is_approved', true).order('created_at', { ascending: false }),
     ]);
 
-  for (const result of [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult]) {
+  for (const result of [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, reviewResult]) {
     if (result.error) throw result.error;
   }
 
@@ -36,6 +37,7 @@ export async function loadShowroomBootstrap() {
   const variants = variantResult.data ?? [];
   const images = imageResult.data ?? [];
   const dtfPrices = dtfResult.data ?? [];
+  const reviews = (reviewResult.data ?? []).map((row) => ({ id: row.id, productId: row.product_id, authorName: row.author_name, rating: row.rating, comment: row.comment, verifiedPurchase: row.verified_purchase, createdAt: row.created_at }));
 
   const categories: Category[] = categoriesRaw.map((row) => ({
     id: row.id,
@@ -145,7 +147,7 @@ export async function loadShowroomBootstrap() {
     shippingCouriers: shipping,
     adminWhatsapp: '6282266412844',
     dtfZones,
-    reviews: [],
+    reviews,
     chatMessages: [],
   };
 }
