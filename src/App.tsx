@@ -241,6 +241,10 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_products' }, () => { void loadBootstrap(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_categories' }, () => { void loadBootstrap(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_dtf_prices' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_materials' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_settings' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_images' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_variants' }, () => { void loadBootstrap(); })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [loadBootstrap]);
