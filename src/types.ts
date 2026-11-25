@@ -28,6 +28,7 @@ export interface GarmentColorOption {
   name: string;
   hex: string;
   publishedByAdmin: boolean;
+  mockups?: Array<{ garmentType: 'short' | 'long'; frontImage: string; backImage: string }>;
 }
 
 export interface Product {
