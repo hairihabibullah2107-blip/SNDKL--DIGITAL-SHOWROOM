@@ -1,6 +1,6 @@
 import { ArrowRight, Bell, Bug, CheckCircle2, HelpCircle, Layers, Lock, Shield, Sparkles, Truck, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AdminDashboard } from './components/AdminDashboard';
+import { AdminDashboardSupabase } from './components/AdminDashboardSupabase';
 import { CartCheckoutDrawer } from './components/CartCheckoutDrawer';
 import { CustomDtfStudio } from './components/CustomDtfStudio';
 import { Navbar } from './components/Navbar';
@@ -8,7 +8,7 @@ import { OrderTrackingSection } from './components/OrderTrackingSection';
 import { ProductCatalog } from './components/ProductCatalog';
 import { ProductQuickViewModal } from './components/ProductQuickViewModal';
 import { AccountModal, BugReportModal, LiveChatWidget, TutorialModal } from './components/SupportModals';
-import { invokeShowroom, dataUrlToBase64, supabase } from './lib/supabase';
+import { invokeShowroom, artworkForUpload, supabase } from './lib/supabase';
 import { loadShowroomBootstrap } from './lib/showroom-bootstrap';
 import type {
   CartItem,
@@ -304,7 +304,7 @@ export default function App() {
     paymentLabel: string;
   }): Promise<Order | null> => {
     try {
-      const items = payload.items.map((item) => {
+      const items = await Promise.all(payload.items.map(async (item) => {
         const placements = item.customPlacements || [];
         if (!placements.length) throw new Error(`Desain DTF untuk ${item.name} belum diunggah.`);
         return {
@@ -313,11 +313,10 @@ export default function App() {
           garment_type: 'short',
           color: item.colorName,
           sizes: [{ size: item.size, quantity: item.quantity }],
-          prints: placements.map((placement) => ({
+          prints: await Promise.all(placements.map(async (placement) => ({
             position: ({ A6: 'Depan - Dada kiri', A5: 'Lengan kiri', A4: 'Depan - Tengah', A3: 'Belakang - Tengah' } as Record<string, string>)[placement.zoneId] || 'Depan - Tengah',
             size_code: placement.zoneId,
-            design_name: placement.artworkName || 'design.png',
-            design_base64: dataUrlToBase64(placement.artworkDataUrl),
+            ...await artworkForUpload(placement.artworkDataUrl, placement.artworkName || 'design.png'),
             transform: {
               x: 50 + placement.xOffset,
               y: 50 + placement.yOffset,
@@ -325,9 +324,9 @@ export default function App() {
               scale: placement.scale,
               rotation: placement.rotation,
             },
-          })),
+          }))),
         };
-      });
+      }));
       const data = await invokeShowroom<{
         order_number: string; spk_number: string; tracking_code: string; total_amount: number;
         deposit_amount: number; remaining_amount: number; customer_name: string;
@@ -475,27 +474,8 @@ export default function App() {
   };
 
   const handleOpenAdminLock = async () => {
-    if (adminToken) {
-      try {
-        window.history.pushState({}, '', '?view=admin');
-      } catch {
-        // ignore history error in restricted frame
-      }
-      setIsAdminRoute(true);
-      return;
-    }
-    setAdminAuthError('');
-    setAdminPasscode('');
-    try {
-      const res = await fetch('/api/admin/auth-status');
-      if (res.ok) {
-        const data = await res.json();
-        setAdminConfigured(Boolean(data.configured));
-      }
-    } catch {
-      // fallback to login mode
-    }
-    setAdminModalOpen(true);
+    window.history.pushState({}, '', '?view=admin');
+    setIsAdminRoute(true);
   };
 
   const handleAdminLockSubmit = async (e: React.FormEvent) => {
@@ -555,14 +535,7 @@ export default function App() {
             <span>{toastMsg}</span>
           </div>
         )}
-        <AdminDashboard
-          adminToken={adminToken}
-          onAdminToken={setAdminToken}
-          chatMessages={chatMessages}
-          onRefreshBootstrap={loadBootstrap}
-          onExitAdmin={exitAdminPortal}
-          onToast={showToast}
-        />
+        <AdminDashboardSupabase onExitAdmin={exitAdminPortal} onToast={showToast} />
       </>
     );
   }
