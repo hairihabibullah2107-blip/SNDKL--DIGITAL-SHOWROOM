@@ -63,12 +63,6 @@ export function CartCheckoutDrawer({
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    if (shippingCourier && !shippingCouriers.some((c) => c.name === shippingCourier)) {
-      setShippingCourier('');
-    }
-  }, [shippingCouriers, shippingCourier]);
-
-  useEffect(() => {
     if (paymentMethod && !paymentMethods.some((p) => p.id === paymentMethod)) {
       setPaymentMethod('');
     }
@@ -76,18 +70,15 @@ export function CartCheckoutDrawer({
 
   if (!open) return null;
 
-  const selectedCourier = shippingCourier
-    ? shippingCouriers.find((c) => c.name === shippingCourier) || null
-    : null;
   const selectedPayment = paymentMethod
     ? paymentMethods.find((p) => p.id === paymentMethod) || null
     : null;
 
   const subtotal = items.reduce((acc, i) => acc + i.unitPrice * i.quantity, 0);
-  const shippingCost =
-    items.length === 0 ? 0 : subtotal >= 500000 ? 0 : selectedCourier ? selectedCourier.cost : 0;
+  const shippingCost = 0;
   const total = subtotal + shippingCost;
-  const canSubmitCheckout = Boolean(selectedCourier && selectedPayment && shippingCity.trim());
+  const isPickup = shippingCourier === 'Ambil Sendiri di Store';
+  const canSubmitCheckout = Boolean(shippingCourier && selectedPayment && (isPickup || (shippingCity.trim() && shippingAddress.trim())));
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,8 +87,8 @@ export function CartCheckoutDrawer({
       setErrorMsg('Anda sedang offline. Keranjang tetap tersimpan aman dan siap checkout saat terhubung internet.');
       return;
     }
-    if (!selectedPayment || !selectedCourier) {
-      setErrorMsg('Metode pembayaran dan kurir pengiriman belum diizinkan oleh Admin.');
+    if (!selectedPayment || !shippingCourier) {
+      setErrorMsg('Pilih metode pengambilan/pengiriman dan metode pembayaran terlebih dahulu.');
       return;
     }
     setSubmitting(true);
@@ -106,9 +97,9 @@ export function CartCheckoutDrawer({
         customerName: customerName || user?.name || 'Pelanggan',
         customerEmail: customerEmail || user?.email || 'pelanggan@sandikale.id',
         customerPhone: customerPhone || user?.phone || '081200000000',
-        shippingAddress,
-        shippingCity,
-        shippingCourier: selectedCourier.name,
+        shippingAddress: isPickup ? 'Ambil sendiri di Store SANDIKALE' : shippingAddress,
+        shippingCity: isPickup ? 'Ambil di Store' : shippingCity,
+        shippingCourier,
         items,
         paymentMethod: selectedPayment.id,
         paymentLabel: selectedPayment.label,
@@ -271,50 +262,21 @@ export function CartCheckoutDrawer({
                     className="h-10 px-3 rounded-md text-xs bg-neutral-50 dark:bg-[#181818] border border-black/15 dark:border-white/15"
                   />
                 </div>
-                <textarea
-                  required
-                  rows={2}
-                  placeholder="Alamat pengiriman lengkap (Jalan, No. Rumah, Kecamatan)"
-                  value={shippingAddress}
-                  onChange={(e) => setShippingAddress(e.target.value)}
-                  className="w-full p-3 rounded-md text-xs bg-neutral-50 dark:bg-[#181818] border border-black/15 dark:border-white/15"
-                />
-                <input
-                  type="text"
-                  required
-                  placeholder="Kota / Kabupaten"
-                  value={shippingCity}
-                  onChange={(e) => setShippingCity(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md text-xs bg-neutral-50 dark:bg-[#181818] border border-black/15 dark:border-white/15"
-                />
+                {shippingCourier === 'Diantar Kurir' && <>
+                  <textarea required rows={2} placeholder="Alamat lengkap tujuan pengantaran" value={shippingAddress} onChange={(e) => setShippingAddress(e.target.value)} className="w-full p-3 rounded-md text-xs bg-neutral-50 dark:bg-[#181818] border border-black/15 dark:border-white/15" />
+                  <input type="text" required placeholder="Kecamatan / Kota / Kabupaten" value={shippingCity} onChange={(e) => setShippingCity(e.target.value)} className="w-full h-10 px-3 rounded-md text-xs bg-neutral-50 dark:bg-[#181818] border border-black/15 dark:border-white/15" />
+                </>}
               </div>
 
-              {/* Admin-permitted Shipping Couriers ONLY */}
               <div className="space-y-2 pt-2 border-t border-black/10 dark:border-white/10">
-                <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 flex items-center gap-1.5">
-                  <Truck className="w-3.5 h-3.5 text-[#FF4D00]" />
-                  <span>Metode Pengiriman (Diizinkan Admin)</span>
+                <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-[#7A1F2B]" /><span>Metode Pengambilan / Pengiriman</span></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {[{value:'Ambil Sendiri di Store',detail:'Pesanan diambil langsung di SANDIKALE.'},{value:'Diantar Kurir',detail:'Biaya dan waktu antar dibahas melalui WhatsApp.'}].map((option) => <label key={option.value} className={`p-3 rounded-lg border cursor-pointer ${shippingCourier===option.value?'border-[#7A1F2B] bg-[#7A1F2B]/10':'border-black/10 dark:border-white/10'}`}>
+                    <span className="flex items-center gap-2 text-xs font-semibold"><input type="radio" name="shippingMethod" checked={shippingCourier===option.value} onChange={()=>setShippingCourier(option.value)} className="accent-[#7A1F2B]" />{option.value}</span>
+                    <span className="block pl-5 pt-1 text-[11px] text-neutral-500">{option.detail}</span>
+                  </label>)}
                 </div>
-                {shippingCouriers.length === 0 ? (
-                  <div className="p-3 rounded-md border border-dashed border-amber-500/40 bg-amber-500/5 text-xs flex items-start gap-2 text-amber-700 dark:text-amber-300">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>Belum ada metode pengiriman yang diaktifkan oleh Admin.</span>
-                  </div>
-                ) : (
-                  <select
-                    required
-                    value={shippingCourier}
-                    onChange={(e) => setShippingCourier(e.target.value)}
-                    className="w-full h-10 px-3 rounded-md text-xs bg-neutral-50 dark:bg-[#181818] border border-black/15 dark:border-white/15"
-                  >
-                    <option value="">-- Pilih ekspedisi pengiriman --</option>
-                    {shippingCouriers.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name} ({c.etaLabel}) — {subtotal >= 500000 ? 'GRATIS' : formatRupiah(c.cost)}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                {isPickup && <p className="text-[11px] text-neutral-500">Lokasi dan waktu pengambilan akan dikonfirmasi admin melalui WhatsApp.</p>}
               </div>
 
               {/* Admin-permitted Payment Methods ONLY */}
@@ -369,7 +331,7 @@ export function CartCheckoutDrawer({
               })
               .join('\n');
             const waText = encodeURIComponent(
-              `Halo Admin SANDIKALE,\n\nSaya baru saja membuat pesanan di website SANDIKALE:\n- No. Pesanan: ${createdOrder.id}\n- Kode Tracking: ${createdOrder.trackingNumber}\n- Nama: ${createdOrder.customerName}\n- Kota Tujuan: ${createdOrder.shippingCity} (${createdOrder.shippingCourier})\n- Metode: ${createdOrder.paymentLabel}\n- Estimasi Total: ${formatRupiah(createdOrder.total)}\n\nDetail Produk:\n${itemLines}\n\nBerikut saya lampirkan file desain asli (PNG/AI/CDR/PDF) untuk proses revisi & konfirmasi produksi lebih lanjut. Terima kasih!`
+              `Halo Admin SANDIKALE,\n\nSaya baru saja membuat pesanan di website SANDIKALE:\n- No. Pesanan: ${createdOrder.id}\n- Kode Tracking: ${createdOrder.trackingNumber}\n- Nama: ${createdOrder.customerName}\n- Metode: ${createdOrder.shippingCourier}\nAlamat: ${createdOrder.shippingAddress}, ${createdOrder.shippingCity}\nBiaya dan waktu pengiriman: mohon konfirmasi dengan admin\n- Metode: ${createdOrder.paymentLabel}\n- Estimasi Total: ${formatRupiah(createdOrder.total)}\n\nDetail Produk:\n${itemLines}\n\nBerikut saya lampirkan file desain asli (PNG/AI/CDR/PDF) untuk proses revisi & konfirmasi produksi lebih lanjut. Terima kasih!`
             );
             const waUrl = `https://wa.me/${cleanWa}?text=${waText}`;
 
@@ -385,7 +347,7 @@ export function CartCheckoutDrawer({
                     <span className="font-mono-tabular">{createdOrder.paymentReference}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-neutral-500">Kurir &amp; Metode</span>
+                    <span className="text-neutral-500">Pengambilan / Pengiriman</span>
                     <span>{createdOrder.shippingCourier} · {createdOrder.paymentLabel}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm font-bold pt-2 border-t border-black/10 dark:border-white/10">
@@ -466,12 +428,7 @@ export function CartCheckoutDrawer({
                 <span className="font-mono-tabular">{formatRupiah(subtotal)}</span>
               </div>
               <div className="flex justify-between text-neutral-500">
-                <span className="flex items-center gap-1">
-                  <Truck className="w-3.5 h-3.5" /> Ongkos Kirim
-                </span>
-                <span className="font-mono-tabular">
-                  {shippingCost === 0 ? (subtotal >= 500000 ? 'GRATIS' : '—') : formatRupiah(shippingCost)}
-                </span>
+                <span className="flex items-center gap-1"><Truck className="w-3.5 h-3.5" /> Pengiriman</span><span className="font-mono-tabular text-[11px]">Dikonfirmasi via WhatsApp</span>
               </div>
               <div className="flex justify-between text-sm font-bold pt-1.5 border-t border-black/10 dark:border-white/10">
                 <span>Total</span>
