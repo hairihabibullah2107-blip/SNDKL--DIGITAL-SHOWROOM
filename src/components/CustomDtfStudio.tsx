@@ -382,8 +382,11 @@ export function CustomDtfStudio({
   });
 
   const activeZoneMeta = dtfZones.find((z) => z.id === selectedZoneId);
-  const mockupType = activeSilhouette === 'longsleeve' ? 'long' : 'short';
-  const selectedMockup = selectedColor?.mockups?.find((item) => item.garmentType === mockupType);
+  const currentProductImage = !selectedProduct ? '' : activeView === 'sleeve'
+    ? selectedProduct.images[2]
+    : activeView === 'back'
+      ? selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
+      : selectedProduct.frontImage || selectedProduct.images[0];
 
   return (
     <section id="studio" className="py-14 md:py-20 bg-neutral-100/70 dark:bg-[#0E0E0E] border-b border-black/10 dark:border-white/10">
@@ -491,17 +494,29 @@ export function CustomDtfStudio({
               {selectedProduct && (activeView !== 'sleeve' || Boolean(selectedProduct.images[2])) ? (
                 <>
                   <img
-                    src={
-                      activeView === 'sleeve'
-                        ? selectedProduct.images[2]
-                        : activeView === 'back'
-                          ? selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
-                          : selectedProduct.frontImage || selectedProduct.images[0]
-                    }
+                    src={currentProductImage}
                     alt={`${selectedProduct.name} ${activeView === 'sleeve' ? 'model lengan panjang' : activeView === 'back' ? 'tampak belakang' : 'tampak depan'}`}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-contain pointer-events-none"
                   />
+                  {selectedColor && currentProductImage && (
+                    <div
+                      aria-hidden="true"
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        backgroundColor: selectedColor.hex,
+                        WebkitMaskImage: `url("${currentProductImage}")`,
+                        maskImage: `url("${currentProductImage}")`,
+                        WebkitMaskSize: 'contain',
+                        maskSize: 'contain',
+                        WebkitMaskPosition: 'center',
+                        maskPosition: 'center',
+                        WebkitMaskRepeat: 'no-repeat',
+                        maskRepeat: 'no-repeat',
+                        mixBlendMode: 'multiply',
+                      }}
+                    />
+                  )}
                   {selectedColor && (
                     <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/75 text-white text-[11px] font-medium flex items-center gap-1.5 backdrop-blur-sm">
                       <span
