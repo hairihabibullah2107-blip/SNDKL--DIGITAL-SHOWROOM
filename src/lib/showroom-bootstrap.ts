@@ -66,13 +66,15 @@ export async function loadShowroomBootstrap() {
     const photoUrls = productImages.map((photo) => storagePublicUrl(photo.storage_path)).filter(Boolean);
     const material = Array.isArray(row.showroom_materials) ? row.showroom_materials[0] : row.showroom_materials;
     const price = asNumber(row.base_price);
+    const modelName = String(row.model || '').toLowerCase();
+    const silhouette = modelName.includes('hood') ? 'hoodie' : modelName.includes('boxy') ? 'boxy-tee' : modelName.includes('long') ? 'longsleeve' : 'regular-tee';
     return {
       id: row.id,
       sku: productVariants.find((v) => v.sku)?.sku ?? row.slug.toUpperCase().replace(/-/g, '-'),
       name: row.name,
       categorySlug: category?.slug ?? 'custom-apparel',
       categoryName: category?.name ?? 'Custom Apparel',
-      silhouette: 'regular-tee',
+      silhouette,
       price,
       compareAtPrice: undefined,
       fabricWeight: row.weight_description ?? material?.name ?? 'Custom Apparel',
