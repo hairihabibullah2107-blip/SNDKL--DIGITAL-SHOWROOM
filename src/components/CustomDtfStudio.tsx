@@ -6,7 +6,7 @@ import {
   Layers,
   Move,
   Save,
-  ShoppingBag,
+  ShoppingCart,
   Sparkles,
   Trash2,
   Upload,
@@ -48,7 +48,7 @@ const SAMPLE_STAMPS = [
     dataUrl:
       'data:image/svg+xml;utf8,' +
       encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240"><rect width="240" height="240" fill="none"/><rect x="18" y="18" width="204" height="204" stroke="#7A1F2B" stroke-width="8" fill="none"/><text x="120" y="108" font-family="Arial Black, sans-serif" font-size="36" fill="#FFFFFF" text-anchor="middle">SANDI</text><text x="120" y="150" font-family="Arial Black, sans-serif" font-size="36" fill="#FF4D00" text-anchor="middle">KALE</text><text x="120" y="185" font-family="monospace" font-size="14" fill="#FFFFFF" text-anchor="middle">STREETWEAR LAB</text></svg>`
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240"><rect width="240" height="240" fill="none"/><rect x="18" y="18" width="204" height="204" stroke="#7A1F2B" stroke-width="8" fill="none"/><text x="120" y="108" font-family="Arial Black, sans-serif" font-size="36" fill="#FFFFFF" text-anchor="middle">SANDI</text><text x="120" y="150" font-family="Arial Black, sans-serif" font-size="36" fill="#7A1F2B" text-anchor="middle">KALE</text><text x="120" y="185" font-family="monospace" font-size="14" fill="#FFFFFF" text-anchor="middle">STREETWEAR LAB</text></svg>`
       ),
   },
   {
@@ -56,7 +56,7 @@ const SAMPLE_STAMPS = [
     dataUrl:
       'data:image/svg+xml;utf8,' +
       encodeURIComponent(
-        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240"><polygon points="120,20 220,190 20,190" fill="none" stroke="#FFFFFF" stroke-width="10"/><circle cx="120" cy="135" r="36" fill="#FF4D00"/><rect x="88" y="202" width="64" height="12" fill="#FFFFFF"/></svg>`
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240"><polygon points="120,20 220,190 20,190" fill="none" stroke="#FFFFFF" stroke-width="10"/><circle cx="120" cy="135" r="36" fill="#7A1F2B"/><rect x="88" y="202" width="64" height="12" fill="#FFFFFF"/></svg>`
       ),
   },
 ];
@@ -84,8 +84,6 @@ export function CustomDtfStudio({
   products,
   fabrics,
   garmentColors,
-  shippingOriginCity,
-  shippingCouriers,
   dtfZones,
   bulkDiscounts,
   printingMethods,
@@ -408,7 +406,7 @@ export function CustomDtfStudio({
         </div>
 
         <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-200">
-          <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#FF4D00]" />
+          <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#7A1F2B]" />
           <span>
             <strong>Simulasi Gambaran Publik:</strong> Studio ini berfungsi sebagai pratinjau penempatan &amp; gambaran estimasi biaya. Anda cukup <strong>menggeser posisi desain</strong> (ukuran cetak otomatis mengikuti zona yang dipilih). File desain asli dikirimkan ke <strong>WhatsApp Admin saat checkout</strong> untuk proses revisi dan konfirmasi cetak.
           </span>
@@ -476,7 +474,7 @@ export function CustomDtfStudio({
                     </div>
                   </div>
                 </div>
-                <span className="text-[11px] font-mono-tabular text-[#FF4D00] shrink-0 uppercase">
+                <span className="text-[11px] font-mono-tabular text-[#7A1F2B] shrink-0 uppercase">
                   {activeSilhouette}
                 </span>
               </div>
@@ -613,7 +611,7 @@ export function CustomDtfStudio({
                       height: `${zMeta.box.h}%`,
                     }}
                     className={`absolute flex items-center justify-center border ${
-                      isSelected ? 'border-dashed border-[#FF4D00] bg-[#7A1F2B]/5' : 'border-dashed border-white/35'
+                      isSelected ? 'border-dashed border-[#7A1F2B] bg-[#7A1F2B]/5' : 'border-dashed border-white/35'
                     }`}
                   >
                     <div
@@ -638,7 +636,7 @@ export function CustomDtfStudio({
 
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[11px] font-mono-tabular px-3 py-1.5 rounded-md bg-black/75 text-white">
                 <span className="flex items-center gap-1.5">
-                  <Move className="w-3.5 h-3.5 text-[#FF4D00]" />
+                  <Move className="w-3.5 h-3.5 text-[#7A1F2B]" />
                   {removingBg ? 'Menghapus background otomatis...' : 'Geser posisi desain di area garis oranye'}
                 </span>
                 <span className="truncate max-w-[160px]">
@@ -651,12 +649,12 @@ export function CustomDtfStudio({
               <div className="p-3.5 rounded-lg bg-neutral-100 dark:bg-[#1C1C1C] space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-xs font-semibold truncate">
-                    Layer Aktif: <span className="text-[#FF4D00]">{activePlacement.zoneLabel}</span>
+                    Layer Aktif: <span className="text-[#7A1F2B]">{activePlacement.zoneLabel}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => updateActivePlacement({ xOffset: 0, yOffset: 0 })}
-                    className="text-xs text-neutral-500 hover:text-[#FF4D00] cursor-pointer shrink-0"
+                    className="text-xs text-neutral-500 hover:text-[#7A1F2B] cursor-pointer shrink-0"
                   >
                     Reset Posisi Geser
                   </button>
@@ -669,7 +667,7 @@ export function CustomDtfStudio({
                       Proporsi menyesuaikan zona {activeZoneMeta?.label} — cukup geser posisi di kanvas.
                     </div>
                   </div>
-                  <span className="font-mono-tabular font-bold text-[#FF4D00] shrink-0">
+                  <span className="font-mono-tabular font-bold text-[#7A1F2B] shrink-0">
                     {activeZoneMeta?.dimensionsCm}
                   </span>
                 </div>
@@ -698,9 +696,9 @@ export function CustomDtfStudio({
                           type="checkbox"
                           checked={activePlacement.removeWhiteBg}
                           onChange={(e) => handleToggleAutoBgRemove(e.target.checked)}
-                          className="accent-[#FF4D00]"
+                          className="accent-[#7A1F2B]"
                         />
-                        <Eraser className="w-3.5 h-3.5 text-[#FF4D00] shrink-0" />
+                        <Eraser className="w-3.5 h-3.5 text-[#7A1F2B] shrink-0" />
                         <span>Hapus Background Otomatis Ala Canva (PNG)</span>
                       </label>
                     </div>
@@ -722,7 +720,7 @@ export function CustomDtfStudio({
                         step={2}
                         value={activePlacement.bgTolerance ?? 38}
                         onChange={(e) => handleToleranceChange(Number(e.target.value))}
-                        className="w-full accent-[#FF4D00]"
+                        className="w-full accent-[#7A1F2B]"
                       />
                     </label>
                   )}
@@ -750,8 +748,8 @@ export function CustomDtfStudio({
                       onClick={() => setSelectedProductId(prod.id)}
                       className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer flex items-center gap-3 ${
                         selectedProduct?.id === prod.id
-                          ? 'border-[#FF4D00] bg-[#FF4D00]/10'
-                          : 'border-black/10 dark:border-white/10 hover:border-[#FF4D00]/50'
+                          ? 'border-[#7A1F2B] bg-[#7A1F2B]/10'
+                          : 'border-black/10 dark:border-white/10 hover:border-[#7A1F2B]/50'
                       }`}
                     >
                       <img
@@ -763,7 +761,7 @@ export function CustomDtfStudio({
                       <div className="min-w-0">
                         <div className="text-xs font-bold truncate">{prod.name}</div>
                         <div className="text-[11px] text-neutral-500 truncate">{prod.fit}</div>
-                        <div className="text-[11px] font-mono-tabular text-[#FF4D00]">
+                        <div className="text-[11px] font-mono-tabular text-[#7A1F2B]">
                           {formatRupiah(prod.price)}
                         </div>
                       </div>
@@ -790,13 +788,13 @@ export function CustomDtfStudio({
                         onClick={() => setFabricId(fab.id)}
                         className={`p-3 rounded-lg border text-left transition-colors cursor-pointer ${
                           fabricId === fab.id
-                            ? 'border-[#FF4D00] bg-[#FF4D00]/10'
-                            : 'border-black/10 dark:border-white/10 hover:border-[#FF4D00]/50'
+                            ? 'border-[#7A1F2B] bg-[#7A1F2B]/10'
+                            : 'border-black/10 dark:border-white/10 hover:border-[#7A1F2B]/50'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-xs font-bold">{fab.name}</span>
-                          <span className="text-[11px] font-mono-tabular text-[#FF4D00]">{fab.gsm}</span>
+                          <span className="text-[11px] font-mono-tabular text-[#7A1F2B]">{fab.gsm}</span>
                         </div>
                         <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">{fab.feel}</div>
                         <div className="text-[11px] font-mono-tabular mt-1">
@@ -827,11 +825,11 @@ export function CustomDtfStudio({
                           title={c.name}
                           aria-label={`Pilih warna ${c.name}`}
                           className={`w-8 h-8 rounded-full border-2 cursor-pointer flex items-center justify-center ${
-                            colorId === c.id ? 'border-[#FF4D00] scale-110' : 'border-black/20 dark:border-white/20'
+                            colorId === c.id ? 'border-[#7A1F2B] scale-110' : 'border-black/20 dark:border-white/20'
                           }`}
                           style={{ backgroundColor: c.hex }}
                         >
-                          {colorId === c.id && <Check className="w-3.5 h-3.5 text-[#FF4D00]" />}
+                          {colorId === c.id && <Check className="w-3.5 h-3.5 text-[#7A1F2B]" />}
                         </button>
                       ))}
                     </div>
@@ -882,15 +880,15 @@ export function CustomDtfStudio({
                       onClick={() => handleSelectZone(zone)}
                       className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer ${
                         isFocused
-                          ? 'border-[#FF4D00] bg-[#FF4D00]/10'
+                          ? 'border-[#7A1F2B] bg-[#7A1F2B]/10'
                           : isAdded
                           ? 'border-emerald-500/60 bg-emerald-500/5'
-                          : 'border-black/10 dark:border-white/10 hover:border-[#FF4D00]/40'
+                          : 'border-black/10 dark:border-white/10 hover:border-[#7A1F2B]/40'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-1 text-xs font-semibold">
                         <span className="truncate">{zone.label}</span>
-                        {isAdded && <Layers className="w-3.5 h-3.5 text-[#FF4D00] shrink-0" />}
+                        {isAdded && <Layers className="w-3.5 h-3.5 text-[#7A1F2B] shrink-0" />}
                       </div>
                       <div className="text-[11px] font-mono-tabular text-neutral-500 dark:text-neutral-400 mt-0.5">
                         {zone.dimensionsCm} · {formatRupiah(zone.price)}
@@ -905,7 +903,7 @@ export function CustomDtfStudio({
                   <div>
                     <div className="text-xs font-semibold">
                       Unggah Artwork untuk:{' '}
-                      <span className="text-[#FF4D00]">
+                      <span className="text-[#7A1F2B]">
                         {activeZoneMeta?.label || 'Pilih zona sablon di atas terlebih dahulu'}
                       </span>
                     </div>
@@ -913,7 +911,7 @@ export function CustomDtfStudio({
                       Background dihapus otomatis ke PNG transparan saat diunggah (PNG/JPG/SVG maks 5MB)
                     </div>
                   </div>
-                  <label className="h-9 px-4 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#7A1F2B] dark:hover:bg-[#FF4D00] dark:hover:text-white text-xs font-semibold uppercase tracking-wider inline-flex items-center gap-2 cursor-pointer shrink-0 transition-colors">
+                  <label className="h-9 px-4 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#7A1F2B] dark:hover:bg-[#7A1F2B] dark:hover:text-white text-xs font-semibold uppercase tracking-wider inline-flex items-center gap-2 cursor-pointer shrink-0 transition-colors">
                     <Upload className="w-3.5 h-3.5" />
                     <span>Unggah Desain</span>
                     <input type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" onChange={handleFileUpload} className="hidden" />
@@ -922,7 +920,7 @@ export function CustomDtfStudio({
 
                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-black/10 dark:border-white/10">
                   <span className="text-[11px] text-neutral-500 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-[#FF4D00]" /> Contoh grafis cepat:
+                    <Sparkles className="w-3 h-3 text-[#7A1F2B]" /> Contoh grafis cepat:
                   </span>
                   {SAMPLE_STAMPS.map((st) => (
                     <button
@@ -961,7 +959,7 @@ export function CustomDtfStudio({
                           ];
                         });
                       }}
-                      className="text-[11px] px-2.5 py-1 rounded border border-black/15 dark:border-white/15 hover:border-[#FF4D00] cursor-pointer"
+                      className="text-[11px] px-2.5 py-1 rounded border border-black/15 dark:border-white/15 hover:border-[#7A1F2B] cursor-pointer"
                     >
                       {st.name.replace('.svg', '')}
                     </button>
@@ -1060,7 +1058,7 @@ export function CustomDtfStudio({
                   <span>
                     Total Harga ({quantity} pcs)
                   </span>
-                  <span className="text-lg font-mono-tabular text-[#FF4D00]">{formatRupiah(totalEstimate)}</span>
+                  <span className="text-lg font-mono-tabular text-[#7A1F2B]">{formatRupiah(totalEstimate)}</span>
                 </div>
               </div>
 
@@ -1068,9 +1066,9 @@ export function CustomDtfStudio({
                 type="button"
                 disabled={!isStudioReady}
                 onClick={handleOrderCustom}
-                className="w-full h-12 rounded-md bg-[#FF4D00] hover:bg-[#e04400] text-white text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-45"
+                className="w-full h-12 rounded-md bg-[#7A1F2B] hover:bg-[#e04400] text-white text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-45"
               >
-                <ShoppingBag className="w-4 h-4" />
+                <ShoppingCart className="w-4 h-4" />
                 <span>
                   {fabrics.length === 0 || garmentColors.length === 0
                     ? 'Lengkapi Kain & Warna di Admin Terlebih Dahulu'
