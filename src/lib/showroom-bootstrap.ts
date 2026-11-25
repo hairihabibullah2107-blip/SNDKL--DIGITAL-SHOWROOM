@@ -77,7 +77,12 @@ export async function loadShowroomBootstrap() {
       sizes[variant.size] = (sizes[variant.size] ?? 0) + asNumber(variant.stock_quantity);
     }
     if (!Object.keys(sizes).length) for (const size of ['S', 'M', 'L', 'XL', 'XXL']) sizes[size] = 0;
-    const uploadedPhotoUrls = productImages.map((photo) => storagePublicUrl(photo.storage_path)).filter(Boolean);\n    const mockupBase = `${window.location.origin}/SNDKL--DIGITAL-SHOWROOM/mockups`;\n    const photoUrls = uploadedPhotoUrls.length ? uploadedPhotoUrls : [`${mockupBase}/sandikale-front.svg`, `${mockupBase}/sandikale-back.svg`, `${mockupBase}/sandikale-long-sleeve.svg`];
+    const mockupBase = `${import.meta.env.BASE_URL}mockups`;
+    const photoUrls = [
+      `${mockupBase}/sandikale-front.svg`,
+      `${mockupBase}/sandikale-back.svg`,
+      `${mockupBase}/sandikale-long-sleeve.svg`,
+    ];
     const material = Array.isArray(row.showroom_materials) ? row.showroom_materials[0] : row.showroom_materials;
     const price = asNumber(row.base_price);
     const modelName = String(row.model || '').toLowerCase();
