@@ -41,7 +41,6 @@ export function CartCheckoutDrawer({
   onClose,
   items,
   paymentMethods,
-  shippingCouriers,
   adminWhatsapp,
   user,
   isOnline,
@@ -153,7 +152,7 @@ export function CartCheckoutDrawer({
       <div className="w-full max-w-md h-full bg-white dark:bg-[#121212] text-[#080808] dark:text-white border-l border-black/10 dark:border-white/10 flex flex-col">
         <div className="h-14 px-5 border-b border-black/10 dark:border-white/10 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2 font-display text-xl font-bold uppercase tracking-wide">
-            <ShoppingBag className="w-4 h-4 text-[#FF4D00]" />
+            <ShoppingBag className="w-4 h-4 text-[#7A1F2B]" />
             <span>
               {step === 'cart' ? `Tas Belanja (${items.length})` : step === 'checkout' ? 'Pengiriman & Checkout' : 'Kirim Desain & Konfirmasi'}
             </span>
@@ -206,7 +205,7 @@ export function CartCheckoutDrawer({
                         {item.fabricName ? ` · ${item.fabricName}` : ''}
                       </div>
                       {item.customPlacements && (
-                        <div className="text-[11px] text-[#FF4D00]">
+                        <div className="text-[11px] text-[#7A1F2B]">
                           DTF {item.customPlacements.length} posisi ({item.customPlacements.map((p) => p.zoneLabel).join(', ')})
                         </div>
                       )}
@@ -336,7 +335,7 @@ export function CartCheckoutDrawer({
                         key={opt.id}
                         className={`flex items-center justify-between p-2.5 rounded-md border text-xs cursor-pointer ${
                           paymentMethod === opt.id
-                            ? 'border-[#FF4D00] bg-[#FF4D00]/10 font-semibold'
+                            ? 'border-[#7A1F2B] bg-[#7A1F2B]/10 font-semibold'
                             : 'border-black/10 dark:border-white/10'
                         }`}
                       >
@@ -448,7 +447,7 @@ export function CartCheckoutDrawer({
                       type="button"
                       disabled={submitting}
                       onClick={handlePayNow}
-                      className="w-full h-10 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#FF4D00] dark:hover:bg-[#FF4D00] dark:hover:text-white text-xs font-bold uppercase tracking-widest cursor-pointer transition-colors"
+                      className="w-full h-10 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#7A1F2B] dark:hover:bg-[#FF4D00] dark:hover:text-white text-xs font-bold uppercase tracking-widest cursor-pointer transition-colors"
                     >
                       {submitting ? 'Memproses...' : `Catat Simulasi Pembayaran (${formatRupiah(createdOrder.total)})`}
                     </button>
@@ -484,7 +483,7 @@ export function CartCheckoutDrawer({
               <button
                 type="button"
                 onClick={() => setStep('checkout')}
-                className="w-full h-11 rounded-md bg-[#FF4D00] hover:bg-[#e04400] text-white text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
+                className="w-full h-11 rounded-md bg-[#FF4D00] hover:bg-[#641923] text-white text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer"
               >
                 Lanjut ke Checkout
               </button>
