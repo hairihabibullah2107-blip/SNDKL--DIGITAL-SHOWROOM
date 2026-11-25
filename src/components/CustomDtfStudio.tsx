@@ -126,6 +126,7 @@ export function CustomDtfStudio({
   const selectedProduct = selectedProductId
     ? customBaseProducts.find((p) => p.id === selectedProductId) || null
     : null;
+  const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
   const selectedFabric = fabricId ? fabrics.find((f) => f.id === fabricId) || null : null;
   const selectedColor = colorId ? garmentColors.find((c) => c.id === colorId) || null : null;
   const selectedCourier = selectedCourierId
@@ -387,7 +388,6 @@ export function CustomDtfStudio({
   });
 
   const activeZoneMeta = dtfZones.find((z) => z.id === selectedZoneId);
-  const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
   const mockupType = activeSilhouette === 'longsleeve' ? 'long' : 'short';
   const selectedMockup = selectedColor?.mockups?.find((item) => item.garmentType === mockupType);
 
