@@ -127,12 +127,6 @@ export function CustomDtfStudio({
   const selectedProduct = selectedProductId
     ? customBaseProducts.find((p) => p.id === selectedProductId) || null
     : null;
-  const availableColors = useMemo<GarmentColorOption[]>(() => selectedProduct?.colors?.length
-    ? selectedProduct.colors.map((color) => ({ id: color.name.toLowerCase(), name: color.name, hex: color.hex, publishedByAdmin: true }))
-    : garmentColors, [selectedProduct, garmentColors]);
-  useEffect(() => {
-    if (colorId && !availableColors.some((color) => color.id === colorId)) setColorId('');
-  }, [availableColors, colorId]);
   const availableColors = useMemo<GarmentColorOption[]>(() => selectedProduct
     ? selectedProduct.colors.map((color) => ({ id: color.name.toLowerCase(), name: color.name, hex: color.hex, publishedByAdmin: true }))
     : garmentColors, [selectedProduct, garmentColors]);
