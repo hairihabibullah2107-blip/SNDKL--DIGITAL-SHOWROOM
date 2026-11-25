@@ -95,6 +95,25 @@ export default function App() {
   const toastTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
+    let alive = true;
+    const applySession = (session: { user: { id: string; email?: string; user_metadata?: Record<string, unknown>; created_at: string }; access_token: string } | null) => {
+      if (!alive || !session) return;
+      setCustomerToken(session.access_token);
+      setCustomerUser({
+        id: session.user.id,
+        name: String(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Pelanggan'),
+        email: session.user.email || '',
+        phone: String(session.user.user_metadata?.phone || ''),
+        role: 'customer',
+        createdAt: session.user.created_at,
+      });
+    };
+    void supabase.auth.getSession().then(({ data }) => applySession(data.session as typeof data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => applySession(session as typeof session));
+    return () => { alive = false; listener.subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
     if (isAdminRoute) return;
     try {
       if (!localStorage.getItem(TUTORIAL_SEEN_KEY)) {
