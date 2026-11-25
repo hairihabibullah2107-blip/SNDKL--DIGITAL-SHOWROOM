@@ -56,7 +56,7 @@ export default function App() {
     primaryCta: 'Custom Your Style',
     secondaryCta: 'Shop Collection',
     heroImage: '',
-    theme: { accent: '#ff4d00', background: '#080808', surface: '#171717', text: '#ffffff', muted: '#a3a3a3' },
+    theme: { accent: '#7A1F2B', background: '#080808', surface: '#171717', text: '#ffffff', muted: '#a3a3a3' },
     gallery: [] as Array<{image:string;caption:string;alt:string}>,
   });
 
@@ -395,7 +395,7 @@ export default function App() {
           phone: payload.customerPhone,
           address: [payload.shippingAddress, payload.shippingCity].filter(Boolean).join(', '),
           city: payload.shippingCity,
-          notes: `Kurir: ${payload.shippingCourier}; metode pembayaran: ${payload.paymentLabel}`,
+          notes: `Metode pengiriman: ${payload.shippingCourier}; metode pembayaran: ${payload.paymentLabel}; waktu pengerjaan dan biaya antar dikonfirmasi melalui WhatsApp.`,
         },
         items,
         deposit_amount: 0,
@@ -581,9 +581,9 @@ export default function App() {
         {toastMsg && (
           <div
             role="status"
-            className="fixed top-5 right-4 z-50 max-w-sm px-4 py-3 rounded-lg bg-[#080808] dark:bg-white text-white dark:text-[#080808] shadow-xl border border-[#FF4D00]/40 flex items-center gap-2.5 text-xs font-medium"
+            className="fixed top-5 right-4 z-50 max-w-sm px-4 py-3 rounded-lg bg-[#080808] dark:bg-white text-white dark:text-[#080808] shadow-xl border border-[#7A1F2B]/40 flex items-center gap-2.5 text-xs font-medium"
           >
-            <CheckCircle2 className="w-4 h-4 text-[#FF4D00] shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-[#7A1F2B] shrink-0" />
             <span>{toastMsg}</span>
           </div>
         )}
@@ -595,7 +595,7 @@ export default function App() {
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F2F2F2] text-[#080808] dark:bg-[#080808] dark:text-white pb-14 md:pb-0" style={{ "--brand-accent": siteContent.theme.accent, "--site-background": siteContent.theme.background, "--site-surface": siteContent.theme.surface, "--site-text": siteContent.theme.text, "--site-muted": siteContent.theme.muted, backgroundColor: siteContent.theme.background, color: siteContent.theme.text } as React.CSSProperties}>
+    <div className="min-h-screen flex flex-col bg-[#F2F2F2] text-[#080808] dark:bg-[#080808] dark:text-white pb-14 md:pb-0" style={{ "--brand-accent": '#7A1F2B', "--site-background": siteContent.theme.background, "--site-surface": siteContent.theme.surface, "--site-text": siteContent.theme.text, "--site-muted": siteContent.theme.muted, backgroundColor: siteContent.theme.background, color: siteContent.theme.text } as React.CSSProperties}>
       <Navbar
         activeSection={activeSection}
         onNavigate={scrollToSection}
@@ -616,9 +616,9 @@ export default function App() {
       {toastMsg && (
         <div
           role="status"
-          className="fixed top-20 right-4 z-50 max-w-sm px-4 py-3 rounded-lg bg-[#080808] dark:bg-white text-white dark:text-[#080808] shadow-xl border border-[#FF4D00]/40 flex items-center gap-2.5 text-xs font-medium"
+          className="fixed top-20 right-4 z-50 max-w-sm px-4 py-3 rounded-lg bg-[#080808] dark:bg-white text-white dark:text-[#080808] shadow-xl border border-[#7A1F2B]/40 flex items-center gap-2.5 text-xs font-medium"
         >
-          <CheckCircle2 className="w-4 h-4 text-[#FF4D00] shrink-0" />
+          <CheckCircle2 className="w-4 h-4 text-[#7A1F2B] shrink-0" />
           <span>{toastMsg}</span>
         </div>
       )}
@@ -636,17 +636,17 @@ export default function App() {
 
           <div className="relative z-10 max-w-[1360px] w-full mx-auto px-4 md:px-6 py-12 md:py-20 space-y-6">
             <div className="max-w-3xl space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{color:siteContent.theme.accent}}>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{color:'#7A1F2B'}}>
                 {siteContent.heroEyebrow}
               </p>
               <h1
                 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold uppercase tracking-tight leading-[0.94] text-white"
                 style={{ textWrap: 'balance' }}
               >
-                {siteContent.heroTitle.split('|')[0]} <span style={{color:siteContent.theme.accent}}>{siteContent.heroTitle.split('|')[1] || ''}</span>
+                {siteContent.heroTitle.split('|')[0]} <span style={{color:'#7A1F2B'}}>{siteContent.heroTitle.split('|')[1] || ''}</span>
               </h1>
               <p className="text-sm md:text-base text-neutral-300 max-w-xl leading-relaxed">
-                {siteContent.heroSubtitle}
+                <span className="hero-subtitle-marquee">{siteContent.heroSubtitle}</span>
               </p>
             </div>
 
@@ -654,7 +654,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => scrollToSection('studio')}
-                className="h-12 px-7 rounded-md text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer" style={{backgroundColor:siteContent.theme.accent}}
+                className="h-12 px-7 rounded-md text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer" style={{backgroundColor:'#7A1F2B'}}
               >
                 <Layers className="w-4 h-4" />
                 <span>{siteContent.primaryCta}</span>
@@ -672,7 +672,7 @@ export default function App() {
                 onClick={() => setTutorialOpen(true)}
                 className="h-12 px-5 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/25 text-xs font-semibold uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer"
               >
-                <HelpCircle className="w-4 h-4 text-[#FF4D00]" />
+                <HelpCircle className="w-4 h-4 text-[#7A1F2B]" />
                 <span>Panduan Pengguna</span>
               </button>
             </div>
@@ -680,7 +680,7 @@ export default function App() {
         </section>
 
         {/* MARQUEE */}
-        <div className="h-10 text-white overflow-hidden flex items-center border-y border-black/15" style={{backgroundColor:siteContent.theme.accent}}>
+        <div className="h-10 text-white overflow-hidden flex items-center border-y border-black/15" style={{backgroundColor:'#7A1F2B'}}>
           <div className="marquee-track text-xs font-bold uppercase tracking-[0.2em]">
             {[0, 1].map((dup) => (
               <div key={dup} className="flex items-center gap-8 pr-8 whitespace-nowrap">
@@ -699,7 +699,7 @@ export default function App() {
           </div>
         </div>
 
-        {siteContent.gallery.length > 0 && <section id="galeri" className="py-12 md:py-16 border-b border-black/10 dark:border-white/10"><div className="max-w-[1360px] mx-auto px-4 md:px-6 space-y-6"><div><p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{color:siteContent.theme.accent}}>SANDIKALE VISUAL JOURNAL</p><h2 className="font-display text-3xl md:text-5xl font-bold uppercase mt-2">Gallery / Campaigns</h2></div><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">{siteContent.gallery.map((item,index)=><figure key={item.image} className="overflow-hidden rounded-xl bg-neutral-200 dark:bg-[#171717]"><img src={item.image} alt={item.alt} loading="lazy" className="w-full aspect-[4/5] object-cover"/>{item.caption&&<figcaption className="p-3 text-xs text-neutral-600 dark:text-neutral-300">{item.caption}</figcaption>}</figure>)}</div></div></section>}
+        {siteContent.gallery.length > 0 && <section id="galeri" className="py-12 md:py-16 border-b border-black/10 dark:border-white/10"><div className="max-w-[1360px] mx-auto px-4 md:px-6 space-y-6"><div><p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{color:'#7A1F2B'}}>SANDIKALE VISUAL JOURNAL</p><h2 className="font-display text-3xl md:text-5xl font-bold uppercase mt-2">Gallery / Campaigns</h2></div><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">{siteContent.gallery.map((item,index)=><figure key={item.image} className="overflow-hidden rounded-xl bg-neutral-200 dark:bg-[#171717]"><img src={item.image} alt={item.alt} loading="lazy" className="w-full aspect-[4/5] object-cover"/>{item.caption&&<figcaption className="p-3 text-xs text-neutral-600 dark:text-neutral-300">{item.caption}</figcaption>}</figure>)}</div></div></section>}
 
         {/* PRODUCT CATALOG */}
         <ProductCatalog
@@ -747,7 +747,7 @@ export default function App() {
 
             <div className="lg:col-span-6 flex flex-col justify-center space-y-6">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF4D00]">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7A1F2B]">
                   Industrial Streetwear Craft
                 </p>
                 <h2 className="font-display text-3xl md:text-5xl font-bold uppercase tracking-tight mt-1">
@@ -761,17 +761,17 @@ export default function App() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
                 <div className="p-4 rounded-lg bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 space-y-1">
-                  <Sparkles className="w-4 h-4 text-[#FF4D00]" />
+                  <Sparkles className="w-4 h-4 text-[#7A1F2B]" />
                   <div className="text-sm font-bold">8-Pass White Ink</div>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">Warna solid di atas kain hitam pekat tanpa pecah.</p>
                 </div>
                 <div className="p-4 rounded-lg bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 space-y-1">
-                  <Truck className="w-4 h-4 text-[#FF4D00]" />
-                  <div className="text-sm font-bold">2–3 Hari Produksi</div>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Estimasi transparan &amp; notifikasi email otomatis.</p>
+                  <Truck className="w-4 h-4 text-[#7A1F2B]" />
+                  <div className="text-sm font-bold">Konfirmasi via WhatsApp</div>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Waktu pengerjaan dan pengiriman dibahas langsung bersama admin.</p>
                 </div>
                 <div className="p-4 rounded-lg bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 space-y-1">
-                  <Shield className="w-4 h-4 text-[#FF4D00]" />
+                  <Shield className="w-4 h-4 text-[#7A1F2B]" />
                   <div className="text-sm font-bold">QC Garansi Tukar</div>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">Pemeriksaan jahitan dan ketahanan press sebelum kirim.</p>
                 </div>
@@ -803,7 +803,7 @@ export default function App() {
                 onClick={handleOpenAdminLock}
                 aria-label="Login Admin"
                 title="Login Admin"
-                className="inline-flex items-center justify-center p-1 rounded text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-[#FF4D00]"
+                className="inline-flex items-center justify-center p-1 rounded text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-[#7A1F2B]"
               >
                 <Lock className="w-3.5 h-3.5" />
               </button>
@@ -811,33 +811,33 @@ export default function App() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 text-xs">
-            <a href={siteContent.instagramUrl} target="_blank" rel="noreferrer" className="h-9 px-3.5 rounded-md border border-black/15 dark:border-white/15 hover:border-[#FF4D00] flex items-center gap-1.5">
-              <Instagram className="w-3.5 h-3.5 text-[#FF4D00]"/><span>{siteContent.instagramHandle}</span>
+            <a href={siteContent.instagramUrl} target="_blank" rel="noreferrer" className="h-9 px-3.5 rounded-md border border-black/15 dark:border-white/15 hover:border-[#7A1F2B] flex items-center gap-1.5">
+              <Instagram className="w-3.5 h-3.5 text-[#7A1F2B]"/><span>{siteContent.instagramHandle}</span>
             </a>
             <button
               type="button"
               onClick={() => setTutorialOpen(true)}
-              className="h-9 px-3.5 rounded-md border border-black/15 dark:border-white/15 hover:border-[#FF4D00] flex items-center gap-1.5 cursor-pointer"
+              className="h-9 px-3.5 rounded-md border border-black/15 dark:border-white/15 hover:border-[#7A1F2B] flex items-center gap-1.5 cursor-pointer"
             >
-              <HelpCircle className="w-3.5 h-3.5 text-[#FF4D00]" />
+              <HelpCircle className="w-3.5 h-3.5 text-[#7A1F2B]" />
               <span>Panduan Pemula</span>
             </button>
 
             <button
               type="button"
               onClick={handleEnableBrowserPush}
-              className="h-9 px-3.5 rounded-md border border-black/15 dark:border-white/15 hover:border-[#FF4D00] flex items-center gap-1.5 cursor-pointer"
+              className="h-9 px-3.5 rounded-md border border-black/15 dark:border-white/15 hover:border-[#7A1F2B] flex items-center gap-1.5 cursor-pointer"
             >
-              <Bell className="w-3.5 h-3.5 text-[#FF4D00]" />
+              <Bell className="w-3.5 h-3.5 text-[#7A1F2B]" />
               <span>Notifikasi Browser</span>
             </button>
 
             <button
               type="button"
               onClick={() => setBugOpen(true)}
-              className="h-9 px-3.5 rounded-md border border-black/15 dark:border-white/15 hover:border-[#FF4D00] flex items-center gap-1.5 cursor-pointer"
+              className="h-9 px-3.5 rounded-md border border-black/15 dark:border-white/15 hover:border-[#7A1F2B] flex items-center gap-1.5 cursor-pointer"
             >
-              <Bug className="w-3.5 h-3.5 text-[#FF4D00]" />
+              <Bug className="w-3.5 h-3.5 text-[#7A1F2B]" />
               <span>Laporkan Bug</span>
             </button>
           </div>
