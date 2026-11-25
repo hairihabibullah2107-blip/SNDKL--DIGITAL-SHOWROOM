@@ -8,6 +8,8 @@ import { OrderTrackingSection } from './components/OrderTrackingSection';
 import { ProductCatalog } from './components/ProductCatalog';
 import { ProductQuickViewModal } from './components/ProductQuickViewModal';
 import { AccountModal, BugReportModal, LiveChatWidget, TutorialModal } from './components/SupportModals';
+import { invokeShowroom, dataUrlToBase64, supabase } from './lib/supabase';
+import { loadShowroomBootstrap } from './lib/showroom-bootstrap';
 import type {
   CartItem,
   Category,
@@ -25,7 +27,7 @@ import type {
   UserProfile,
 } from './types';
 
-const HERO_IMAGE = '/src/assets/images/hero_sandikale_streetwear_1795511846725.jpg';
+const HERO_IMAGE = `${import.meta.env.BASE_URL}src/assets/images/hero_sandikale_streetwear_1795511846725.jpg`;
 const CACHE_BOOTSTRAP_KEY = 'sandikale_offline_bootstrap_v2';
 const CACHE_CART_KEY = 'sandikale_cart_v1';
 const CACHE_WISHLIST_KEY = 'sandikale_wishlist_v1';
@@ -182,26 +184,22 @@ export default function App() {
 
   const loadBootstrap = useCallback(async () => {
     try {
-      const res = await fetch('/api/bootstrap');
-      if (!res.ok) throw new Error('bootstrap failed');
-      const data = await res.json();
-      setCategories(data.categories || []);
-      setProducts(data.products || []);
-      setFabrics(data.fabrics || []);
-      setGarmentColors(data.garmentColors || []);
-      setPaymentMethods(data.paymentMethods || []);
-      setShippingOriginCity(data.shippingOriginCity || '');
-      setShippingCouriers(data.shippingCouriers || []);
-      setAdminWhatsapp(data.adminWhatsapp || '6281234567890');
-      setDtfZones(data.dtfZones || []);
-      setReviews(data.reviews || []);
-      setChatMessages(data.chatMessages || []);
-      try {
-        localStorage.setItem(CACHE_BOOTSTRAP_KEY, JSON.stringify(data));
-      } catch {
-        // ignore
-      }
-    } catch {
+      const data = await loadShowroomBootstrap();
+      setCategories(data.categories);
+      setProducts(data.products);
+      setFabrics(data.fabrics);
+      setGarmentColors(data.garmentColors);
+      setPaymentMethods(data.paymentMethods);
+      setShippingOriginCity(data.shippingOriginCity);
+      setShippingCouriers(data.shippingCouriers);
+      setAdminWhatsapp(data.adminWhatsapp);
+      setDtfZones(data.dtfZones);
+      setReviews(data.reviews);
+      setChatMessages(data.chatMessages);
+      try { localStorage.setItem(CACHE_BOOTSTRAP_KEY, JSON.stringify(data)); } catch { /* optional offline cache */ }
+    } catch (error) {
+      console.error('Supabase showroom bootstrap failed:', error);
+      showToast('Katalog belum dapat dimuat. Periksa koneksi database.');
       try {
         const cached = localStorage.getItem(CACHE_BOOTSTRAP_KEY);
         if (cached) {
@@ -213,81 +211,24 @@ export default function App() {
           setPaymentMethods(data.paymentMethods || []);
           setShippingOriginCity(data.shippingOriginCity || '');
           setShippingCouriers(data.shippingCouriers || []);
-          setAdminWhatsapp(data.adminWhatsapp || '6281234567890');
+          setAdminWhatsapp(data.adminWhatsapp || '6282266412844');
           setDtfZones(data.dtfZones || []);
           setReviews(data.reviews || []);
         }
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore invalid cache */ }
     }
-  }, []);
+  }, [showToast]);
+
+  useEffect(() => { void loadBootstrap(); }, [loadBootstrap]);
 
   useEffect(() => {
-    loadBootstrap();
-    fetch('/api/orders/track/SDK-2026-1042')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.order) {
-          setRecentOrders([data.order]);
-          if (data.emails) setEmailOutbox(data.emails);
-        }
-      })
-      .catch(() => {});
+    const channel = supabase.channel('showroom-public-catalog')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_products' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_categories' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_dtf_prices' }, () => { void loadBootstrap(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
   }, [loadBootstrap]);
-
-  useEffect(() => {
-    let ws: WebSocket | null = null;
-    let reconnectTimer: number | null = null;
-
-    const connect = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
-      ws.onmessage = (evt) => {
-        try {
-          const msg = JSON.parse(evt.data);
-          if (msg.event === 'config:updated') {
-            loadBootstrap();
-          } else if (msg.event === 'chat:message' && msg.payload) {
-            setChatMessages((prev) => {
-              if (prev.some((m) => m.id === msg.payload.id)) return prev;
-              return [...prev, msg.payload];
-            });
-          } else if (msg.event === 'order:updated' || msg.event === 'order:created') {
-            const { order, email } = msg.payload || {};
-            if (order) {
-              setRecentOrders((prev) => {
-                const exists = prev.some((o) => o.id === order.id);
-                return exists ? prev.map((o) => (o.id === order.id ? order : o)) : [order, ...prev];
-              });
-              triggerPushBanner(`Update Pesanan ${order.id}`, `Status produksi: ${order.stage}`);
-            }
-            if (email) {
-              setEmailOutbox((prev) => [email, ...prev]);
-            }
-          } else if (msg.event === 'promo:push' && msg.payload) {
-            triggerPushBanner(msg.payload.title, msg.payload.message);
-          } else if (msg.event === 'review:created' && msg.payload) {
-            setReviews((prev) => {
-              if (prev.some((r) => r.id === msg.payload.id)) return prev;
-              return [msg.payload, ...prev];
-            });
-          }
-        } catch {
-          // ignore
-        }
-      };
-      ws.onclose = () => {
-        reconnectTimer = window.setTimeout(connect, 4000);
-      };
-    };
-
-    connect();
-    return () => {
-      if (reconnectTimer) window.clearTimeout(reconnectTimer);
-      ws?.close();
-    };
-  }, [loadBootstrap, triggerPushBanner]);
 
   const scrollToSection = (id: string) => {
     setActiveSection(id);
@@ -362,23 +303,80 @@ export default function App() {
     paymentMethod: PaymentMethodId;
     paymentLabel: string;
   }): Promise<Order | null> => {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (customerToken) headers.Authorization = `Bearer ${customerToken}`;
-    const res = await fetch('/api/orders', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.order) {
-      setRecentOrders((prev) => [data.order, ...prev]);
+    try {
+      const items = payload.items.map((item) => {
+        const placements = item.customPlacements || [];
+        if (!placements.length) throw new Error(`Desain DTF untuk ${item.name} belum diunggah.`);
+        return {
+          product_id: item.productId,
+          quantity: item.quantity,
+          garment_type: 'short',
+          color: item.colorName,
+          sizes: [{ size: item.size, quantity: item.quantity }],
+          prints: placements.map((placement) => ({
+            position: placement.zoneLabel,
+            size_code: placement.zoneId,
+            design_name: placement.artworkName || 'design.png',
+            design_base64: dataUrlToBase64(placement.artworkDataUrl),
+            transform: {
+              x: 50 + placement.xOffset,
+              y: 50 + placement.yOffset,
+              width: 30 * placement.scale,
+              scale: placement.scale,
+              rotation: placement.rotation,
+            },
+          })),
+        };
+      });
+      const data = await invokeShowroom<{
+        order_number: string; spk_number: string; tracking_code: string; total_amount: number;
+        deposit_amount: number; remaining_amount: number; customer_name: string;
+      }>({
+        action: 'create_order',
+        customer: {
+          name: payload.customerName,
+          email: payload.customerEmail,
+          phone: payload.customerPhone,
+          address: payload.shippingAddress,
+          city: payload.shippingCity,
+          notes: `Kurir: ${payload.shippingCourier}; metode pembayaran: ${payload.paymentLabel}`,
+        },
+        items,
+        deposit_amount: 0,
+      });
+      const now = new Date().toISOString();
+      const order = {
+        id: data.order_number,
+        customerName: payload.customerName,
+        customerEmail: payload.customerEmail,
+        customerPhone: payload.customerPhone,
+        shippingAddress: payload.shippingAddress,
+        shippingCity: payload.shippingCity,
+        shippingCourier: payload.shippingCourier,
+        shippingEtaDays: 0,
+        items: payload.items,
+        subtotal: data.total_amount,
+        shippingCost: 0,
+        discount: 0,
+        total: data.total_amount,
+        paymentMethod: payload.paymentMethod,
+        paymentLabel: payload.paymentLabel,
+        paymentReference: data.tracking_code,
+        paymentStatus: 'pending' as const,
+        stage: 'Menunggu Pembayaran' as const,
+        trackingNumber: data.tracking_code,
+        timeline: [{ stage: 'Menunggu Pembayaran' as const, timestamp: now, note: 'Pesanan diterima dan menunggu konfirmasi admin.', completed: true }],
+        createdAt: now,
+        updatedAt: now,
+      } as Order;
+      setRecentOrders((prev) => [order, ...prev]);
       setCart([]);
+      showToast(`Pesanan ${data.order_number} berhasil dikirim. Simpan kode tracking untuk memantau pesanan.`);
+      return order;
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Pesanan gagal dikirim ke server.');
+      return null;
     }
-    if (data.email) {
-      setEmailOutbox((prev) => [data.email, ...prev]);
-    }
-    return data.order || null;
   };
 
   const handleConfirmPayment = async (orderId: string): Promise<Order | null> => {
@@ -391,17 +389,52 @@ export default function App() {
     return data.order || null;
   };
 
-  const handleTrackOrder = async (orderId: string) => {
-    const res = await fetch(`/api/orders/track/${encodeURIComponent(orderId)}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.order) {
-      setRecentOrders((prev) => {
-        const exists = prev.some((o) => o.id === data.order.id);
-        return exists ? prev.map((o) => (o.id === data.order.id ? data.order : o)) : [data.order, ...prev];
-      });
+  const handleTrackOrder = async (trackingCode: string) => {
+    try {
+      const data = await invokeShowroom<Record<string, any>>({ action: 'track_order', tracking_code: trackingCode });
+      const statusMap: Record<string, Order['stage']> = {
+        customer_submitted: 'Menunggu Pembayaran',
+        waiting_customer_approval: 'Verifikasi Desain DTF',
+        approved: 'Verifikasi Desain DTF',
+        printing: 'Proses Cetak DTF',
+        production: 'Heat Press & QC',
+        shipped: 'Dikirim',
+        completed: 'Selesai',
+      };
+      const order = {
+        id: data.order_number,
+        customerName: '',
+        customerEmail: '',
+        customerPhone: '',
+        shippingAddress: '',
+        shippingCity: '',
+        shippingCourier: '',
+        shippingEtaDays: 0,
+        items: [],
+        subtotal: 0,
+        shippingCost: 0,
+        discount: 0,
+        total: 0,
+        paymentMethod: 'qris',
+        paymentLabel: 'Pembayaran manual',
+        paymentReference: '',
+        paymentStatus: 'pending',
+        stage: statusMap[data.status] || 'Menunggu Pembayaran',
+        trackingNumber: trackingCode,
+        timeline: (data.history || []).map((event: any) => ({
+          stage: statusMap[event.new_status] || 'Menunggu Pembayaran',
+          timestamp: event.created_at,
+          note: event.notes || '',
+          completed: true,
+        })),
+        createdAt: data.created_at,
+        updatedAt: data.created_at,
+      } as Order;
+      setRecentOrders((prev) => [order, ...prev.filter((entry) => entry.id !== order.id)]);
+      return { order, emails: [] };
+    } catch {
+      return null;
     }
-    return data;
   };
 
   const handleSubmitReview = async (payload: {
