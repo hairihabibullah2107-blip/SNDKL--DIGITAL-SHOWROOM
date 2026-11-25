@@ -10,10 +10,10 @@ interface OrderTrackingSectionProps {
 }
 
 export function OrderTrackingSection({ recentOrders, emailOutbox, onTrackOrder }: OrderTrackingSectionProps) {
-  const [query, setQuery] = useState('SDK-2026-1042');
+  const [query, setQuery] = useState('');
   const [trackedOrder, setTrackedOrder] = useState<Order | null>(recentOrders[0] || null);
   const [orderEmails, setOrderEmails] = useState<EmailNotification[]>(
-    emailOutbox.filter((e) => e.orderId === (recentOrders[0]?.id || 'SDK-2026-1042'))
+    emailOutbox.filter((e) => e.orderId === (recentOrders[0]?.id || ''))
   );
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
