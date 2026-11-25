@@ -138,7 +138,7 @@ export function CustomDtfStudio({
 
   const dtfTotalPerShirt = placements.reduce((sum, p) => sum + p.price, 0);
   const baseGarmentPrice = activeSilhouette === 'longsleeve' ? (selectedProduct?.longSleevePrice ?? selectedProduct?.price ?? 0) : (selectedProduct?.price || 0);
-  const selectedVariantAdjustment = selectedProduct?.variantPrices?.[`${'${selectedColor?.name.toLowerCase() || ''}::${size}'}`] || 0;
+  const selectedVariantAdjustment = selectedProduct?.variantPrices?.[`${selectedColor?.name.toLowerCase() || ''}::${size}`] || 0;
   const selectedSizeSurcharge = selectedProduct?.sizeSurcharges?.[size] || 0;
   const rawUnitPrice = baseGarmentPrice + (selectedFabric?.priceModifier || 0) + dtfTotalPerShirt + selectedVariantAdjustment + selectedSizeSurcharge;
   const activeBulkDiscount = [...bulkDiscounts].sort((a,b)=>b.minQuantity-a.minQuantity).find((rule)=>quantity>=rule.minQuantity);
