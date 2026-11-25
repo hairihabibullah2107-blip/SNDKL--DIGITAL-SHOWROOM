@@ -594,6 +594,7 @@ export default function App() {
         isOnline={isOnline}
         showAnnouncement={showAnnouncement}
         announcementText={siteContent.announcement}
+        brandName={siteContent.brandName}
         onDismissAnnouncement={() => setShowAnnouncement(false)}
       />
 
