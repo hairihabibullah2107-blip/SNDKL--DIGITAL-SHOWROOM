@@ -55,6 +55,9 @@ export default function App() {
     heroSubtitle: 'Kaos custom dan studio sablon DTF dengan pilihan bahan, visualisasi desain, serta pelacakan produksi dalam satu tempat.',
     primaryCta: 'Custom Your Style',
     secondaryCta: 'Shop Collection',
+    heroImage: '',
+    theme: { accent: '#ff4d00', background: '#080808', surface: '#171717', text: '#ffffff', muted: '#a3a3a3' },
+    gallery: [] as Array<{image:string;caption:string;alt:string}>,
   });
 
   const [activeSection, setActiveSection] = useState('hero');
@@ -592,7 +595,7 @@ export default function App() {
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F2F2F2] text-[#080808] dark:bg-[#080808] dark:text-white pb-14 md:pb-0">
+    <div className="min-h-screen flex flex-col bg-[#F2F2F2] text-[#080808] dark:bg-[#080808] dark:text-white pb-14 md:pb-0" style={{ "--brand-accent": siteContent.theme.accent, "--site-background": siteContent.theme.background, "--site-surface": siteContent.theme.surface, "--site-text": siteContent.theme.text, "--site-muted": siteContent.theme.muted, backgroundColor: siteContent.theme.background, color: siteContent.theme.text } as React.CSSProperties}>
       <Navbar
         activeSection={activeSection}
         onNavigate={scrollToSection}
@@ -624,7 +627,7 @@ export default function App() {
         {/* HERO SECTION */}
         <section id="hero" className="relative min-h-[78vh] md:min-h-[84vh] flex items-end overflow-hidden bg-[#080808]">
           <img
-            src={HERO_IMAGE}
+            src={siteContent.heroImage || HERO_IMAGE}
             alt="Kampanye Streetwear SANDIKALE"
             referrerPolicy="no-referrer"
             className="absolute inset-0 w-full h-full object-cover object-center"
@@ -633,14 +636,14 @@ export default function App() {
 
           <div className="relative z-10 max-w-[1360px] w-full mx-auto px-4 md:px-6 py-12 md:py-20 space-y-6">
             <div className="max-w-3xl space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#FF4D00]">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{color:siteContent.theme.accent}}>
                 {siteContent.heroEyebrow}
               </p>
               <h1
                 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold uppercase tracking-tight leading-[0.94] text-white"
                 style={{ textWrap: 'balance' }}
               >
-                {siteContent.heroTitle.split('|')[0]} <span className="text-[#FF4D00]">{siteContent.heroTitle.split('|')[1] || ''}</span>
+                {siteContent.heroTitle.split('|')[0]} <span style={{color:siteContent.theme.accent}}>{siteContent.heroTitle.split('|')[1] || ''}</span>
               </h1>
               <p className="text-sm md:text-base text-neutral-300 max-w-xl leading-relaxed">
                 {siteContent.heroSubtitle}
@@ -651,7 +654,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => scrollToSection('studio')}
-                className="h-12 px-7 rounded-md bg-[#FF4D00] hover:bg-[#e04400] text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer"
+                className="h-12 px-7 rounded-md text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer" style={{backgroundColor:siteContent.theme.accent}}
               >
                 <Layers className="w-4 h-4" />
                 <span>{siteContent.primaryCta}</span>
@@ -677,7 +680,7 @@ export default function App() {
         </section>
 
         {/* MARQUEE */}
-        <div className="h-10 bg-[#FF4D00] text-white overflow-hidden flex items-center border-y border-black/15">
+        <div className="h-10 text-white overflow-hidden flex items-center border-y border-black/15" style={{backgroundColor:siteContent.theme.accent}}>
           <div className="marquee-track text-xs font-bold uppercase tracking-[0.2em]">
             {[0, 1].map((dup) => (
               <div key={dup} className="flex items-center gap-8 pr-8 whitespace-nowrap">
@@ -695,6 +698,8 @@ export default function App() {
             ))}
           </div>
         </div>
+
+        {siteContent.gallery.length > 0 && <section id="galeri" className="py-12 md:py-16 border-b border-black/10 dark:border-white/10"><div className="max-w-[1360px] mx-auto px-4 md:px-6 space-y-6"><div><p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{color:siteContent.theme.accent}}>SANDIKALE VISUAL JOURNAL</p><h2 className="font-display text-3xl md:text-5xl font-bold uppercase mt-2">Gallery / Campaigns</h2></div><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">{siteContent.gallery.map((item,index)=><figure key={item.image} className="overflow-hidden rounded-xl bg-neutral-200 dark:bg-[#171717]"><img src={item.image} alt={item.alt} loading="lazy" className="w-full aspect-[4/5] object-cover"/>{item.caption&&<figcaption className="p-3 text-xs text-neutral-600 dark:text-neutral-300">{item.caption}</figcaption>}</figure>)}</div></div></section>}
 
         {/* PRODUCT CATALOG */}
         <ProductCatalog
