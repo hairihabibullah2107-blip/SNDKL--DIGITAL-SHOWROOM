@@ -128,7 +128,10 @@ export function CustomDtfStudio({
     ? customBaseProducts.find((p) => p.id === selectedProductId) || null
     : null;
   const availableColors = useMemo<GarmentColorOption[]>(() => selectedProduct
-    ? selectedProduct.colors.map((color) => ({ id: color.name.toLowerCase(), name: color.name, hex: color.hex, publishedByAdmin: true }))
+    ? selectedProduct.colors.map((color) => {
+        const shared = garmentColors.find((item) => item.name.toLowerCase() === color.name.toLowerCase());
+        return { ...shared, id: color.name.toLowerCase(), name: color.name, hex: color.hex || shared?.hex || '#777777', publishedByAdmin: true };
+      })
     : garmentColors, [selectedProduct, garmentColors]);
   useEffect(() => {
     if (colorId && !availableColors.some((color) => color.id === colorId)) setColorId('');
@@ -136,12 +139,18 @@ export function CustomDtfStudio({
   const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
   const selectedFabric = fabricId ? fabrics.find((f) => f.id === fabricId) || null : null;
   const selectedColor = colorId ? availableColors.find((c) => c.id === colorId) || null : null;
+  const selectedMockup = selectedColor?.mockups?.find((item) => item.garmentType === (activeSilhouette === 'longsleeve' ? 'long' : 'short'));
   const activeColorHex = selectedColor?.hex || '#27272A';
   const activePlacement = placements.find((p) => p.zoneId === selectedZoneId) || null;
 
   const isStudioReady = Boolean(selectedProduct && selectedFabric && selectedColor && size && placements.length > 0);
 
   const dtfTotalPerShirt = placements.reduce((sum, p) => sum + p.price, 0);
+  const currentProductImage = !selectedProduct ? '' : activeView === 'sleeve'
+    ? selectedProduct.images[2] || selectedMockup?.frontImage || selectedProduct.frontImage
+    : activeView === 'back'
+      ? selectedMockup?.backImage || selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
+      : selectedMockup?.frontImage || selectedProduct.frontImage || selectedProduct.images[0];
   const baseGarmentPrice = selectedProduct?.price || 0;
   const selectedSizeSurcharge = selectedProduct?.sizeSurcharges?.[size] || 0;
   const rawUnitPrice = baseGarmentPrice + dtfTotalPerShirt + selectedSizeSurcharge;
