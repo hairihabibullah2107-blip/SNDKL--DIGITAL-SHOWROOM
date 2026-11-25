@@ -40,12 +40,23 @@ Deno.serve(async (req: Request) => {
     if (rateError) throw rateError;
     if (!allowed) return json({ error: "Terlalu banyak permintaan. Coba kembali sebentar lagi." }, 429);
 
-    const [categories, products, images, variants, materials, dtfPrices, mockups, printingMethods, settings] =
+    const products = await db
+      .from("showroom_products")
+      .select("id,category_id,name,slug,description,base_price,long_sleeve_price,material_id,model,weight_description,is_featured,is_best_seller,is_published,stock_mode,available_colors,size_surcharges,finishing_options")
+      .eq("is_published", true)
+      .order("created_at", { ascending: false });
+    if (products.error) throw products.error;
+
+    const publishedIds = (products.data || []).map((product) => product.id);
+    const [categories, images, variants, materials, dtfPrices, mockups, printingMethods, settings] =
       await Promise.all([
         db.from("showroom_categories").select("id,name,slug,description,image_path,sort_order,is_active").eq("is_active", true).order("sort_order"),
-        db.from("showroom_products").select("id,category_id,name,slug,description,base_price,long_sleeve_price,material_id,model,weight_description,is_featured,is_best_seller,is_published,stock_mode,available_colors,size_surcharges,finishing_options").eq("is_published", true).order("created_at", { ascending: false }),
-        db.from("showroom_product_images").select("id,product_id,storage_path,alt_text,sort_order,is_primary").order("sort_order"),
-        db.from("showroom_product_variants").select("id,product_id,color,size,sku,price_adjustment,stock_quantity,is_available").eq("is_available", true),
+        publishedIds.length
+          ? db.from("showroom_product_images").select("id,product_id,storage_path,alt_text,sort_order,is_primary").in("product_id", publishedIds).order("sort_order")
+          : Promise.resolve({ data: [], error: null }),
+        publishedIds.length
+          ? db.from("showroom_product_variants").select("id,product_id,color,size,sku,price_adjustment,stock_quantity,is_available").in("product_id", publishedIds).eq("is_available", true)
+          : Promise.resolve({ data: [], error: null }),
         db.from("showroom_materials").select("id,name,description,surcharge,is_active").eq("is_active", true).order("name"),
         db.from("showroom_dtf_prices").select("id,size_code,label,width_cm,height_cm,price,is_active,sort_order").eq("is_active", true).order("sort_order"),
         db.from("showroom_garment_mockups").select("id,garment_type,color_name,color_hex,front_storage_path,back_storage_path,is_active").eq("is_active", true),
@@ -53,7 +64,7 @@ Deno.serve(async (req: Request) => {
         db.from("showroom_settings").select("key,value").in("key", ["brand", "instagram", "whatsapp", "payment"]),
       ]);
 
-    for (const result of [categories, products, images, variants, materials, dtfPrices, mockups, printingMethods, settings]) {
+    for (const result of [categories, images, variants, materials, dtfPrices, mockups, printingMethods, settings]) {
       if (result.error) throw result.error;
     }
 
