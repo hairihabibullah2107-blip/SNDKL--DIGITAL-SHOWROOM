@@ -120,7 +120,7 @@ export async function loadShowroomBootstrap() {
 
   for (const mockup of mockupResult.data || []) {
     const key = String(mockup.color_name).toLowerCase();
-    const existing = colorMap.get(key) || { id: key, name: mockup.color_name, hex: mockup.color_hex || '#777777', publishedByAdmin: true };
+    const existing: GarmentColorOption = colorMap.get(key) || { id: key, name: mockup.color_name, hex: mockup.color_hex || '#777777', publishedByAdmin: true };
     const mockups = [...(existing.mockups || []).filter((item) => item.garmentType !== mockup.garment_type), {
       garmentType: mockup.garment_type as 'short' | 'long',
       frontImage: storagePublicUrl(mockup.front_storage_path),
