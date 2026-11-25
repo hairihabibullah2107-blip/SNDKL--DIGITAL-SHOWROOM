@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { AdminContentManager } from './AdminContentManager';
 
 type Profile = { id: string; full_name: string; email: string | null; role: string; is_active: boolean };
 type OrderRow = {
@@ -38,7 +39,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<'orders' | 'products' | 'categories' | 'pricing' | 'reviews' | 'materials'>('orders');
+  const [tab, setTab] = useState<'orders' | 'products' | 'categories' | 'pricing' | 'reviews' | 'materials' | 'content'>('orders');
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
@@ -296,7 +297,8 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
           <div><div className="text-xs tracking-[.3em] uppercase text-[#FF4D00]">SANDIKALE · CONTROL ROOM</div><h1 className="text-2xl md:text-3xl font-bold mt-1">Dashboard Showroom</h1><p className="text-xs text-white/50 mt-1">{profile.full_name} · {profile.role}</p></div>
           <div className="flex gap-2"><button onClick={() => void load()} className="border border-white/15 rounded-lg px-4 py-2 text-sm">Muat ulang</button><button onClick={signOut} className="bg-white text-black rounded-lg px-4 py-2 text-sm font-semibold">Keluar</button></div>
         </header>
-        <nav className="flex flex-wrap gap-2">{(['orders','products','categories','pricing','reviews','materials'] as const).map((key) => <button key={key} onClick={() => setTab(key)} className={`px-4 py-2 rounded-lg text-sm capitalize ${tab === key ? 'bg-[#FF4D00] text-white' : 'bg-white/5 text-white/65'}`}>{({orders:'Pesanan',products:'Produk',categories:'Kategori',pricing:'Harga DTF',reviews:'Ulasan',materials:'Bahan'} as Record<string,string>)[key]}</button>)}</nav>
+        <nav className="flex flex-wrap gap-2">{(['orders','products','categories','pricing','reviews','materials','content'] as const).map((key) => <button key={key} onClick={() => setTab(key)} className={`px-4 py-2 rounded-lg text-sm capitalize ${tab === key ? 'bg-[#FF4D00] text-white' : 'bg-white/5 text-white/65'}`}>{({orders:'Pesanan',products:'Produk',categories:'Kategori',pricing:'Harga DTF',reviews:'Ulasan',materials:'Bahan',content:'Manajemen Konten'} as Record<string,string>)[key]}</button>)}</nav>
+        {tab === 'content' && <AdminContentManager onToast={onToast} />}
         {tab === 'materials' && <section className="space-y-4"><h2 className="text-xl font-bold">Bahan & biaya tambahan</h2><form onSubmit={addMaterial} className="grid md:grid-cols-3 gap-2 bg-[#121212] border border-white/10 rounded-xl p-4"><input required value={materialName} onChange={(e) => setMaterialName(e.target.value)} placeholder="Nama bahan, contoh Cotton Combed 30s" className="bg-black border border-white/10 rounded-lg px-3 py-2 text-sm" /><input required type="number" min="0" value={materialSurcharge} onChange={(e) => setMaterialSurcharge(e.target.value)} placeholder="Tambahan harga per kaos" className="bg-black border border-white/10 rounded-lg px-3 py-2 text-sm" /><button className="bg-[#FF4D00] rounded-lg py-2 text-sm font-semibold">Tambah bahan</button></form><div className="grid md:grid-cols-2 gap-3">{materials.map((m) => <MaterialEditor key={m.id} material={m} onSave={saveMaterial} />)}</div></section>}
         {tab === 'reviews' && <section className="space-y-3"><h2 className="text-xl font-bold">Moderasi ulasan ({reviews.length})</h2>{reviews.map((r) => <article key={r.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 space-y-2"><div className="flex justify-between gap-3"><strong>{r.author_name} · {'★'.repeat(r.rating)}</strong><span className="text-xs text-white/50">{r.is_approved ? 'Terbit' : 'Menunggu'}</span></div><p className="text-sm text-white/75">{r.comment}</p><div className="flex gap-2"><button onClick={() => void moderateReview(r, true)} className="bg-[#FF4D00] rounded px-3 py-2 text-xs">Terbitkan</button><button onClick={() => void moderateReview(r, false)} className="border border-white/15 rounded px-3 py-2 text-xs">Tolak</button></div></article>)}</section>}
         {tab === 'orders' && <section className="space-y-4"><div className="flex flex-wrap justify-between gap-3"><h2 className="text-xl font-bold">Pesanan masuk ({orders.length})</h2><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nomor / nama / WhatsApp" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm" /></div>
