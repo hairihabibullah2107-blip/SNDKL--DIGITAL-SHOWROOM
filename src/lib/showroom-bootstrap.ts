@@ -51,6 +51,7 @@ export async function loadShowroomBootstrap() {
   const products: Product[] = productsRaw.map((row) => {
     const productVariants = variants.filter((v) => v.product_id === row.id);
     const productImages = images.filter((v) => v.product_id === row.id);
+    const productReviews = reviews.filter((review) => review.productId === row.id);
     const colorNames = Array.isArray(row.available_colors) ? row.available_colors : [];
     const colors: ProductColor[] = colorNames.map((entry) => {
       const name = typeof entry === 'string' ? entry : String((entry as { name?: string })?.name ?? 'Default');
@@ -88,8 +89,8 @@ export async function loadShowroomBootstrap() {
       isCustomBase: true,
       madeToOrder: row.stock_mode === 'made_to_order',
       featured: Boolean(row.is_featured || row.is_best_seller),
-      rating: 0,
-      reviewCount: 0,
+      rating: productReviews.length ? productReviews.reduce((sum, review) => sum + Number(review.rating), 0) / productReviews.length : 0,
+      reviewCount: productReviews.length,
     };
   });
 
