@@ -1,4 +1,5 @@
 import { ArrowRight, Bell, Bug, CheckCircle2, HelpCircle, Layers, Shield, Sparkles, Truck, X } from 'lucide-react';
+import heroImage from './assets/images/hero_sandikale_streetwear_1795511846725.jpg';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AdminDashboardSupabase } from './components/AdminDashboardSupabase';
 import { CartCheckoutDrawer } from './components/CartCheckoutDrawer';
@@ -27,7 +28,7 @@ import type {
   UserProfile,
 } from './types';
 
-const HERO_IMAGE = `${import.meta.env.BASE_URL}src/assets/images/hero_sandikale_streetwear_1795511846725.jpg`;
+const HERO_IMAGE = heroImage;
 const CACHE_BOOTSTRAP_KEY = 'sandikale_offline_bootstrap_v2';
 const CACHE_CART_KEY = 'sandikale_cart_v1';
 const CACHE_WISHLIST_KEY = 'sandikale_wishlist_v1';
@@ -479,16 +480,7 @@ export default function App() {
   };
 
   const handleEnableBrowserPush = async () => {
-    if (typeof Notification === 'undefined') {
-      showToast('Notifikasi real-time aktif di dalam aplikasi.');
-      return;
-    }
-    const perm = await Notification.requestPermission();
-    showToast(
-      perm === 'granted'
-        ? 'Notifikasi push browser diaktifkan untuk promo & status produksi.'
-        : 'Notifikasi in-app real-time tetap aktif.'
-    );
+    showToast('Notifikasi otomatis belum diaktifkan. Gunakan kode tracking untuk memantau status pesanan.');
   };
 
   const handleOpenAdminLock = async () => {
