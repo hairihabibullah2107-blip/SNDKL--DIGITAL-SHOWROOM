@@ -427,7 +427,7 @@ export function CartCheckoutDrawer({
                     <button
                       type="button"
                       onClick={() => {
-                        const oid = createdOrder.id;
+                        const oid = createdOrder.trackingNumber;
                         setStep('cart');
                         setCreatedOrder(null);
                         onClose();
