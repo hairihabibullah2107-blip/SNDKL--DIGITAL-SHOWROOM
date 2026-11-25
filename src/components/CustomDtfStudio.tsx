@@ -61,7 +61,24 @@ const SAMPLE_STAMPS = [
   },
 ];
 
-const DRAFT_STORAGE_KEY = 'sandikale_dtf_studio_draft_v2';
+const DRAFT_STORAGE_KEY = 'sandikale_dtf_studio_draft_v3';
+const DRAFT_DB_NAME = 'sandikale-studio-drafts';
+const openDraftDb = () => new Promise<IDBDatabase>((resolve, reject) => {
+  const request = indexedDB.open(DRAFT_DB_NAME, 1);
+  request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains('drafts')) request.result.createObjectStore('drafts'); };
+  request.onsuccess = () => resolve(request.result);
+  request.onerror = () => reject(request.error);
+});
+const saveStudioDraft = async (key: string, value: unknown) => {
+  const db = await openDraftDb();
+  await new Promise<void>((resolve, reject) => { const tx = db.transaction('drafts', 'readwrite'); tx.objectStore('drafts').put(value, key); tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error); });
+  db.close();
+};
+const loadStudioDraft = async <T,>(key: string): Promise<T | undefined> => {
+  const db = await openDraftDb();
+  const value = await new Promise<T | undefined>((resolve, reject) => { const req = db.transaction('drafts', 'readonly').objectStore('drafts').get(key); req.onsuccess = () => resolve(req.result as T | undefined); req.onerror = () => reject(req.error); });
+  db.close(); return value;
+};
 
 export function CustomDtfStudio({
   products,
@@ -82,19 +99,13 @@ export function CustomDtfStudio({
   const [colorId, setColorId] = useState<string>('');
   const [size, setSize] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [selectedCourierId, setSelectedCourierId] = useState<string>('');
   const [removingBg, setRemovingBg] = useState(false);
 
   const [activeView, setActiveView] = useState<'front' | 'back' | 'sleeve'>('front');
   const [placements, setPlacements] = useState<CustomDesignPlacement[]>([]);
   const [selectedZoneId, setSelectedZoneId] = useState<string>('');
-  const [hasSavedDraft, setHasSavedDraft] = useState(() => {
-    try {
-      return Boolean(localStorage.getItem(DRAFT_STORAGE_KEY));
-    } catch {
-      return false;
-    }
-  });
+  const [hasSavedDraft, setHasSavedDraft] = useState(false);
+  useEffect(() => { loadStudioDraft(DRAFT_STORAGE_KEY).then((draft) => setHasSavedDraft(Boolean(draft))).catch(() => setHasSavedDraft(false)); }, []);
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
@@ -121,21 +132,12 @@ export function CustomDtfStudio({
     }
   }, [garmentColors, colorId]);
 
-  useEffect(() => {
-    if (selectedCourierId && !shippingCouriers.some((c) => c.id === selectedCourierId)) {
-      setSelectedCourierId('');
-    }
-  }, [shippingCouriers, selectedCourierId]);
-
   const selectedProduct = selectedProductId
     ? customBaseProducts.find((p) => p.id === selectedProductId) || null
     : null;
   const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
   const selectedFabric = fabricId ? fabrics.find((f) => f.id === fabricId) || null : null;
   const selectedColor = colorId ? garmentColors.find((c) => c.id === colorId) || null : null;
-  const selectedCourier = selectedCourierId
-    ? shippingCouriers.find((c) => c.id === selectedCourierId) || null
-    : null;
   const activeColorHex = selectedColor?.hex || '#27272A';
   const activePlacement = placements.find((p) => p.zoneId === selectedZoneId) || null;
 
@@ -150,8 +152,6 @@ export function CustomDtfStudio({
   const bulkDiscountRate = Math.max(0,Math.min(100,activeBulkDiscount?.discountPercent||0))/100;
   const unitPrice = Math.round(rawUnitPrice * (1 - bulkDiscountRate));
   const totalEstimate = unitPrice * quantity;
-  const courierDays = selectedCourier ? selectedCourier.etaDays : 0;
-  const totalEtaDays = (selectedFabric?.productionDays || 0) + courierDays;
 
   const getAutoScaleForZone = (zoneId: string) => {
     if (zoneId === 'front-pocket' || zoneId === 'sleeve-label') return 0.92;
@@ -320,33 +320,26 @@ export function CustomDtfStudio({
     draggingRef.current = null;
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     try {
-      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({ selectedProductId, fabricId, colorId, size, placements }));
+      await saveStudioDraft(DRAFT_STORAGE_KEY, { selectedProductId, fabricId, colorId, size, quantity, placements, savedAt: new Date().toISOString() });
       setHasSavedDraft(true);
-      onToast('Draf desain custom tersimpan di perangkat (tersedia saat offline).');
-    } catch {
-      onToast('Gagal menyimpan draf lokal.');
-    }
+      onToast('Draf desain dan file artwork tersimpan di perangkat ini.');
+    } catch { onToast('Penyimpanan draf gagal. Periksa ruang penyimpanan browser.'); }
   };
 
-  const handleLoadDraft = () => {
+  const handleLoadDraft = async () => {
     try {
-      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
-      if (!saved) return;
-      const parsed = JSON.parse(saved);
-      if (parsed.selectedProductId) setSelectedProductId(parsed.selectedProductId);
-      if (parsed.fabricId) setFabricId(parsed.fabricId);
-      if (parsed.colorId) setColorId(parsed.colorId);
-      if (parsed.size) setSize(parsed.size);
-      if (Array.isArray(parsed.placements) && parsed.placements.length > 0) {
-        setPlacements(parsed.placements);
-        setSelectedZoneId(parsed.placements[0].zoneId);
-      }
+      const draft = await loadStudioDraft<{selectedProductId?:string;fabricId?:string;colorId?:string;size?:string;quantity?:number;placements?:CustomDesignPlacement[]}>(DRAFT_STORAGE_KEY);
+      if (!draft) { onToast('Belum ada draf tersimpan.'); return; }
+      if (draft.selectedProductId) setSelectedProductId(draft.selectedProductId);
+      if (draft.fabricId) setFabricId(draft.fabricId);
+      if (draft.colorId) setColorId(draft.colorId);
+      if (draft.size) setSize(draft.size);
+      if (draft.quantity) setQuantity(draft.quantity);
+      if (Array.isArray(draft.placements)) { setPlacements(draft.placements); setSelectedZoneId(draft.placements[0]?.zoneId || ''); }
       onToast('Draf tersimpan berhasil dimuat.');
-    } catch {
-      onToast('Gagal memuat draf tersimpan.');
-    }
+    } catch { onToast('Gagal memuat draf dari penyimpanan browser.'); }
   };
 
   const handleOrderCustom = () => {
@@ -380,7 +373,6 @@ export function CustomDtfStudio({
       unitPrice,
       fabricName: selectedFabric.name,
       fabricId: selectedFabric.id,
-      estimatedDays: totalEtaDays || 3,
       customModel: `${activeSilhouette} ${selectedProduct.name}`,
       customPlacements: placements.map(({ originalDataUrl: _orig, ...rest }) => rest),
     });
@@ -412,7 +404,6 @@ export function CustomDtfStudio({
             <span aria-hidden="true">·</span>
             <span>Mockup Foto Depan &amp; Belakang</span>
             <span aria-hidden="true">·</span>
-            <span className="font-mono-tabular">Estimasi Jadi {totalEtaDays} Hari</span>
           </div>
         </div>
 
@@ -1053,25 +1044,7 @@ export function CustomDtfStudio({
                   )}
                 </div>
 
-                {shippingCouriers.length > 0 ? (
-                  <select
-                    value={selectedCourierId}
-                    onChange={(e) => setSelectedCourierId(e.target.value)}
-                    aria-label="Ekspedisi pengiriman"
-                    className="h-9 px-3 rounded-md text-xs bg-neutral-50 dark:bg-[#1A1A1A] border border-black/15 dark:border-white/15"
-                  >
-                    <option value="">-- Pilih ekspedisi pengiriman --</option>
-                    {shippingCouriers.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        Dari {shippingOriginCity}: {c.name} ({c.etaLabel})
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <span className="text-[11px] text-neutral-500">
-                    Dikirim dari {shippingOriginCity} (ekspedisi diatur Admin)
-                  </span>
-                )}
+
               </div>
 
               <div className="space-y-1.5 text-xs pt-2 border-t border-black/10 dark:border-white/10">
@@ -1085,7 +1058,7 @@ export function CustomDtfStudio({
                 </div>
                 <div className="flex justify-between text-sm font-bold pt-2 border-t border-black/10 dark:border-white/10">
                   <span>
-                    Total Estimasi ({quantity} pcs{totalEtaDays > 0 ? ` · ~${totalEtaDays} hari` : ''})
+                    Total Harga ({quantity} pcs)
                   </span>
                   <span className="text-lg font-mono-tabular text-[#FF4D00]">{formatRupiah(totalEstimate)}</span>
                 </div>
