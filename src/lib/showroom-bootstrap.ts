@@ -22,7 +22,7 @@ export async function loadShowroomBootstrap() {
       supabase.from('showroom_products').select('id,category_id,name,slug,description,base_price,long_sleeve_price,model,weight_description,is_featured,is_best_seller,is_published,stock_mode,available_colors,size_surcharges,material_id,showroom_materials(name,description,surcharge)').eq('is_published', true).order('created_at', { ascending: false }),
       supabase.from('showroom_materials').select('id,name,description,surcharge,is_active').eq('is_active', true),
       supabase.from('showroom_product_variants').select('id,product_id,color,size,sku,price_adjustment,stock_quantity,is_available').eq('is_available', true),
-      supabase.from('showroom_product_images').select('id,product_id,storage_path,alt_text,sort_order,is_primary').order('sort_order'),
+      supabase.from('showroom_product_images').select('id,product_id,storage_path,alt_text,sort_order,is_primary').order('is_primary', { ascending: false }).order('sort_order'),
       supabase.from('showroom_dtf_prices').select('id,size_code,label,width_cm,height_cm,price,is_active,sort_order,placement_view,box_x,box_y,box_w,box_h').eq('is_active', true).order('sort_order'),
       supabase.from('showroom_product_reviews').select('id,product_id,author_name,rating,comment,verified_purchase,created_at').eq('is_approved', true).order('created_at', { ascending: false }),
       supabase.from('showroom_settings').select('key,value'),
