@@ -102,8 +102,12 @@ export function CustomDtfStudio({
   useEffect(() => {
     if (preselectedProduct && preselectedProduct.isCustomBase) {
       setSelectedProductId(preselectedProduct.id);
+      return;
     }
-  }, [preselectedProduct]);
+    if (!selectedProductId && customBaseProducts.length > 0) {
+      setSelectedProductId(customBaseProducts[0].id);
+    }
+  }, [preselectedProduct, selectedProductId, customBaseProducts]);
 
   useEffect(() => {
     if (fabricId && !fabrics.some((f) => f.id === fabricId)) {
@@ -495,15 +499,17 @@ export function CustomDtfStudio({
               ref={canvasRef}
               className="relative aspect-[4/4.2] w-full rounded-lg overflow-hidden bg-gradient-to-b from-neutral-200 to-neutral-300 dark:from-[#1A1A1A] dark:to-[#101010] border border-black/10 dark:border-white/10 flex items-center justify-center select-none touch-none"
             >
-              {selectedProduct && activeView !== 'sleeve' ? (
+              {selectedProduct && (activeView !== 'sleeve' || Boolean(selectedProduct.images[2])) ? (
                 <>
                   <img
                     src={
-                      activeView === 'back'
-                        ? selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
-                        : selectedProduct.frontImage || selectedProduct.images[0]
+                      activeView === 'sleeve'
+                        ? selectedProduct.images[2]
+                        : activeView === 'back'
+                          ? selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
+                          : selectedProduct.frontImage || selectedProduct.images[0]
                     }
-                    alt={`${selectedProduct.name} tampak ${activeView === 'back' ? 'belakang' : 'depan'}`}
+                    alt={`${selectedProduct.name} ${activeView === 'sleeve' ? 'model lengan panjang' : activeView === 'back' ? 'tampak belakang' : 'tampak depan'}`}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-contain pointer-events-none"
                   />
