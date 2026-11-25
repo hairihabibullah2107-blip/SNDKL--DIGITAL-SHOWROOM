@@ -449,11 +449,31 @@ export default function App() {
         })),
         createdAt: data.created_at,
         updatedAt: data.created_at,
+        designs: (data.designs || []).map((design: any) => ({
+          id: design.id,
+          productName: design.product_name,
+          approvalStatus: design.approval_status,
+          designVersion: Number(design.design_version || 1),
+          designConfiguration: design.design_configuration || {},
+          previewUrl: design.preview_url || null,
+        })),
+        designApprovalOpen: data.status === 'waiting_customer_approval',
       } as Order;
       setRecentOrders((prev) => [order, ...prev.filter((entry) => entry.id !== order.id)]);
       return { order, emails: [] };
     } catch {
       return null;
+    }
+  };
+
+  const handleDesignDecision = async (trackingCode: string, designId: string, decision: 'approved' | 'revision_requested', notes: string): Promise<boolean> => {
+    try {
+      await invokeShowroom({ action: 'design_decision', tracking_code: trackingCode, design_id: designId, decision, notes });
+      showToast(decision === 'approved' ? 'Desain disetujui. Terima kasih.' : 'Permintaan revisi dikirim ke SANDIKALE.');
+      return true;
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Keputusan desain gagal dikirim.');
+      return false;
     }
   };
 
@@ -704,6 +724,7 @@ export default function App() {
           recentOrders={recentOrders}
           emailOutbox={emailOutbox}
           onTrackOrder={handleTrackOrder}
+          onDesignDecision={handleDesignDecision}
         />
       </main>
 
