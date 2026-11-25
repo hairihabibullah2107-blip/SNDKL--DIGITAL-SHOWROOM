@@ -412,10 +412,17 @@ export default function App() {
       const data = await invokeShowroom<Record<string, any>>({ action: 'track_order', tracking_code: trackingCode });
       const statusMap: Record<string, Order['stage']> = {
         customer_submitted: 'Menunggu Pembayaran',
+        waiting_admin_confirmation: 'Menunggu Pembayaran',
+        waiting_payment: 'Menunggu Pembayaran',
+        waiting_design_review: 'Verifikasi Desain DTF',
+        revision_requested: 'Verifikasi Desain DTF',
         waiting_customer_approval: 'Verifikasi Desain DTF',
         approved: 'Verifikasi Desain DTF',
+        in_production: 'Proses Cetak DTF',
         printing: 'Proses Cetak DTF',
         production: 'Heat Press & QC',
+        quality_control: 'Heat Press & QC',
+        ready: 'Dikirim',
         shipped: 'Dikirim',
         completed: 'Selesai',
       };
