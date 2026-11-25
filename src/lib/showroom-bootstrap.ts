@@ -19,7 +19,7 @@ export async function loadShowroomBootstrap() {
   const [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, reviewResult] =
     await Promise.all([
       supabase.from('showroom_categories').select('id,name,slug,description,image_path,sort_order,is_active').eq('is_active', true).order('sort_order'),
-      supabase.from('showroom_products').select('id,category_id,name,slug,description,base_price,long_sleeve_price,model,weight_description,is_featured,is_best_seller,is_published,available_colors,size_surcharges,material_id,showroom_materials(name,description,surcharge)').eq('is_published', true).order('created_at', { ascending: false }),
+      supabase.from('showroom_products').select('id,category_id,name,slug,description,base_price,long_sleeve_price,model,weight_description,is_featured,is_best_seller,is_published,stock_mode,available_colors,size_surcharges,material_id,showroom_materials(name,description,surcharge)').eq('is_published', true).order('created_at', { ascending: false }),
       supabase.from('showroom_materials').select('id,name,description,surcharge,is_active').eq('is_active', true),
       supabase.from('showroom_product_variants').select('id,product_id,color,size,sku,price_adjustment,stock_quantity,is_available').eq('is_available', true),
       supabase.from('showroom_product_images').select('id,product_id,storage_path,alt_text,sort_order,is_primary').order('sort_order'),
