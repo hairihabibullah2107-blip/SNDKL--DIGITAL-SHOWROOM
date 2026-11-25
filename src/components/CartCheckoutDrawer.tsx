@@ -143,7 +143,7 @@ export function CartCheckoutDrawer({
       <div className="w-full max-w-md h-full bg-white dark:bg-[#121212] text-[#080808] dark:text-white border-l border-black/10 dark:border-white/10 flex flex-col">
         <div className="h-14 px-5 border-b border-black/10 dark:border-white/10 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2 font-display text-xl font-bold uppercase tracking-wide">
-            <ShoppingBag className="w-4 h-4 text-[#7A1F2B]" />
+            <ShoppingCart className="w-4 h-4 text-[#7A1F2B]" />
             <span>
               {step === 'cart' ? `Tas Belanja (${items.length})` : step === 'checkout' ? 'Pengiriman & Checkout' : 'Kirim Desain & Konfirmasi'}
             </span>
