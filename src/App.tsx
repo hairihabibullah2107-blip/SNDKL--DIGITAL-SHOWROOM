@@ -1,4 +1,4 @@
-import { ArrowRight, Bell, Bug, CheckCircle2, HelpCircle, Layers, Lock, Shield, Sparkles, Truck, X } from 'lucide-react';
+import { ArrowRight, Bell, Bug, CheckCircle2, HelpCircle, Instagram, Layers, Lock, Shield, Sparkles, Truck, X } from 'lucide-react';
 import heroImage from './assets/images/hero_sandikale_streetwear_1795511846725.jpg';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AdminDashboardSupabase } from './components/AdminDashboardSupabase';
@@ -42,6 +42,11 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [siteContent, setSiteContent] = useState({
+    brandName: 'SANDIKALE',
+    brandTagline: 'Design & Productions',
+    instagramUrl: 'https://instagram.com/_sandikale',
+    instagramHandle: '@_sandikale',
+    storeAddress: 'Dusun Penangke, Desa Sesaot, Narmada, Lombok Barat, NTB',
     announcement: 'Custom apparel & DTF printing · Made to order in Sesaot',
     heroEyebrow: 'SANDIKALE DIGITAL SHOWROOM & DTF LAB',
     heroTitle: 'OWN YOUR STREET.|PRINT YOUR IDENTITY.',
@@ -768,10 +773,10 @@ export default function App() {
       <footer className="bg-white dark:bg-[#080808] border-t border-black/10 dark:border-white/10 py-10">
         <div className="max-w-[1360px] mx-auto px-4 md:px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-1">
-            <div className="font-display text-2xl font-extrabold uppercase tracking-wider">SANDIKALE</div>
+            <div className="font-display text-2xl font-extrabold uppercase tracking-wider">{siteContent.brandName}</div><p className="text-[11px] text-neutral-500 dark:text-neutral-400">{siteContent.brandTagline}</p>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 flex flex-wrap items-center gap-1.5">
               <span>
-                {shippingOriginCity ? `${shippingOriginCity} · ` : ''}SANDIKALE Digital Showroom &amp; DTF Custom Studio · Hak cipta © {new Date().getFullYear()}
+                {siteContent.storeAddress} · {siteContent.brandName} {siteContent.brandTagline} · Hak cipta © {new Date().getFullYear()}
               </span>
               <button
                 type="button"
@@ -786,6 +791,9 @@ export default function App() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 text-xs">
+            <a href={siteContent.instagramUrl} target="_blank" rel="noreferrer" className="h-9 px-3.5 rounded-md border border-black/15 dark:border-white/15 hover:border-[#FF4D00] flex items-center gap-1.5">
+              <Instagram className="w-3.5 h-3.5 text-[#FF4D00]"/><span>{siteContent.instagramHandle}</span>
+            </a>
             <button
               type="button"
               onClick={() => setTutorialOpen(true)}
@@ -801,7 +809,7 @@ export default function App() {
               className="h-9 px-3.5 rounded-md border border-black/15 dark:border-white/15 hover:border-[#FF4D00] flex items-center gap-1.5 cursor-pointer"
             >
               <Bell className="w-3.5 h-3.5 text-[#FF4D00]" />
-              <span>Aktifkan Push Promo &amp; Status</span>
+              <span>Notifikasi Browser</span>
             </button>
 
             <button
