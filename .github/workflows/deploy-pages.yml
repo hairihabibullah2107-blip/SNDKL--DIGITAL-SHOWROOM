@@ -2,7 +2,7 @@ name: Build and Deploy SANDIKALE Digital Showroom
 
 on:
   push:
-    branches: [sandikale-supabase-github-pages]
+    branches: [main, sandikale-supabase-github-pages]
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]
