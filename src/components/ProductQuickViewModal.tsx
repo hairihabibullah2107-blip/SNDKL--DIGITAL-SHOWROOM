@@ -121,12 +121,12 @@ export function ProductQuickViewModal({
         <div className="p-5 md:p-7 grid grid-cols-1 md:grid-cols-2 gap-7">
           {/* Left Gallery with swipe/navigation */}
           <div className="space-y-3">
-            <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-neutral-100 dark:bg-[#171717]">
+            <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-neutral-100 dark:bg-[#171717]" style={{ backgroundColor: activeColor?.hex || undefined }}>
               <img
                 src={activeImage}
                 alt={product.name}
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain mix-blend-multiply"
               />
               {galleryImages.length > 1 && (
                 <>
@@ -160,7 +160,7 @@ export function ProductQuickViewModal({
                     imageIdx === idx ? 'border-[#FF4D00]' : 'border-transparent opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={img} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                  <img src={img} alt="" referrerPolicy="no-referrer" className="w-full h-full object-contain mix-blend-multiply" />
                 </button>
               ))}
             </div>
