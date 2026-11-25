@@ -326,7 +326,6 @@ export default function App() {
     try {
       const items = await Promise.all(payload.items.map(async (item) => {
         const placements = item.customPlacements || [];
-        if (!placements.length) throw new Error(`Desain DTF untuk ${item.name} belum diunggah.`);
         return {
           product_id: item.productId,
           material_id: item.fabricId,
