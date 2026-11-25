@@ -1,0 +1,187 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { supabase } from '../lib/supabase';
+
+type Profile = { id: string; full_name: string; email: string | null; role: string; is_active: boolean };
+type OrderRow = {
+  id: string; order_number: string; spk_number: string; status: string; production_status: string;
+  payment_status: string; subtotal: number; total_amount: number; deposit_amount: number;
+  created_at: string; estimated_completion: string | null; notes: string | null;
+  showroom_customers?: { name: string; whatsapp: string } | null;
+  showroom_order_items?: Array<{ id: string; product_name_snapshot: string; quantity: number; subtotal: number; specification: Record<string, unknown> }>;
+};
+type ProductRow = { id: string; name: string; slug: string; base_price: number; is_published: boolean; is_featured: boolean; description: string | null };
+type CategoryRow = { id: string; name: string; slug: string; is_active: boolean };
+type PriceRow = { id: string; size_code: string; label: string; price: number; width_cm: number; height_cm: number; is_active: boolean };
+
+const money = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value || 0));
+const STATUS: Record<string, { status: string; production: string }> = {
+  'Menunggu Pembayaran': { status: 'waiting_payment', production: 'new' },
+  'Verifikasi Desain DTF': { status: 'waiting_design_review', production: 'design_confirmation' },
+  'Proses Cetak DTF': { status: 'in_production', production: 'printing' },
+  'Heat Press & QC': { status: 'quality_control', production: 'quality_control' },
+  'Siap Diserahkan': { status: 'ready', production: 'ready_for_pickup' },
+  'Selesai': { status: 'completed', production: 'completed' },
+};
+
+export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: () => void; onToast: (message: string) => void }) {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState<'orders' | 'products' | 'categories' | 'pricing'>('orders');
+  const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [products, setProducts] = useState<ProductRow[]>([]);
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [prices, setPrices] = useState<PriceRow[]>([]);
+  const [categoryName, setCategoryName] = useState('');
+  const [productName, setProductName] = useState('');
+  const [productPrice, setProductPrice] = useState('85000');
+  const [productCategory, setProductCategory] = useState('');
+  const [priceDraft, setPriceDraft] = useState<Record<string, string>>({});
+  const [search, setSearch] = useState('');
+
+  const load = useCallback(async () => {
+    const [o, p, c, d] = await Promise.all([
+      supabase.from('showroom_orders').select('id,order_number,spk_number,status,production_status,payment_status,subtotal,total_amount,deposit_amount,created_at,estimated_completion,notes,showroom_customers(name,whatsapp),showroom_order_items(id,product_name_snapshot,quantity,subtotal,specification)').order('created_at', { ascending: false }).limit(100),
+      supabase.from('showroom_products').select('id,name,slug,base_price,is_published,is_featured,description').order('created_at', { ascending: false }),
+      supabase.from('showroom_categories').select('id,name,slug,is_active').order('sort_order'),
+      supabase.from('showroom_dtf_prices').select('id,size_code,label,price,width_cm,height_cm,is_active').order('sort_order'),
+    ]);
+    const failure = [o.error, p.error, c.error, d.error].find(Boolean);
+    if (failure) throw failure;
+    setOrders((o.data || []) as unknown as OrderRow[]);
+    setProducts((p.data || []) as ProductRow[]);
+    setCategories((c.data || []) as CategoryRow[]);
+    setPrices((d.data || []) as PriceRow[]);
+  }, []);
+
+  const verifySession = useCallback(async () => {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) { setProfile(null); return; }
+    const { data: staff, error: staffError } = await supabase.from('showroom_staff_profiles')
+      .select('id,full_name,email,role,is_active').eq('auth_user_id', data.session.user.id).maybeSingle();
+    if (staffError || !staff || !staff.is_active || !['owner', 'admin', 'staff', 'production'].includes(staff.role)) {
+      await supabase.auth.signOut();
+      setProfile(null);
+      setError('Akun ini tidak memiliki akses staf showroom.');
+      return;
+    }
+    setProfile(staff as Profile);
+  }, []);
+
+  useEffect(() => { void verifySession(); }, [verifySession]);
+  useEffect(() => {
+    if (!profile) return;
+    void load().catch((e) => onToast(e.message || 'Gagal memuat data admin.'));
+    const channel = supabase.channel('showroom-admin-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_orders' }, () => { void load(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_products' }, () => { void load(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [profile, load, onToast]);
+
+  const visibleOrders = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return q ? orders.filter((o) => [o.order_number, o.spk_number, o.showroom_customers?.name, o.showroom_customers?.whatsapp].some((v) => String(v || '').toLowerCase().includes(q))) : orders;
+  }, [orders, search]);
+
+  const signIn = async (event: React.FormEvent) => {
+    event.preventDefault(); setBusy(true); setError('');
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (authError) throw authError;
+      await verifySession();
+      setPassword('');
+    } catch (e) { setError(e instanceof Error ? e.message : 'Login gagal.'); }
+    finally { setBusy(false); }
+  };
+
+  const signOut = async () => { await supabase.auth.signOut(); setProfile(null); onToast('Anda telah keluar dari admin.'); };
+
+  const updateStage = async (order: OrderRow, label: string) => {
+    const next = STATUS[label];
+    if (!next || !profile) return;
+    setBusy(true);
+    try {
+      const { error: updateError } = await supabase.from('showroom_orders').update({
+        status: next.status, production_status: next.production, updated_at: new Date().toISOString(),
+        updated_by: profile.id,
+      }).eq('id', order.id);
+      if (updateError) throw updateError;
+      await supabase.from('showroom_order_status_history').insert({
+        order_id: order.id, previous_status: order.status, new_status: next.status, changed_by: profile.id,
+        notes: `Status diperbarui dari dashboard oleh ${profile.full_name}.`,
+      });
+      await load(); onToast(`Status pesanan ${order.order_number} diperbarui.`);
+    } catch (e) { onToast(e instanceof Error ? e.message : 'Gagal memperbarui status.'); }
+    finally { setBusy(false); }
+  };
+
+  const addCategory = async (event: React.FormEvent) => {
+    event.preventDefault(); if (!categoryName.trim()) return;
+    const slug = categoryName.trim().toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const { error: e } = await supabase.from('showroom_categories').insert({ name: categoryName.trim(), slug, is_active: true });
+    if (e) { onToast(e.message); return; }
+    setCategoryName(''); await load(); onToast('Kategori berhasil ditambahkan.');
+  };
+
+  const addProduct = async (event: React.FormEvent) => {
+    event.preventDefault(); if (!productName.trim() || !productCategory) return;
+    const slug = productName.trim().toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const category = categories.find((c) => c.id === productCategory);
+    const { error: e } = await supabase.from('showroom_products').insert({
+      category_id: productCategory, name: productName.trim(), slug: `${slug}-${Date.now().toString().slice(-5)}`,
+      description: 'Produk baru SANDIKALE', base_price: Math.max(0, Number(productPrice) || 0),
+      is_published: false, is_featured: false, stock_mode: 'made_to_order', available_colors: ['Hitam', 'Putih'],
+    });
+    if (e) { onToast(e.message); return; }
+    setProductName(''); await load(); onToast(`Produk ditambahkan ke kategori ${category?.name || ''} sebagai draft.`);
+  };
+
+  const toggleProduct = async (product: ProductRow) => {
+    const { error: e } = await supabase.from('showroom_products').update({ is_published: !product.is_published, updated_at: new Date().toISOString() }).eq('id', product.id);
+    if (e) { onToast(e.message); return; } await load();
+  };
+
+  const savePrice = async (price: PriceRow) => {
+    const next = Number(priceDraft[price.id]);
+    if (!Number.isFinite(next) || next < 0) { onToast('Harga DTF tidak valid.'); return; }
+    const { error: e } = await supabase.from('showroom_dtf_prices').update({ price: next, updated_at: new Date().toISOString() }).eq('id', price.id);
+    if (e) { onToast(e.message); return; }
+    setPriceDraft((prev) => ({ ...prev, [price.id]: '' })); await load(); onToast(`Tarif ${price.size_code} disimpan.`);
+  };
+
+  if (!profile) return (
+    <main className="min-h-screen bg-[#080808] text-white flex items-center justify-center p-5">
+      <form onSubmit={signIn} className="w-full max-w-md bg-[#121212] border border-white/10 rounded-2xl p-7 space-y-5">
+        <div className="text-xs tracking-[.3em] uppercase text-[#FF4D00]">SANDIKALE · CONTROL ROOM</div>
+        <h1 className="text-3xl font-bold">Admin Showroom</h1>
+        <p className="text-sm text-white/60">Masuk menggunakan akun staf Supabase yang sudah terdaftar.</p>
+        <label className="block text-xs space-y-2">Email<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-lg bg-black border border-white/15 px-3 py-3 text-sm" autoComplete="username" /></label>
+        <label className="block text-xs space-y-2">Password<input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-lg bg-black border border-white/15 px-3 py-3 text-sm" autoComplete="current-password" /></label>
+        {error && <p className="text-sm text-red-400">{error}</p>}
+        <button disabled={busy} className="w-full rounded-lg bg-[#FF4D00] text-white font-bold py-3 disabled:opacity-50">{busy ? 'Memeriksa…' : 'Masuk'}</button>
+        <button type="button" onClick={onExitAdmin} className="w-full text-sm text-white/60 py-2">Kembali ke showroom</button>
+      </form>
+    </main>
+  );
+
+  return (
+    <main className="min-h-screen bg-[#080808] text-white p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5">
+          <div><div className="text-xs tracking-[.3em] uppercase text-[#FF4D00]">SANDIKALE · CONTROL ROOM</div><h1 className="text-2xl md:text-3xl font-bold mt-1">Dashboard Showroom</h1><p className="text-xs text-white/50 mt-1">{profile.full_name} · {profile.role}</p></div>
+          <div className="flex gap-2"><button onClick={() => void load()} className="border border-white/15 rounded-lg px-4 py-2 text-sm">Muat ulang</button><button onClick={signOut} className="bg-white text-black rounded-lg px-4 py-2 text-sm font-semibold">Keluar</button></div>
+        </header>
+        <nav className="flex flex-wrap gap-2">{(['orders','products','categories','pricing'] as const).map((key) => <button key={key} onClick={() => setTab(key)} className={`px-4 py-2 rounded-lg text-sm capitalize ${tab === key ? 'bg-[#FF4D00] text-white' : 'bg-white/5 text-white/65'}`}>{({orders:'Pesanan',products:'Produk',categories:'Kategori',pricing:'Harga DTF'} as Record<string,string>)[key]}</button>)}</nav>
+        {tab === 'orders' && <section className="space-y-4"><div className="flex flex-wrap justify-between gap-3"><h2 className="text-xl font-bold">Pesanan masuk ({orders.length})</h2><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nomor / nama / WhatsApp" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm" /></div>
+          {visibleOrders.map((order) => <article key={order.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 md:p-5 space-y-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="font-bold">{order.order_number}</div><div className="text-xs text-white/50">{order.spk_number} · {new Date(order.created_at).toLocaleString('id-ID')}</div></div><div className="text-right"><div className="font-bold">{money(Number(order.total_amount))}</div><div className="text-xs text-white/50">DP {money(Number(order.deposit_amount))} · {order.payment_status}</div></div></div><div className="text-sm">{order.showroom_customers?.name || 'Pelanggan'} · {order.showroom_customers?.whatsapp || '—'}</div><div className="text-xs text-white/60">{(order.showroom_order_items || []).map((item) => `${item.product_name_snapshot} × ${item.quantity}`).join(' · ')}</div><div className="flex flex-wrap items-center gap-3"><span className="text-xs text-white/50">Status: {order.status}</span><select disabled={busy || !['owner','admin','staff'].includes(profile.role)} defaultValue="" onChange={(e) => { if (e.target.value) void updateStage(order, e.target.value); }} className="bg-black border border-white/15 rounded-lg px-3 py-2 text-sm"><option value="">Ubah status produksi…</option>{Object.keys(STATUS).map((s) => <option key={s} value={s}>{s}</option>)}</select><a className="text-xs text-[#FF6A32]" href={`https://wa.me/${order.showroom_customers?.whatsapp || ''}`} target="_blank" rel="noreferrer">Hubungi pelanggan via WhatsApp</a></div></article>)}
+          {!visibleOrders.length && <p className="text-sm text-white/50">Belum ada pesanan yang cocok.</p>}</section>}
+        {tab === 'products' && <section className="space-y-4"><h2 className="text-xl font-bold">Katalog produk</h2><form onSubmit={addProduct} className="grid md:grid-cols-4 gap-2 bg-[#121212] border border-white/10 rounded-xl p-4"><input required value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="Nama produk" className="bg-black border border-white/10 rounded-lg px-3 py-2 text-sm" /><input required type="number" min="0" value={productPrice} onChange={(e) => setProductPrice(e.target.value)} placeholder="Harga" className="bg-black border border-white/10 rounded-lg px-3 py-2 text-sm" /><select required value={productCategory} onChange={(e) => setProductCategory(e.target.value)} className="bg-black border border-white/10 rounded-lg px-3 py-2 text-sm"><option value="">Pilih kategori</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select><button className="bg-[#FF4D00] rounded-lg py-2 text-sm font-semibold">Tambah draft</button></form><div className="grid md:grid-cols-2 gap-3">{products.map((p) => <article key={p.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 flex items-center justify-between gap-3"><div><div className="font-semibold">{p.name}</div><div className="text-xs text-white/50">{money(Number(p.base_price))} · {p.is_published ? 'Terbit' : 'Draft'}</div></div><button onClick={() => void toggleProduct(p)} className="text-xs border border-white/15 rounded-lg px-3 py-2">{p.is_published ? 'Tarik' : 'Terbitkan'}</button></article>)}</div></section>}
+        {tab === 'categories' && <section className="space-y-4"><h2 className="text-xl font-bold">Kategori katalog</h2><form onSubmit={addCategory} className="flex flex-wrap gap-2"><input required value={categoryName} onChange={(e) => setCategoryName(e.target.value)} placeholder="Nama kategori baru" className="flex-1 min-w-52 bg-[#121212] border border-white/10 rounded-lg px-3 py-2 text-sm" /><button className="bg-[#FF4D00] rounded-lg px-5 py-2 text-sm font-semibold">Tambah kategori</button></form><div className="grid md:grid-cols-3 gap-3">{categories.map((c) => <div key={c.id} className="bg-[#121212] border border-white/10 rounded-xl p-4"><div className="font-semibold">{c.name}</div><div className="text-xs text-white/50">{c.slug} · {c.is_active ? 'Aktif' : 'Nonaktif'}</div></div>)}</div></section>}
+        {tab === 'pricing' && <section className="space-y-4"><h2 className="text-xl font-bold">Tarif cetak DTF</h2><div className="grid md:grid-cols-2 gap-3">{prices.map((p) => <div key={p.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 flex items-center gap-3"><div className="flex-1"><div className="font-semibold">{p.label}</div><div className="text-xs text-white/50">{p.width_cm} × {p.height_cm} cm</div></div><input type="number" min="0" value={priceDraft[p.id] ?? String(p.price)} onChange={(e) => setPriceDraft((prev) => ({ ...prev, [p.id]: e.target.value }))} className="w-32 bg-black border border-white/10 rounded-lg px-3 py-2 text-sm" /><button onClick={() => void savePrice(p)} className="bg-[#FF4D00] rounded-lg px-3 py-2 text-xs font-semibold">Simpan</button></div>)}</div></section>}
+      </div>
+    </main>
+  );
+}
