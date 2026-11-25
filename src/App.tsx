@@ -35,7 +35,7 @@ const TUTORIAL_SEEN_KEY = 'sandikale_tutorial_seen_v1';
 
 export default function App() {
   const [isAdminRoute, setIsAdminRoute] = useState(
-    () => typeof window !== 'undefined' && window.location.pathname === '/admin'
+    () => typeof window !== 'undefined' && (window.location.pathname.endsWith('/admin') || new URLSearchParams(window.location.search).get('view') === 'admin')
   );
   const [darkMode, setDarkMode] = useState(true);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -137,7 +137,7 @@ export default function App() {
 
   useEffect(() => {
     const onPopState = () => {
-      setIsAdminRoute(window.location.pathname === '/admin');
+      setIsAdminRoute(window.location.pathname.endsWith('/admin') || new URLSearchParams(window.location.search).get('view') === 'admin');
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -314,7 +314,7 @@ export default function App() {
           color: item.colorName,
           sizes: [{ size: item.size, quantity: item.quantity }],
           prints: placements.map((placement) => ({
-            position: placement.zoneLabel,
+            position: ({ A6: 'Depan - Dada kiri', A5: 'Lengan kiri', A4: 'Depan - Tengah', A3: 'Belakang - Tengah' } as Record<string, string>)[placement.zoneId] || 'Depan - Tengah',
             size_code: placement.zoneId,
             design_name: placement.artworkName || 'design.png',
             design_base64: dataUrlToBase64(placement.artworkDataUrl),
@@ -477,7 +477,7 @@ export default function App() {
   const handleOpenAdminLock = async () => {
     if (adminToken) {
       try {
-        window.history.pushState({}, '', '/admin');
+        window.history.pushState({}, '', '?view=admin');
       } catch {
         // ignore history error in restricted frame
       }
@@ -534,7 +534,7 @@ export default function App() {
 
   const exitAdminPortal = () => {
     try {
-      window.history.pushState({}, '', '/');
+      window.history.pushState({}, '', window.location.pathname);
     } catch {
       // ignore history error in restricted frame
     }
