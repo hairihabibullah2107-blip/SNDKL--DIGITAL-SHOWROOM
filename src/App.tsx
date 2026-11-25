@@ -329,6 +329,7 @@ export default function App() {
         if (!placements.length) throw new Error(`Desain DTF untuk ${item.name} belum diunggah.`);
         return {
           product_id: item.productId,
+          material_id: item.fabricId,
           quantity: item.quantity,
           garment_type: 'short',
           color: item.colorName,
