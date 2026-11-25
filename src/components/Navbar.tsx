@@ -25,6 +25,8 @@ interface NavbarProps {
   onToggleDark: () => void;
   isOnline: boolean;
   showAnnouncement: boolean;
+  announcementText: string;
+  brandName: string;
   onDismissAnnouncement: () => void;
 }
 
@@ -40,6 +42,8 @@ export function Navbar({
   onToggleDark,
   isOnline,
   showAnnouncement,
+  announcementText,
+  brandName,
   onDismissAnnouncement,
 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -62,7 +66,7 @@ export function Navbar({
         {showAnnouncement && (
           <div className="h-8 bg-[#FF4D00] text-white px-4 flex items-center justify-between text-xs font-medium">
             <span className="truncate mx-auto">
-              Gratis ongkir seluruh Indonesia untuk order di atas Rp 500.000 · Produksi DTF 2–3 hari kerja
+              {announcementText}
             </span>
             <button
               type="button"
@@ -91,7 +95,7 @@ export function Navbar({
               onClick={() => handleNav('hero')}
               className="font-display text-2xl md:text-3xl font-extrabold tracking-wider uppercase text-[#080808] dark:text-white whitespace-nowrap shrink-0 cursor-pointer"
             >
-              SANDIKALE
+              {brandName}
             </button>
 
             {/* Zone 2: 5 Clean Single-Line Nav Links */}

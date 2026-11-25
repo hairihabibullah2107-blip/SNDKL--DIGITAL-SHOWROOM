@@ -16,6 +16,8 @@ import type {
   CartItem,
   CustomDesignPlacement,
   DtfZonePrice,
+  BulkDiscountRule,
+  PrintingMethodOption,
   FabricOption,
   GarmentColorOption,
   Product,
@@ -31,6 +33,8 @@ interface CustomDtfStudioProps {
   shippingOriginCity: string;
   shippingCouriers: ShippingCourierConfig[];
   dtfZones: DtfZonePrice[];
+  bulkDiscounts: BulkDiscountRule[];
+  printingMethods: PrintingMethodOption[];
   preselectedProduct?: Product | null;
   onAddCustomToCart: (item: CartItem) => void;
   onToast: (msg: string) => void;
@@ -66,6 +70,8 @@ export function CustomDtfStudio({
   shippingOriginCity,
   shippingCouriers,
   dtfZones,
+  bulkDiscounts,
+  printingMethods,
   preselectedProduct,
   onAddCustomToCart,
   onToast,
@@ -133,7 +139,8 @@ export function CustomDtfStudio({
   const dtfTotalPerShirt = placements.reduce((sum, p) => sum + p.price, 0);
   const baseGarmentPrice = selectedProduct?.price || 0;
   const rawUnitPrice = baseGarmentPrice + (selectedFabric?.priceModifier || 0) + dtfTotalPerShirt;
-  const bulkDiscountRate = quantity >= 12 ? 0.12 : quantity >= 6 ? 0.06 : 0;
+  const activeBulkDiscount = [...bulkDiscounts].sort((a,b)=>b.minQuantity-a.minQuantity).find((rule)=>quantity>=rule.minQuantity);
+  const bulkDiscountRate = Math.max(0,Math.min(100,activeBulkDiscount?.discountPercent||0))/100;
   const unitPrice = Math.round(rawUnitPrice * (1 - bulkDiscountRate));
   const totalEstimate = unitPrice * quantity;
   const courierDays = selectedCourier ? selectedCourier.etaDays : 0;
@@ -379,6 +386,8 @@ export function CustomDtfStudio({
 
   const activeZoneMeta = dtfZones.find((z) => z.id === selectedZoneId);
   const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
+  const mockupType = activeSilhouette === 'longsleeve' ? 'long' : 'short';
+  const selectedMockup = selectedColor?.mockups?.find((item) => item.garmentType === mockupType);
 
   return (
     <section id="studio" className="py-14 md:py-20 bg-neutral-100/70 dark:bg-[#0E0E0E] border-b border-black/10 dark:border-white/10">
@@ -456,8 +465,8 @@ export function CustomDtfStudio({
                   <img
                     src={
                       activeView === 'back'
-                        ? selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
-                        : selectedProduct.frontImage || selectedProduct.images[0]
+                        ? selectedMockup?.backImage || selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
+                        : selectedMockup?.frontImage || selectedProduct.frontImage || selectedProduct.images[0]
                     }
                     alt={selectedProduct.name}
                     referrerPolicy="no-referrer"
@@ -863,6 +872,7 @@ export function CustomDtfStudio({
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {printingMethods.length>0&&<div className="mb-4 rounded-xl border border-black/10 dark:border-white/10 p-3 space-y-2"><div className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">Teknik produksi tersedia</div><div className="flex flex-wrap gap-2">{printingMethods.map(method=><span key={method.id} title={method.description} className="rounded-full border border-black/10 dark:border-white/15 px-3 py-1.5 text-[11px]">{method.name}<span className="ml-1.5 text-neutral-400">{method.pricingType==='quote'?'· Penawaran admin':'· Tersedia'}</span></span>)}</div><p className="text-[10px] text-neutral-500">Pemesanan online saat ini menghitung tarif DTF. Teknik lain dapat dikonsultasikan dengan admin.</p></div>}
                 {dtfZones.map((zone) => {
                   const isAdded = placements.some((p) => p.zoneId === zone.id);
                   const isFocused = selectedZoneId === zone.id;

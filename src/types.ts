@@ -28,6 +28,7 @@ export interface GarmentColorOption {
   name: string;
   hex: string;
   publishedByAdmin: boolean;
+  mockups?: Array<{ garmentType: 'short' | 'long'; frontImage: string; backImage: string }>;
 }
 
 export interface Product {
@@ -49,6 +50,7 @@ export interface Product {
   sizes: Record<string, number>;
   isCustomBase: boolean;
   madeToOrder?: boolean;
+  variantPrices?: Record<string, number>;
   featured: boolean;
   rating: number;
   reviewCount: number;
@@ -74,6 +76,10 @@ export type PaymentMethodId =
   | 'qris'
   | 'ewallet_gopay'
   | 'intl_card_wise';
+
+export interface PrintingMethodOption { id: string; name: string; description: string; pricingType: string; basePrice: number }
+
+export interface BulkDiscountRule { minQuantity: number; discountPercent: number }
 
 export interface PaymentMethodConfig {
   id: PaymentMethodId;

@@ -1,4 +1,4 @@
-import { ArrowRight, Bell, Bug, CheckCircle2, HelpCircle, Layers, Lock, Shield, Sparkles, Truck, X } from 'lucide-react';
+import { ArrowRight, Bell, Bug, CheckCircle2, HelpCircle, Instagram, Layers, Lock, Shield, Sparkles, Truck, X } from 'lucide-react';
 import heroImage from './assets/images/hero_sandikale_streetwear_1795511846725.jpg';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AdminDashboardSupabase } from './components/AdminDashboardSupabase';
@@ -14,6 +14,8 @@ import { loadShowroomBootstrap } from './lib/showroom-bootstrap';
 import type {
   CartItem,
   Category,
+  BulkDiscountRule,
+  PrintingMethodOption,
   ChatMessage,
   DtfZonePrice,
   EmailNotification,
@@ -41,6 +43,20 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(true);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
+  const [siteContent, setSiteContent] = useState({
+    brandName: 'SANDIKALE',
+    brandTagline: 'Design & Productions',
+    instagramUrl: 'https://instagram.com/_sandikale',
+    instagramHandle: '@_sandikale',
+    storeAddress: 'Dusun Penangke, Desa Sesaot, Narmada, Lombok Barat, NTB',
+    announcement: 'Custom apparel & DTF printing · Made to order in Sesaot',
+    heroEyebrow: 'SANDIKALE DIGITAL SHOWROOM & DTF LAB',
+    heroTitle: 'OWN YOUR STREET.|PRINT YOUR IDENTITY.',
+    heroSubtitle: 'Kaos custom dan studio sablon DTF dengan pilihan bahan, visualisasi desain, serta pelacakan produksi dalam satu tempat.',
+    primaryCta: 'Custom Your Style',
+    secondaryCta: 'Shop Collection',
+  });
+
   const [activeSection, setActiveSection] = useState('hero');
 
   // Storefront data (filtered server-side to admin-permitted items only)
@@ -53,6 +69,8 @@ export default function App() {
   const [shippingCouriers, setShippingCouriers] = useState<ShippingCourierConfig[]>([]);
   const [adminWhatsapp, setAdminWhatsapp] = useState('6281234567890');
   const [dtfZones, setDtfZones] = useState<DtfZonePrice[]>([]);
+  const [bulkDiscounts, setBulkDiscounts] = useState<BulkDiscountRule[]>([{minQuantity:6,discountPercent:6},{minQuantity:12,discountPercent:12}]);
+  const [printingMethods, setPrintingMethods] = useState<PrintingMethodOption[]>([]);
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
@@ -200,6 +218,7 @@ export default function App() {
   const loadBootstrap = useCallback(async () => {
     try {
       const data = await loadShowroomBootstrap();
+      setSiteContent(data.siteContent || siteContent);
       setCategories(data.categories);
       setProducts(data.products);
       setFabrics(data.fabrics);
@@ -209,6 +228,8 @@ export default function App() {
       setShippingCouriers(data.shippingCouriers);
       setAdminWhatsapp(data.adminWhatsapp);
       setDtfZones(data.dtfZones);
+      setBulkDiscounts(data.bulkDiscounts || []);
+      setPrintingMethods(data.printingMethods || []);
       setReviews(data.reviews);
       setChatMessages(data.chatMessages);
       try { localStorage.setItem(CACHE_BOOTSTRAP_KEY, JSON.stringify(data)); } catch { /* optional offline cache */ }
@@ -219,6 +240,7 @@ export default function App() {
         const cached = localStorage.getItem(CACHE_BOOTSTRAP_KEY);
         if (cached) {
           const data = JSON.parse(cached);
+          setSiteContent(data.siteContent || siteContent);
           setCategories(data.categories || []);
           setProducts(data.products || []);
           setFabrics(data.fabrics || []);
@@ -228,6 +250,8 @@ export default function App() {
           setShippingCouriers(data.shippingCouriers || []);
           setAdminWhatsapp(data.adminWhatsapp || '6282266412844');
           setDtfZones(data.dtfZones || []);
+          setBulkDiscounts(data.bulkDiscounts || []);
+          setPrintingMethods(data.printingMethods || []);
           setReviews(data.reviews || []);
         }
       } catch { /* ignore invalid cache */ }
@@ -241,6 +265,17 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_products' }, () => { void loadBootstrap(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_categories' }, () => { void loadBootstrap(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_dtf_prices' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_settings' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_materials' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_images' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_variants' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_materials' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_settings' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_images' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_variants' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_printing_methods' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_garment_mockups' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_pricing_rules' }, () => { void loadBootstrap(); })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [loadBootstrap]);
@@ -292,7 +327,7 @@ export default function App() {
           colorHex,
           size,
           quantity,
-          unitPrice: product.price,
+          unitPrice: product.price + (product.variantPrices?.[`${colorName.toLowerCase()}::${size}`] || 0),
           estimatedDays: 2,
         },
       ];
@@ -566,6 +601,8 @@ export default function App() {
         onToggleDark={() => setDarkMode((d) => !d)}
         isOnline={isOnline}
         showAnnouncement={showAnnouncement}
+        announcementText={siteContent.announcement}
+        brandName={siteContent.brandName}
         onDismissAnnouncement={() => setShowAnnouncement(false)}
       />
 
@@ -593,16 +630,16 @@ export default function App() {
           <div className="relative z-10 max-w-[1360px] w-full mx-auto px-4 md:px-6 py-12 md:py-20 space-y-6">
             <div className="max-w-3xl space-y-4">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#FF4D00]">
-                SANDIKALE DIGITAL SHOWROOM &amp; DTF LAB
+                {siteContent.heroEyebrow}
               </p>
               <h1
                 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold uppercase tracking-tight leading-[0.94] text-white"
                 style={{ textWrap: 'balance' }}
               >
-                OWN YOUR STREET. <span className="text-[#FF4D00]">PRINT YOUR IDENTITY.</span>
+                {siteContent.heroTitle.split('|')[0]} <span className="text-[#FF4D00]">{siteContent.heroTitle.split('|')[1] || ''}</span>
               </h1>
               <p className="text-sm md:text-base text-neutral-300 max-w-xl leading-relaxed">
-                Kaos boxy heavyweight dan studio sablon DTF kustom dengan pratinjau langsung mengikuti potongan produk katalog, pilihan kain terkurasi, dan pelacakan produksi real-time.
+                {siteContent.heroSubtitle}
               </p>
             </div>
 
@@ -613,14 +650,14 @@ export default function App() {
                 className="h-12 px-7 rounded-md bg-[#FF4D00] hover:bg-[#e04400] text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer"
               >
                 <Layers className="w-4 h-4" />
-                <span>Custom Your Style</span>
+                <span>{siteContent.primaryCta}</span>
               </button>
               <button
                 type="button"
                 onClick={() => scrollToSection('katalog')}
                 className="h-12 px-7 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/25 text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer"
               >
-                <span>Shop Collection</span>
+                <span>{siteContent.secondaryCta}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
               <button
@@ -679,6 +716,8 @@ export default function App() {
           shippingOriginCity={shippingOriginCity}
           shippingCouriers={shippingCouriers}
           dtfZones={dtfZones}
+          bulkDiscounts={bulkDiscounts}
+          printingMethods={printingMethods}
           preselectedProduct={studioProduct}
           onAddCustomToCart={handleAddCustomToCart}
           onToast={showToast}
@@ -745,10 +784,10 @@ export default function App() {
       <footer className="bg-white dark:bg-[#080808] border-t border-black/10 dark:border-white/10 py-10">
         <div className="max-w-[1360px] mx-auto px-4 md:px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-1">
-            <div className="font-display text-2xl font-extrabold uppercase tracking-wider">SANDIKALE</div>
+            <div className="font-display text-2xl font-extrabold uppercase tracking-wider">{siteContent.brandName}</div><p className="text-[11px] text-neutral-500 dark:text-neutral-400">{siteContent.brandTagline}</p>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 flex flex-wrap items-center gap-1.5">
               <span>
-                {shippingOriginCity ? `${shippingOriginCity} · ` : ''}SANDIKALE Digital Showroom &amp; DTF Custom Studio · Hak cipta © {new Date().getFullYear()}
+                {siteContent.storeAddress} · {siteContent.brandName} {siteContent.brandTagline} · Hak cipta © {new Date().getFullYear()}
               </span>
               <button
                 type="button"
@@ -763,6 +802,9 @@ export default function App() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5 text-xs">
+            <a href={siteContent.instagramUrl} target="_blank" rel="noreferrer" className="h-9 px-3.5 rounded-md border border-black/15 dark:border-white/15 hover:border-[#FF4D00] flex items-center gap-1.5">
+              <Instagram className="w-3.5 h-3.5 text-[#FF4D00]"/><span>{siteContent.instagramHandle}</span>
+            </a>
             <button
               type="button"
               onClick={() => setTutorialOpen(true)}
@@ -778,7 +820,7 @@ export default function App() {
               className="h-9 px-3.5 rounded-md border border-black/15 dark:border-white/15 hover:border-[#FF4D00] flex items-center gap-1.5 cursor-pointer"
             >
               <Bell className="w-3.5 h-3.5 text-[#FF4D00]" />
-              <span>Aktifkan Push Promo &amp; Status</span>
+              <span>Notifikasi Browser</span>
             </button>
 
             <button
