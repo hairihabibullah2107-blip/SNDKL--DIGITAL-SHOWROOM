@@ -1,4 +1,4 @@
-import { ArrowRight, Bell, Bug, CheckCircle2, HelpCircle, Layers, Shield, Sparkles, Truck, X } from 'lucide-react';
+import { ArrowRight, Bell, Bug, CheckCircle2, HelpCircle, Layers, Lock, Shield, Sparkles, Truck, X } from 'lucide-react';
 import heroImage from './assets/images/hero_sandikale_streetwear_1795511846725.jpg';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AdminDashboardSupabase } from './components/AdminDashboardSupabase';
