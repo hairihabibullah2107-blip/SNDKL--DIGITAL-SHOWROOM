@@ -376,7 +376,7 @@ export function CustomDtfStudio({
       fabricName: selectedFabric.name,
       fabricId: selectedFabric.id,
       estimatedDays: totalEtaDays || 3,
-      customModel: selectedProduct.name,
+      customModel: `${activeSilhouette} ${selectedProduct.name}`,
       customPlacements: placements.map(({ originalDataUrl: _orig, ...rest }) => rest),
     });
   };
