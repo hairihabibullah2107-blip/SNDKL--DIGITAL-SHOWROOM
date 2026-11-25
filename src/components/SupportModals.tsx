@@ -175,7 +175,7 @@ export function AccountModal({
             <div className="space-y-2">
               <h4 className="font-display text-lg font-bold uppercase">Riwayat Pesanan ({orders.length})</h4>
               {orders.length === 0 ? (
-                <p className="text-xs text-neutral-500">Belum ada riwayat pesanan pada akun ini.</p>
+                <p className="text-xs text-neutral-500">Checkout tidak memerlukan akun. Gunakan kode tracking pribadi untuk memantau pesanan.</p>
               ) : (
                 <div className="space-y-2">
                   {orders.map((ord) => (
@@ -352,7 +352,7 @@ export function BugReportModal({ open, onClose, userEmail, onSubmitted }: BugRep
       `Judul: ${title}`,
       `Detail: ${description}`,
       `Perangkat: ${window.innerWidth}x${window.innerHeight}`,
-    ].join('\\n');
+    ].join(String.fromCharCode(10));
     window.open(`https://wa.me/6282266412844?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
     setTitle(''); setDescription(''); onSubmitted(); onClose();
   };
