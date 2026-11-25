@@ -111,8 +111,8 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
   const exportOrdersCsv = () => {
     const header = ['Nomor Pesanan','Nomor SPK','Tanggal','Pelanggan','WhatsApp','Status','Pembayaran','Total','DP'];
     const rows = orders.map((order) => [order.order_number,order.spk_number,new Date(order.created_at).toLocaleString('id-ID'),order.showroom_customers?.name || '',order.showroom_customers?.whatsapp || '',order.status,order.payment_status,order.total_amount,order.deposit_amount]);
-    const csv = [header,...rows].map((row) => row.map((value) => '"' + String(value ?? '').replace(/"/g,'""') + '"').join(',')).join('\\r\\n');
-    const url = URL.createObjectURL(new Blob(['\\ufeff',csv],{type:'text/csv;charset=utf-8;'}));
+    const csv = [header,...rows].map((row) => row.map((value) => '"' + String(value ?? '').replace(/"/g,'""') + '"').join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob(['\ufeff',csv],{type:'text/csv;charset=utf-8;'}));
     const link = document.createElement('a'); link.href=url; link.download='SANDIKALE-laporan-pesanan.csv'; link.click(); URL.revokeObjectURL(url);
   };
 
