@@ -358,6 +358,7 @@ export default function App() {
         const placements = item.customPlacements || [];
         return {
           product_id: item.productId,
+          bulk_discount_eligible: item.type === 'custom',
           material_id: item.fabricId,
           quantity: item.quantity,
           garment_type: /long|lengan panjang/i.test(item.customModel || item.name) ? 'long' : 'short',
