@@ -78,11 +78,18 @@ export async function loadShowroomBootstrap() {
     }
     if (!Object.keys(sizes).length) for (const size of ['S', 'M', 'L', 'XL', 'XXL']) sizes[size] = 0;
     const mockupBase = `${import.meta.env.BASE_URL}mockups`;
-    const photoUrls = [
+    const fallbackMockups = [
       `${mockupBase}/sandikale-front.svg`,
       `${mockupBase}/sandikale-back.svg`,
       `${mockupBase}/sandikale-long-sleeve.svg`,
     ];
+    const uploadedPhotoUrls = productImages
+      .map((photo) => storagePublicUrl(photo.storage_path))
+      .filter(Boolean);
+    const photoUrls = fallbackMockups.map((fallback, index) => uploadedPhotoUrls[index] || fallback);
+    if (uploadedPhotoUrls.length > fallbackMockups.length) {
+      photoUrls.push(...uploadedPhotoUrls.slice(fallbackMockups.length));
+    }
     const material = Array.isArray(row.showroom_materials) ? row.showroom_materials[0] : row.showroom_materials;
     const price = asNumber(row.base_price);
     const modelName = String(row.model || '').toLowerCase();
