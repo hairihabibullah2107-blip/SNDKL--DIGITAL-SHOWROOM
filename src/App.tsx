@@ -245,6 +245,9 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_settings' }, () => { void loadBootstrap(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_images' }, () => { void loadBootstrap(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_variants' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_printing_methods' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_garment_mockups' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_pricing_rules' }, () => { void loadBootstrap(); })
       .subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [loadBootstrap]);
