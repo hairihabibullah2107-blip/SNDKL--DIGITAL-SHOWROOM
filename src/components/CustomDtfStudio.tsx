@@ -16,6 +16,7 @@ import type {
   CartItem,
   CustomDesignPlacement,
   DtfZonePrice,
+  BulkDiscountRule,
   FabricOption,
   GarmentColorOption,
   Product,
@@ -31,6 +32,7 @@ interface CustomDtfStudioProps {
   shippingOriginCity: string;
   shippingCouriers: ShippingCourierConfig[];
   dtfZones: DtfZonePrice[];
+  bulkDiscounts: BulkDiscountRule[];
   preselectedProduct?: Product | null;
   onAddCustomToCart: (item: CartItem) => void;
   onToast: (msg: string) => void;
@@ -66,6 +68,7 @@ export function CustomDtfStudio({
   shippingOriginCity,
   shippingCouriers,
   dtfZones,
+  bulkDiscounts,
   preselectedProduct,
   onAddCustomToCart,
   onToast,
@@ -133,7 +136,8 @@ export function CustomDtfStudio({
   const dtfTotalPerShirt = placements.reduce((sum, p) => sum + p.price, 0);
   const baseGarmentPrice = selectedProduct?.price || 0;
   const rawUnitPrice = baseGarmentPrice + (selectedFabric?.priceModifier || 0) + dtfTotalPerShirt;
-  const bulkDiscountRate = quantity >= 12 ? 0.12 : quantity >= 6 ? 0.06 : 0;
+  const activeBulkDiscount = [...bulkDiscounts].sort((a,b)=>b.minQuantity-a.minQuantity).find((rule)=>quantity>=rule.minQuantity);
+  const bulkDiscountRate = Math.max(0,Math.min(100,activeBulkDiscount?.discountPercent||0))/100;
   const unitPrice = Math.round(rawUnitPrice * (1 - bulkDiscountRate));
   const totalEstimate = unitPrice * quantity;
   const courierDays = selectedCourier ? selectedCourier.etaDays : 0;
