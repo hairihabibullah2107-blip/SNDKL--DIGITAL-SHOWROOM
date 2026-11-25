@@ -324,8 +324,8 @@ export function ProductCatalog({
                           >
                             <option value="">-- Pilih Ukuran --</option>
                             {Object.entries(product.sizes).map(([sz, stk]) => (
-                              <option key={sz} value={sz} disabled={stk <= 0}>
-                                {sz} ({stk} pcs)
+                              <option key={sz} value={sz} disabled={!product.madeToOrder && stk <= 0}>
+                                {sz} ({product.madeToOrder ? 'Dibuat setelah dipesan' : `${stk} pcs`})
                               </option>
                             ))}
                           </select>

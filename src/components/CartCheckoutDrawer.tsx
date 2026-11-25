@@ -370,7 +370,7 @@ export function CartCheckoutDrawer({
               })
               .join('\n');
             const waText = encodeURIComponent(
-              `Halo Admin SANDIKALE,\n\nSaya baru saja menyelesaikan checkout gambaran pesanan di website:\n- No. Pesanan: ${createdOrder.id}\n- Nama: ${createdOrder.customerName}\n- Kota Tujuan: ${createdOrder.shippingCity} (${createdOrder.shippingCourier})\n- Metode: ${createdOrder.paymentLabel}\n- Estimasi Total: ${formatRupiah(createdOrder.total)}\n\nDetail Produk:\n${itemLines}\n\nBerikut saya lampirkan file desain asli (PNG/AI/CDR/PDF) untuk proses revisi & konfirmasi produksi lebih lanjut. Terima kasih!`
+              `Halo Admin SANDIKALE,\n\nSaya baru saja membuat pesanan di website SANDIKALE:\n- No. Pesanan: ${createdOrder.id}\n- Kode Tracking: ${createdOrder.trackingNumber}\n- Nama: ${createdOrder.customerName}\n- Kota Tujuan: ${createdOrder.shippingCity} (${createdOrder.shippingCourier})\n- Metode: ${createdOrder.paymentLabel}\n- Estimasi Total: ${formatRupiah(createdOrder.total)}\n\nDetail Produk:\n${itemLines}\n\nBerikut saya lampirkan file desain asli (PNG/AI/CDR/PDF) untuk proses revisi & konfirmasi produksi lebih lanjut. Terima kasih!`
             );
             const waUrl = `https://wa.me/${cleanWa}?text=${waText}`;
 
@@ -382,7 +382,7 @@ export function CartCheckoutDrawer({
                     <span className="font-mono-tabular font-bold">{createdOrder.id}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-neutral-500">Referensi</span>
+                    <span className="text-neutral-500">Kode Tracking</span>
                     <span className="font-mono-tabular">{createdOrder.paymentReference}</span>
                   </div>
                   <div className="flex items-center justify-between text-xs">
@@ -422,12 +422,12 @@ export function CartCheckoutDrawer({
                       <span>Simulasi Pembayaran Tercatat!</span>
                     </div>
                     <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                      Ringkasan pesanan dikirim ke email <strong>{createdOrder.customerEmail}</strong> dan berstatus <strong>{createdOrder.stage}</strong> sambil menunggu file desain Anda di WhatsApp Admin.
+                      Pesanan tersimpan di database dan berstatus <strong>{createdOrder.stage}</strong> sambil menunggu file desain Anda di WhatsApp Admin.
                     </p>
                     <button
                       type="button"
                       onClick={() => {
-                        const oid = createdOrder.id;
+                        const oid = createdOrder.trackingNumber;
                         setStep('cart');
                         setCreatedOrder(null);
                         onClose();

@@ -2,6 +2,7 @@ import { Bug, ChevronLeft, ChevronRight, Compass, HelpCircle, Layers, LogOut, Ma
 import { useEffect, useState } from 'react';
 import type { ChatMessage, EmailNotification, Order, UserProfile } from '../types';
 import { formatDateTime, formatRupiah } from '../utils/format';
+import { supabase } from '../lib/supabase';
 
 interface AccountModalProps {
   open: boolean;
@@ -33,15 +34,8 @@ export function AccountModal({
 
   useEffect(() => {
     if (open && token) {
-      fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (data) {
-            setOrders(data.orders || []);
-            setEmails(data.emails || []);
-          }
-        })
-        .catch(() => {});
+      setOrders([]);
+      setEmails([]);
     }
   }, [open, token]);
 
@@ -50,18 +44,27 @@ export function AccountModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(mode === 'login' ? { email, password } : { name, email, phone, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setErrorMsg(data.error || 'Gagal memproses akun.');
-      return;
+    try {
+      const result = mode === 'login'
+        ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        : await supabase.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim(), phone: phone.trim() } } });
+      if (result.error) throw result.error;
+      if (!result.data.session || !result.data.user) {
+        setErrorMsg('Pendaftaran diterima. Periksa email untuk verifikasi, lalu masuk kembali.');
+        return;
+      }
+      const authUser = result.data.user;
+      onAuthSuccess({
+        id: authUser.id,
+        name: String(authUser.user_metadata?.full_name || name || email.split('@')[0]),
+        email: authUser.email || email,
+        phone: String(authUser.user_metadata?.phone || phone),
+        role: 'customer',
+        createdAt: authUser.created_at,
+      }, result.data.session.access_token);
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Gagal memproses akun.');
     }
-    onAuthSuccess(data.user, data.token);
   };
 
   return (
@@ -172,7 +175,7 @@ export function AccountModal({
             <div className="space-y-2">
               <h4 className="font-display text-lg font-bold uppercase">Riwayat Pesanan ({orders.length})</h4>
               {orders.length === 0 ? (
-                <p className="text-xs text-neutral-500">Belum ada riwayat pesanan pada akun ini.</p>
+                <p className="text-xs text-neutral-500">Checkout tidak memerlukan akun. Gunakan kode tracking pribadi untuk memantau pesanan.</p>
               ) : (
                 <div className="space-y-2">
                   {orders.map((ord) => (
@@ -257,14 +260,14 @@ export function LiveChatWidget({ messages, userName, onSendMessage }: LiveChatWi
           className="h-11 px-4 rounded-full bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#FF4D00] dark:hover:bg-[#FF4D00] dark:hover:text-white shadow-lg border border-black/15 dark:border-white/15 flex items-center gap-2 text-xs font-semibold transition-colors cursor-pointer"
         >
           <MessageCircle className="w-4 h-4 text-[#FF4D00]" />
-          <span>Live Chat</span>
+          <span>WhatsApp Chat</span>
         </button>
       ) : (
         <div className="w-80 sm:w-96 rounded-xl bg-white dark:bg-[#141414] border border-black/15 dark:border-white/15 shadow-2xl overflow-hidden flex flex-col">
           <div className="px-4 py-3 bg-[#080808] text-white flex items-center justify-between">
             <div>
-              <div className="text-xs font-bold uppercase tracking-wider">Dukungan Produksi SANDIKALE</div>
-              <div className="text-[11px] text-neutral-400">Konsultasi ukuran &amp; file sablon DTF</div>
+              <div className="text-xs font-bold uppercase tracking-wider">Konsultasi WhatsApp SANDIKALE</div>
+              <div className="text-[11px] text-neutral-400">Pesan Anda akan diteruskan ke WhatsApp admin</div>
             </div>
             <button
               type="button"
@@ -342,23 +345,16 @@ export function BugReportModal({ open, onClose, userEmail, onSubmitted }: BugRep
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/bugs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        reporterEmail: email || userEmail || 'pelanggan@sandikale.id',
-        title,
-        description,
-        severity,
-        viewport: `${window.innerWidth}x${window.innerHeight}`,
-      }),
-    });
-    if (res.ok) {
-      setTitle('');
-      setDescription('');
-      onSubmitted();
-      onClose();
-    }
+    const message = [
+      'LAPORAN KENDALA WEBSITE SANDIKALE',
+      `Email: ${email || userEmail || '-'}`,
+      `Prioritas: ${severity}`,
+      `Judul: ${title}`,
+      `Detail: ${description}`,
+      `Perangkat: ${window.innerWidth}x${window.innerHeight}`,
+    ].join(String.fromCharCode(10));
+    window.open(`https://wa.me/6282266412844?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+    setTitle(''); setDescription(''); onSubmitted(); onClose();
   };
 
   return (
@@ -458,9 +454,9 @@ const TUTORIAL_STEPS = [
   },
   {
     title: '4. Lacak Produksi Real-Time & Live Chat',
-    subtitle: 'Pantau 6 tahap cetak DTF hingga barang tiba',
+    subtitle: 'Pantau tahapan desain, produksi, QC, dan penyelesaian pesanan',
     description:
-      'Masukkan nomor pesanan (misal: SDK-2026-1042) pada bagian Lacak Pesanan untuk melihat progres verifikasi desain, cetak DTF, heat press QC, hingga nomor resi pengiriman.',
+      'Masukkan kode tracking pribadi yang tampil setelah checkout pada bagian Lacak Pesanan untuk melihat progres verifikasi desain, cetak DTF, heat press QC, hingga nomor resi pengiriman.',
     tips: 'Butuh bantuan desain atau stok? Klik tombol Live Chat di pojok kanan bawah untuk terhubung langsung dengan tim produksi.',
     targetSection: 'lacak',
     ctaLabel: 'Coba Lacak Pesanan',

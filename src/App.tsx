@@ -1,6 +1,7 @@
 import { ArrowRight, Bell, Bug, CheckCircle2, HelpCircle, Layers, Lock, Shield, Sparkles, Truck, X } from 'lucide-react';
+import heroImage from './assets/images/hero_sandikale_streetwear_1795511846725.jpg';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AdminDashboard } from './components/AdminDashboard';
+import { AdminDashboardSupabase } from './components/AdminDashboardSupabase';
 import { CartCheckoutDrawer } from './components/CartCheckoutDrawer';
 import { CustomDtfStudio } from './components/CustomDtfStudio';
 import { Navbar } from './components/Navbar';
@@ -8,6 +9,8 @@ import { OrderTrackingSection } from './components/OrderTrackingSection';
 import { ProductCatalog } from './components/ProductCatalog';
 import { ProductQuickViewModal } from './components/ProductQuickViewModal';
 import { AccountModal, BugReportModal, LiveChatWidget, TutorialModal } from './components/SupportModals';
+import { invokeShowroom, artworkForUpload, supabase } from './lib/supabase';
+import { loadShowroomBootstrap } from './lib/showroom-bootstrap';
 import type {
   CartItem,
   Category,
@@ -25,7 +28,7 @@ import type {
   UserProfile,
 } from './types';
 
-const HERO_IMAGE = '/src/assets/images/hero_sandikale_streetwear_1795511846725.jpg';
+const HERO_IMAGE = heroImage;
 const CACHE_BOOTSTRAP_KEY = 'sandikale_offline_bootstrap_v2';
 const CACHE_CART_KEY = 'sandikale_cart_v1';
 const CACHE_WISHLIST_KEY = 'sandikale_wishlist_v1';
@@ -33,7 +36,7 @@ const TUTORIAL_SEEN_KEY = 'sandikale_tutorial_seen_v1';
 
 export default function App() {
   const [isAdminRoute, setIsAdminRoute] = useState(
-    () => typeof window !== 'undefined' && window.location.pathname === '/admin'
+    () => typeof window !== 'undefined' && (window.location.pathname.endsWith('/admin') || new URLSearchParams(window.location.search).get('view') === 'admin')
   );
   const [darkMode, setDarkMode] = useState(true);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
@@ -58,7 +61,6 @@ export default function App() {
   // Auth tokens strictly kept in React memory
   const [customerUser, setCustomerUser] = useState<UserProfile | null>(null);
   const [customerToken, setCustomerToken] = useState<string | null>(null);
-  const [adminToken, setAdminToken] = useState<string | null>(null);
 
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
@@ -84,13 +86,28 @@ export default function App() {
   const [accountOpen, setAccountOpen] = useState(false);
   const [bugOpen, setBugOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
-  const [adminModalOpen, setAdminModalOpen] = useState(false);
-  const [adminPasscode, setAdminPasscode] = useState('');
-  const [adminAuthError, setAdminAuthError] = useState('');
-  const [adminConfigured, setAdminConfigured] = useState(true);
-  const [adminSubmitting, setAdminSubmitting] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    const applySession = (session: any) => {
+      if (!alive) return;
+      if (!session) { setCustomerToken(null); setCustomerUser(null); return; }
+      setCustomerToken(session.access_token);
+      setCustomerUser({
+        id: session.user.id,
+        name: String(session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'Pelanggan'),
+        email: session.user.email || '',
+        phone: String(session.user.user_metadata?.phone || ''),
+        role: 'customer',
+        createdAt: session.user.created_at,
+      });
+    };
+    void supabase.auth.getSession().then(({ data }) => applySession(data.session as typeof data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => applySession(session as typeof session));
+    return () => { alive = false; listener.subscription.unsubscribe(); };
+  }, []);
 
   useEffect(() => {
     if (isAdminRoute) return;
@@ -135,7 +152,7 @@ export default function App() {
 
   useEffect(() => {
     const onPopState = () => {
-      setIsAdminRoute(window.location.pathname === '/admin');
+      setIsAdminRoute(window.location.pathname.endsWith('/admin') || new URLSearchParams(window.location.search).get('view') === 'admin');
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
@@ -182,26 +199,22 @@ export default function App() {
 
   const loadBootstrap = useCallback(async () => {
     try {
-      const res = await fetch('/api/bootstrap');
-      if (!res.ok) throw new Error('bootstrap failed');
-      const data = await res.json();
-      setCategories(data.categories || []);
-      setProducts(data.products || []);
-      setFabrics(data.fabrics || []);
-      setGarmentColors(data.garmentColors || []);
-      setPaymentMethods(data.paymentMethods || []);
-      setShippingOriginCity(data.shippingOriginCity || '');
-      setShippingCouriers(data.shippingCouriers || []);
-      setAdminWhatsapp(data.adminWhatsapp || '6281234567890');
-      setDtfZones(data.dtfZones || []);
-      setReviews(data.reviews || []);
-      setChatMessages(data.chatMessages || []);
-      try {
-        localStorage.setItem(CACHE_BOOTSTRAP_KEY, JSON.stringify(data));
-      } catch {
-        // ignore
-      }
-    } catch {
+      const data = await loadShowroomBootstrap();
+      setCategories(data.categories);
+      setProducts(data.products);
+      setFabrics(data.fabrics);
+      setGarmentColors(data.garmentColors);
+      setPaymentMethods(data.paymentMethods);
+      setShippingOriginCity(data.shippingOriginCity);
+      setShippingCouriers(data.shippingCouriers);
+      setAdminWhatsapp(data.adminWhatsapp);
+      setDtfZones(data.dtfZones);
+      setReviews(data.reviews);
+      setChatMessages(data.chatMessages);
+      try { localStorage.setItem(CACHE_BOOTSTRAP_KEY, JSON.stringify(data)); } catch { /* optional offline cache */ }
+    } catch (error) {
+      console.error('Supabase showroom bootstrap failed:', error);
+      showToast('Katalog belum dapat dimuat. Periksa koneksi database.');
       try {
         const cached = localStorage.getItem(CACHE_BOOTSTRAP_KEY);
         if (cached) {
@@ -213,81 +226,24 @@ export default function App() {
           setPaymentMethods(data.paymentMethods || []);
           setShippingOriginCity(data.shippingOriginCity || '');
           setShippingCouriers(data.shippingCouriers || []);
-          setAdminWhatsapp(data.adminWhatsapp || '6281234567890');
+          setAdminWhatsapp(data.adminWhatsapp || '6282266412844');
           setDtfZones(data.dtfZones || []);
           setReviews(data.reviews || []);
         }
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore invalid cache */ }
     }
-  }, []);
+  }, [showToast]);
+
+  useEffect(() => { void loadBootstrap(); }, [loadBootstrap]);
 
   useEffect(() => {
-    loadBootstrap();
-    fetch('/api/orders/track/SDK-2026-1042')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (data?.order) {
-          setRecentOrders([data.order]);
-          if (data.emails) setEmailOutbox(data.emails);
-        }
-      })
-      .catch(() => {});
+    const channel = supabase.channel('showroom-public-catalog')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_products' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_categories' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_dtf_prices' }, () => { void loadBootstrap(); })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
   }, [loadBootstrap]);
-
-  useEffect(() => {
-    let ws: WebSocket | null = null;
-    let reconnectTimer: number | null = null;
-
-    const connect = () => {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
-      ws.onmessage = (evt) => {
-        try {
-          const msg = JSON.parse(evt.data);
-          if (msg.event === 'config:updated') {
-            loadBootstrap();
-          } else if (msg.event === 'chat:message' && msg.payload) {
-            setChatMessages((prev) => {
-              if (prev.some((m) => m.id === msg.payload.id)) return prev;
-              return [...prev, msg.payload];
-            });
-          } else if (msg.event === 'order:updated' || msg.event === 'order:created') {
-            const { order, email } = msg.payload || {};
-            if (order) {
-              setRecentOrders((prev) => {
-                const exists = prev.some((o) => o.id === order.id);
-                return exists ? prev.map((o) => (o.id === order.id ? order : o)) : [order, ...prev];
-              });
-              triggerPushBanner(`Update Pesanan ${order.id}`, `Status produksi: ${order.stage}`);
-            }
-            if (email) {
-              setEmailOutbox((prev) => [email, ...prev]);
-            }
-          } else if (msg.event === 'promo:push' && msg.payload) {
-            triggerPushBanner(msg.payload.title, msg.payload.message);
-          } else if (msg.event === 'review:created' && msg.payload) {
-            setReviews((prev) => {
-              if (prev.some((r) => r.id === msg.payload.id)) return prev;
-              return [msg.payload, ...prev];
-            });
-          }
-        } catch {
-          // ignore
-        }
-      };
-      ws.onclose = () => {
-        reconnectTimer = window.setTimeout(connect, 4000);
-      };
-    };
-
-    connect();
-    return () => {
-      if (reconnectTimer) window.clearTimeout(reconnectTimer);
-      ws?.close();
-    };
-  }, [loadBootstrap, triggerPushBanner]);
 
   const scrollToSection = (id: string) => {
     setActiveSection(id);
@@ -362,46 +318,143 @@ export default function App() {
     paymentMethod: PaymentMethodId;
     paymentLabel: string;
   }): Promise<Order | null> => {
-    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (customerToken) headers.Authorization = `Bearer ${customerToken}`;
-    const res = await fetch('/api/orders', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.order) {
-      setRecentOrders((prev) => [data.order, ...prev]);
+    try {
+      const items = await Promise.all(payload.items.map(async (item) => {
+        const placements = item.customPlacements || [];
+        return {
+          product_id: item.productId,
+          material_id: item.fabricId,
+          quantity: item.quantity,
+          garment_type: /long|lengan panjang/i.test(item.customModel || item.name) ? 'long' : 'short',
+          color: item.colorName,
+          sizes: [{ size: item.size, quantity: item.quantity }],
+          prints: await Promise.all(placements.map(async (placement) => ({
+            position: ({ A6: 'Depan - Dada kiri', A5: 'Lengan kiri', A4: 'Depan - Tengah', A3: 'Belakang - Tengah' } as Record<string, string>)[placement.zoneId] || 'Depan - Tengah',
+            size_code: placement.zoneId,
+            ...await artworkForUpload(placement.artworkDataUrl, placement.artworkName || 'design.png'),
+            transform: {
+              x: 50 + placement.xOffset,
+              y: 50 + placement.yOffset,
+              width: 30 * placement.scale,
+              scale: placement.scale,
+              rotation: placement.rotation,
+            },
+          }))),
+        };
+      }));
+      const data = await invokeShowroom<{
+        order_number: string; spk_number: string; tracking_code: string; total_amount: number;
+        deposit_amount: number; remaining_amount: number; customer_name: string;
+      }>({
+        action: 'create_order',
+        customer: {
+          name: payload.customerName,
+          email: payload.customerEmail,
+          phone: payload.customerPhone,
+          address: [payload.shippingAddress, payload.shippingCity].filter(Boolean).join(', '),
+          city: payload.shippingCity,
+          notes: `Kurir: ${payload.shippingCourier}; metode pembayaran: ${payload.paymentLabel}`,
+        },
+        items,
+        deposit_amount: 0,
+      });
+      const now = new Date().toISOString();
+      const order = {
+        id: data.order_number,
+        customerName: payload.customerName,
+        customerEmail: payload.customerEmail,
+        customerPhone: payload.customerPhone,
+        shippingAddress: payload.shippingAddress,
+        shippingCity: payload.shippingCity,
+        shippingCourier: payload.shippingCourier,
+        shippingEtaDays: 0,
+        items: payload.items,
+        subtotal: data.total_amount,
+        shippingCost: 0,
+        discount: 0,
+        total: data.total_amount,
+        paymentMethod: payload.paymentMethod,
+        paymentLabel: payload.paymentLabel,
+        paymentReference: data.tracking_code,
+        paymentStatus: 'pending' as const,
+        stage: 'Menunggu Pembayaran' as const,
+        trackingNumber: data.tracking_code,
+        timeline: [{ stage: 'Menunggu Pembayaran' as const, timestamp: now, note: 'Pesanan diterima dan menunggu konfirmasi admin.', completed: true }],
+        createdAt: now,
+        updatedAt: now,
+      } as Order;
+      setRecentOrders((prev) => [order, ...prev]);
       setCart([]);
+      showToast(`Pesanan ${data.order_number} berhasil dikirim. Simpan kode tracking untuk memantau pesanan.`);
+      return order;
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Pesanan gagal dikirim ke server.');
+      return null;
     }
-    if (data.email) {
-      setEmailOutbox((prev) => [data.email, ...prev]);
-    }
-    return data.order || null;
   };
 
   const handleConfirmPayment = async (orderId: string): Promise<Order | null> => {
-    const res = await fetch(`/api/orders/${orderId}/pay`, { method: 'POST' });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.order) {
-      setRecentOrders((prev) => prev.map((o) => (o.id === data.order.id ? data.order : o)));
-    }
-    return data.order || null;
+    const order = recentOrders.find((entry) => entry.id === orderId);
+    if (!order) return null;
+    const simulated = { ...order, paymentStatus: 'paid' as const, updatedAt: new Date().toISOString() };
+    setRecentOrders((prev) => prev.map((entry) => entry.id === orderId ? simulated : entry));
+    showToast('Simulasi pembayaran tercatat di tampilan ini. Konfirmasi pembayaran sebenarnya tetap melalui admin SANDIKALE.');
+    return simulated;
   };
 
-  const handleTrackOrder = async (orderId: string) => {
-    const res = await fetch(`/api/orders/track/${encodeURIComponent(orderId)}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data.order) {
-      setRecentOrders((prev) => {
-        const exists = prev.some((o) => o.id === data.order.id);
-        return exists ? prev.map((o) => (o.id === data.order.id ? data.order : o)) : [data.order, ...prev];
-      });
+  const handleTrackOrder = async (trackingCode: string) => {
+    try {
+      const data = await invokeShowroom<Record<string, any>>({ action: 'track_order', tracking_code: trackingCode });
+      const statusMap: Record<string, Order['stage']> = {
+        customer_submitted: 'Menunggu Pembayaran',
+        waiting_admin_confirmation: 'Menunggu Pembayaran',
+        waiting_payment: 'Menunggu Pembayaran',
+        waiting_design_review: 'Verifikasi Desain DTF',
+        revision_requested: 'Verifikasi Desain DTF',
+        waiting_customer_approval: 'Verifikasi Desain DTF',
+        approved: 'Verifikasi Desain DTF',
+        in_production: 'Proses Cetak DTF',
+        printing: 'Proses Cetak DTF',
+        production: 'Heat Press & QC',
+        quality_control: 'Heat Press & QC',
+        ready: 'Dikirim',
+        shipped: 'Dikirim',
+        completed: 'Selesai',
+      };
+      const order = {
+        id: data.order_number,
+        customerName: '',
+        customerEmail: '',
+        customerPhone: '',
+        shippingAddress: '',
+        shippingCity: '',
+        shippingCourier: '',
+        shippingEtaDays: 0,
+        items: [],
+        subtotal: 0,
+        shippingCost: 0,
+        discount: 0,
+        total: 0,
+        paymentMethod: 'qris',
+        paymentLabel: 'Pembayaran manual',
+        paymentReference: '',
+        paymentStatus: 'pending',
+        stage: statusMap[data.status] || 'Menunggu Pembayaran',
+        trackingNumber: trackingCode,
+        timeline: (data.history || []).map((event: any) => ({
+          stage: statusMap[event.new_status] || 'Menunggu Pembayaran',
+          timestamp: event.created_at,
+          note: event.notes || '',
+          completed: true,
+        })),
+        createdAt: data.created_at,
+        updatedAt: data.created_at,
+      } as Order;
+      setRecentOrders((prev) => [order, ...prev.filter((entry) => entry.id !== order.id)]);
+      return { order, emails: [] };
+    } catch {
+      return null;
     }
-    return data;
   };
 
   const handleSubmitReview = async (payload: {
@@ -410,98 +463,35 @@ export default function App() {
     rating: number;
     comment: string;
   }) => {
-    const res = await fetch('/api/reviews', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+    const { error } = await supabase.from('showroom_product_reviews').insert({
+      product_id: payload.productId,
+      author_name: payload.authorName.trim(),
+      rating: payload.rating,
+      comment: payload.comment.trim(),
     });
-    if (res.ok) {
-      showToast('Terima kasih! Ulasan Anda telah diterbitkan.');
-    }
+    if (error) showToast(error.message);
+    else showToast('Ulasan terkirim dan menunggu moderasi admin.');
   };
 
   const handleSendChat = async (text: string, senderName: string) => {
-    await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ senderRole: 'customer', senderName, text }),
-    });
+    const message = ['Halo Admin SANDIKALE, saya ' + senderName + '.', '', text].join(String.fromCharCode(10));
+    const url = `https://wa.me/${adminWhatsapp}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleEnableBrowserPush = async () => {
-    if (typeof Notification === 'undefined') {
-      showToast('Notifikasi real-time aktif di dalam aplikasi.');
-      return;
-    }
-    const perm = await Notification.requestPermission();
-    showToast(
-      perm === 'granted'
-        ? 'Notifikasi push browser diaktifkan untuk promo & status produksi.'
-        : 'Notifikasi in-app real-time tetap aktif.'
-    );
+    showToast('Notifikasi otomatis belum diaktifkan. Gunakan kode tracking untuk memantau status pesanan.');
   };
 
   const handleOpenAdminLock = async () => {
-    if (adminToken) {
-      try {
-        window.history.pushState({}, '', '/admin');
-      } catch {
-        // ignore history error in restricted frame
-      }
-      setIsAdminRoute(true);
-      return;
-    }
-    setAdminAuthError('');
-    setAdminPasscode('');
-    try {
-      const res = await fetch('/api/admin/auth-status');
-      if (res.ok) {
-        const data = await res.json();
-        setAdminConfigured(Boolean(data.configured));
-      }
-    } catch {
-      // fallback to login mode
-    }
-    setAdminModalOpen(true);
+    window.history.pushState({}, '', '?view=admin');
+    setIsAdminRoute(true);
   };
 
-  const handleAdminLockSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdminAuthError('');
-    setAdminSubmitting(true);
-    try {
-      const endpoint = adminConfigured ? '/api/admin/login' : '/api/admin/bootstrap';
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passcode: adminPasscode }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setAdminAuthError(data.error || 'Autentikasi admin gagal.');
-        return;
-      }
-      setAdminConfigured(true);
-      setAdminToken(data.token);
-      setAdminPasscode('');
-      setAdminModalOpen(false);
-      try {
-        window.history.pushState({}, '', '/admin');
-      } catch {
-        // ignore history error in restricted frame
-      }
-      setIsAdminRoute(true);
-      showToast('Masuk ke Portal Admin SANDIKALE.');
-    } catch {
-      setAdminAuthError('Gagal terhubung ke server autentikasi.');
-    } finally {
-      setAdminSubmitting(false);
-    }
-  };
 
   const exitAdminPortal = () => {
     try {
-      window.history.pushState({}, '', '/');
+      window.history.pushState({}, '', window.location.pathname);
     } catch {
       // ignore history error in restricted frame
     }
@@ -522,14 +512,7 @@ export default function App() {
             <span>{toastMsg}</span>
           </div>
         )}
-        <AdminDashboard
-          adminToken={adminToken}
-          onAdminToken={setAdminToken}
-          chatMessages={chatMessages}
-          onRefreshBootstrap={loadBootstrap}
-          onExitAdmin={exitAdminPortal}
-          onToast={showToast}
-        />
+        <AdminDashboardSupabase onExitAdmin={exitAdminPortal} onToast={showToast} />
       </>
     );
   }
@@ -775,68 +758,6 @@ export default function App() {
         </div>
       </footer>
 
-      {adminModalOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Login Admin SANDIKALE"
-        >
-          <div className="w-full max-w-sm bg-white dark:bg-[#141414] border border-black/10 dark:border-white/15 rounded-xl p-6 space-y-4 shadow-2xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-widest text-neutral-500">
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>Akses Terkunci</span>
-                </div>
-                <h3 className="font-display text-2xl font-bold uppercase tracking-tight">
-                  {adminConfigured ? 'Login Admin SANDIKALE' : 'Buat Passcode Admin'}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAdminModalOpen(false)}
-                aria-label="Tutup login admin"
-                className="p-1.5 rounded-md text-neutral-500 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              {adminConfigured
-                ? 'Masukkan passcode admin untuk membuka pengaturan ekspedisi, kain, warna, metode pembayaran, dan laporan.'
-                : 'Tetapkan passcode admin pertama (minimal 6 karakter) untuk mengamankan dashboard.'}
-            </p>
-
-            {adminAuthError && (
-              <div className="p-2.5 rounded-md bg-red-500/10 border border-red-500/30 text-xs text-red-500">
-                {adminAuthError}
-              </div>
-            )}
-
-            <form onSubmit={handleAdminLockSubmit} className="space-y-3">
-              <input
-                type="password"
-                required
-                minLength={6}
-                autoFocus
-                placeholder={adminConfigured ? 'Masukkan passcode admin...' : 'Buat passcode baru (min. 6 karakter)'}
-                value={adminPasscode}
-                onChange={(e) => setAdminPasscode(e.target.value)}
-                className="w-full h-11 px-3.5 rounded-md text-xs bg-neutral-50 dark:bg-[#1A1A1A] border border-black/15 dark:border-white/15"
-              />
-              <button
-                type="submit"
-                disabled={adminSubmitting}
-                className="w-full h-11 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#FF4D00] dark:hover:bg-[#FF4D00] dark:hover:text-white text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-50"
-              >
-                {adminSubmitting ? 'Memverifikasi...' : adminConfigured ? 'Masuk Admin' : 'Simpan & Masuk'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
       <ProductQuickViewModal
         product={quickViewProduct}
@@ -891,6 +812,7 @@ export default function App() {
           showToast(`Selamat datang kembali, ${u.name}!`);
         }}
         onLogout={() => {
+          void supabase.auth.signOut();
           setCustomerUser(null);
           setCustomerToken(null);
           showToast('Anda telah keluar dari akun.');
