@@ -133,6 +133,12 @@ export function CustomDtfStudio({
   useEffect(() => {
     if (colorId && !availableColors.some((color) => color.id === colorId)) setColorId('');
   }, [availableColors, colorId]);
+  const availableColors = useMemo<GarmentColorOption[]>(() => selectedProduct
+    ? selectedProduct.colors.map((color) => ({ id: color.name.toLowerCase(), name: color.name, hex: color.hex, publishedByAdmin: true }))
+    : garmentColors, [selectedProduct, garmentColors]);
+  useEffect(() => {
+    if (colorId && !availableColors.some((color) => color.id === colorId)) setColorId('');
+  }, [availableColors, colorId]);
   const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
   const selectedFabric = fabricId ? fabrics.find((f) => f.id === fabricId) || null : null;
   const selectedColor = colorId ? availableColors.find((c) => c.id === colorId) || null : null;
