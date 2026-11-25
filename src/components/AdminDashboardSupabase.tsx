@@ -204,19 +204,19 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
         ['Alamat', customer?.address || '-'], ['Status', order.status],
       ];
       let y = 58;
-      for (const [label, value] of rows) { doc.setFont(undefined, 'bold'); doc.text(label, 14, y); doc.setFont(undefined, 'normal'); doc.text(String(value).slice(0, 95), 62, y); y += 7; }
-      y += 6; doc.setFontSize(12); doc.setFont(undefined, 'bold'); doc.text('RINCIAN PRODUK', 14, y); y += 8;
+      for (const [label, value] of rows) { doc.setFont('helvetica', 'bold'); doc.text(label, 14, y); doc.setFont('helvetica', 'normal'); doc.text(String(value).slice(0, 95), 62, y); y += 7; }
+      y += 6; doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.text('RINCIAN PRODUK', 14, y); y += 8;
       doc.setFontSize(9); doc.text('Produk', 14, y); doc.text('Qty', 130, y); doc.text('Subtotal', 150, y); doc.line(14, y + 2, 196, y + 2); y += 9;
       for (const item of order.showroom_order_items || []) {
         if (y > 260) { doc.addPage(); y = 20; }
-        doc.setFont(undefined, 'normal'); doc.text(String(item.product_name_snapshot).slice(0, 60), 14, y);
+        doc.setFont('helvetica', 'normal'); doc.text(String(item.product_name_snapshot).slice(0, 60), 14, y);
         doc.text(String(item.quantity), 130, y); doc.text(money(Number(item.subtotal)), 150, y); y += 7;
       }
-      y += 8; doc.setFontSize(10); doc.setFont(undefined, 'bold');
+      y += 8; doc.setFontSize(10); doc.setFont('helvetica', 'bold');
       doc.text(`Subtotal: ${money(Number(order.subtotal))}`, 14, y); y += 7;
       doc.text(`DP: ${money(Number(order.deposit_amount))}`, 14, y); y += 7;
       doc.text(`Sisa: ${money(Math.max(0, Number(order.total_amount) - Number(order.deposit_amount)))}`, 14, y); y += 12;
-      doc.setFont(undefined, 'normal'); doc.text('Catatan desain:', 14, y); y += 6; doc.text(doc.splitTextToSize(order.design_notes || '-', 180), 14, y); y += 14;
+      doc.setFont('helvetica', 'normal'); doc.text('Catatan desain:', 14, y); y += 6; doc.text(doc.splitTextToSize(order.design_notes || '-', 180), 14, y); y += 14;
       doc.text('Catatan produksi:', 14, y); y += 6; doc.text(doc.splitTextToSize(order.production_notes || order.notes || '-', 180), 14, y); y += 14;
       doc.text('Instruksi finishing:', 14, y); y += 6; doc.text(doc.splitTextToSize(order.finishing_instructions || '-', 180), 14, y); y += 18;
       doc.line(14, y, 90, y); doc.line(120, y, 196, y); y += 5;
