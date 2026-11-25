@@ -462,8 +462,8 @@ export function CustomDtfStudio({
                   <img
                     src={
                       activeView === 'back'
-                        ? selectedMockup?.backImage || selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
-                        : selectedMockup?.frontImage || selectedProduct.frontImage || selectedProduct.images[0]
+                        ? selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
+                        : selectedProduct.frontImage || selectedProduct.images[0]
                     }
                     alt={selectedProduct.name}
                     referrerPolicy="no-referrer"
