@@ -13,7 +13,7 @@ const resources:Resource[]=[
   {key:'base_price',label:'Harga dasar (Rp)',kind:'number',required:true},{key:'long_sleeve_price',label:'Harga lengan panjang (Rp)',kind:'number'},
   {key:'description',label:'Deskripsi',kind:'textarea'},{key:'model',label:'Model / fit'},{key:'weight_description',label:'Bahan / gramasi'},
   {key:'material_id',label:'Bahan utama',kind:'select',options:[]},{key:'stock_mode',label:'Mode stok',kind:'select',options:[{label:'Made to order',value:'made_to_order'},{label:'Stok tersedia',value:'stock'}]},
-  {key:'available_colors',label:'Warna tersedia',kind:'list',hint:'Pisahkan dengan koma.'},{key:'size_surcharges',label:'Tambahan harga ukuran (JSON)',kind:'json',hint:'Contoh: {"XXL":10000,"XXXL":15000}'},
+  {key:'available_colors',label:'Palet warna (JSON)',kind:'json',hint:'Contoh: [{"name":"Hitam","hex":"#111111"},{"name":"Putih","hex":"#f5f5f5"}]'},{key:'size_surcharges',label:'Tambahan harga ukuran (JSON)',kind:'json',hint:'Contoh: {"XXL":10000,"XXXL":15000}'},
   {key:'finishing_options',label:'Opsi finishing (JSON)',kind:'json',hint:'Gunakan array JSON.'},{key:'is_published',label:'Tampilkan di website',kind:'boolean'},{key:'is_featured',label:'Produk unggulan',kind:'boolean'},{key:'is_best_seller',label:'Best seller',kind:'boolean'}
  ]},
  {id:'variants',label:'Varian & stok',table:'showroom_product_variants',order:'created_at',fields:[
@@ -39,7 +39,7 @@ const resources:Resource[]=[
   {key:'rule_name',label:'Nama aturan',required:true},{key:'rule_type',label:'Jenis aturan',required:true},{key:'conditions',label:'Kondisi (JSON)',kind:'json'},{key:'calculation_type',label:'Jenis perhitungan',required:true},{key:'calculation_value',label:'Nilai perhitungan',kind:'number'},{key:'priority',label:'Prioritas',kind:'number'},{key:'is_active',label:'Aktif',kind:'boolean'}
  ]}
 ];
-const defaults:Row={base_price:85000,long_sleeve_price:'',description:'',model:'Regular Fit',weight_description:'Cotton Combed 24s',stock_mode:'made_to_order',available_colors:['Hitam','Putih'],size_surcharges:{},finishing_options:[],is_published:false,is_featured:false,is_best_seller:false,is_active:true,is_available:true,surcharge:0,price:0,width_cm:21,height_cm:29.7,sort_order:0,pricing_type:'fixed',price_adjustment:0,stock_quantity:null,conditions:{},calculation_value:0,priority:100,color_hex:'#ffffff'};
+const defaults:Row={base_price:85000,long_sleeve_price:'',description:'',model:'Regular Fit',weight_description:'Cotton Combed 24s',stock_mode:'made_to_order',available_colors:[{name:'Hitam',hex:'#111111'},{name:'Putih',hex:'#f5f5f5'}],size_surcharges:{},finishing_options:[],is_published:false,is_featured:false,is_best_seller:false,is_active:true,is_available:true,surcharge:0,price:0,width_cm:21,height_cm:29.7,sort_order:0,pricing_type:'fixed',price_adjustment:0,stock_quantity:null,conditions:{},calculation_value:0,priority:100,color_hex:'#ffffff'};
 function displayValue(row:Row,field:Field){const v=row[field.key];if(field.kind==='boolean')return v?'Aktif':'Nonaktif';if(field.kind==='number'&&['base_price','price','surcharge','price_adjustment','calculation_value'].includes(field.key))return money(v);if(Array.isArray(v))return v.join(', ');if(v&&typeof v==='object')return JSON.stringify(v);return String(v??'—');}
 function Editor({resource,row,categories,materials,products,onClose,onSave,busy}:{resource:Resource;row:Row|null;categories:Row[];materials:Row[];products:Row[];onClose:()=>void;onSave:(value:Row)=>void;busy:boolean}){
  const initial=useMemo(()=>({...defaults,...(row||{})}),[row]);
