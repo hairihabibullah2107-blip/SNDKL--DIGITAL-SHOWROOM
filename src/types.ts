@@ -48,6 +48,7 @@ export interface Product {
   colors: ProductColor[];
   sizes: Record<string, number>;
   isCustomBase: boolean;
+  madeToOrder?: boolean;
   featured: boolean;
   rating: number;
   reviewCount: number;
