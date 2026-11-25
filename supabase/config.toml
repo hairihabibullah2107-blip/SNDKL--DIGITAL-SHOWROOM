@@ -1,0 +1,7 @@
+project_id = "bpfurmqbtredhipendpz"
+
+[functions.showroom-public-api]
+verify_jwt = false
+
+[functions.showroom-storefront-api]
+verify_jwt = false
