@@ -156,9 +156,16 @@ export async function loadShowroomBootstrap() {
   })) : [{ id: 'confirm-shipping', name: 'Konfirmasi ongkir via WhatsApp', serviceArea: 'Indonesia', etaLabel: 'Dikonfirmasi admin', etaDays: 0, cost: 0, enabled: true }];
   const whatsapp = settings.whatsapp || {};
   const storefront = settings.storefront || {};
+  const brand = settings.brand || {};
+  const instagram = settings.instagram || {};
 
   return {
     siteContent: {
+      brandName: String(brand.name || 'SANDIKALE'),
+      brandTagline: String(brand.tagline || 'Design & Productions'),
+      instagramUrl: String(instagram.url || 'https://instagram.com/_sandikale'),
+      instagramHandle: String(instagram.handle || '@_sandikale'),
+      storeAddress: String(storefront.store_address || 'Dusun Penangke, Desa Sesaot, Narmada, Lombok Barat, NTB'),
       announcement: String(storefront.announcement || 'Custom apparel & DTF printing · Made to order in Sesaot'),
       heroEyebrow: String(storefront.hero_eyebrow || 'SANDIKALE DIGITAL SHOWROOM & DTF LAB'),
       heroTitle: String(storefront.hero_title || 'OWN YOUR STREET. PRINT YOUR IDENTITY.'),
