@@ -4,6 +4,7 @@ on:
   push:
     branches: [sandikale-supabase-github-pages]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [main]
   workflow_dispatch:
 
