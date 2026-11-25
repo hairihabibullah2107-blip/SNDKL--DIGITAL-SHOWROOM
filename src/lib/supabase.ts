@@ -31,3 +31,18 @@ export function dataUrlToBase64(value: string): string {
   const comma = value.indexOf(',');
   return comma >= 0 ? value.slice(comma + 1) : value;
 }
+
+export async function artworkForUpload(dataUrl: string, fileName: string): Promise<{ design_base64: string; design_name: string }> {
+  const isSvg = /\\.svg$/i.test(fileName) || dataUrl.startsWith('data:image/svg+xml');
+  if (!isSvg) return { design_base64: dataUrlToBase64(dataUrl), design_name: fileName || 'artwork.png' };
+  const image = new Image();
+  image.src = dataUrl;
+  await image.decode();
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.min(4096, Math.max(512, image.naturalWidth || 1200));
+  canvas.height = Math.min(4096, Math.max(512, image.naturalHeight || 1200));
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Browser tidak dapat memproses file SVG.');
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return { design_base64: dataUrlToBase64(canvas.toDataURL('image/png')), design_name: (fileName || 'artwork').replace(/\\.svg$/i, '.png') };
+}
