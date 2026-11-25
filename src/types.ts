@@ -50,6 +50,7 @@ export interface Product {
   sizes: Record<string, number>;
   isCustomBase: boolean;
   madeToOrder?: boolean;
+  variantPrices?: Record<string, number>;
   featured: boolean;
   rating: number;
   reviewCount: number;
