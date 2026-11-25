@@ -308,7 +308,7 @@ export default function App() {
   }) => {
     const { product, colorName, colorHex, size, quantity } = payload;
     const baseUnitPrice = /long|lengan panjang/i.test(product.silhouette) ? (product.longSleevePrice ?? product.price) : product.price;
-    const variantAdjustment = product.variantPrices?.[`${'${colorName.toLowerCase()}::${size}'}`] || 0;
+    const variantAdjustment = product.variantPrices?.[`${colorName.toLowerCase()}::${size}`] || 0;
     const sizeSurcharge = product.sizeSurcharges?.[size] || 0;
     setCart((prev) => {
       const existing = prev.find(
