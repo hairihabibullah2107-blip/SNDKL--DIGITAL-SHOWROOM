@@ -260,14 +260,14 @@ export function LiveChatWidget({ messages, userName, onSendMessage }: LiveChatWi
           className="h-11 px-4 rounded-full bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#FF4D00] dark:hover:bg-[#FF4D00] dark:hover:text-white shadow-lg border border-black/15 dark:border-white/15 flex items-center gap-2 text-xs font-semibold transition-colors cursor-pointer"
         >
           <MessageCircle className="w-4 h-4 text-[#FF4D00]" />
-          <span>Live Chat</span>
+          <span>WhatsApp Chat</span>
         </button>
       ) : (
         <div className="w-80 sm:w-96 rounded-xl bg-white dark:bg-[#141414] border border-black/15 dark:border-white/15 shadow-2xl overflow-hidden flex flex-col">
           <div className="px-4 py-3 bg-[#080808] text-white flex items-center justify-between">
             <div>
-              <div className="text-xs font-bold uppercase tracking-wider">Dukungan Produksi SANDIKALE</div>
-              <div className="text-[11px] text-neutral-400">Konsultasi ukuran &amp; file sablon DTF</div>
+              <div className="text-xs font-bold uppercase tracking-wider">Konsultasi WhatsApp SANDIKALE</div>
+              <div className="text-[11px] text-neutral-400">Pesan Anda akan diteruskan ke WhatsApp admin</div>
             </div>
             <button
               type="button"
