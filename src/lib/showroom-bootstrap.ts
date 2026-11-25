@@ -178,7 +178,7 @@ export async function loadShowroomBootstrap() {
   const visuals = settings.visuals || {};
   const galleryRows = Array.isArray(visuals.gallery) ? visuals.gallery as Array<Record<string, unknown>> : [];
   const theme = settings.theme || {};
-  const heroImagePath = String(storefront.hero_image_path || '');\n  const visuals = settings.visuals || {};\n  const galleryRows = Array.isArray(visuals.gallery) ? visuals.gallery as Array<Record<string, unknown>> : [];\n  const theme = settings.theme || {};\n  const heroImagePath = String(storefront.hero_image_path || '');
+  const heroImagePath = String(storefront.hero_image_path || '');
   const bulkDiscountRows = Array.isArray(pricing.bulk_discounts) ? pricing.bulk_discounts as Array<Record<string, unknown>> : [];
   const bulkDiscounts: BulkDiscountRule[] = bulkDiscountRows.map((row) => ({ minQuantity: Math.max(1, asNumber(row.min_quantity, 1)), discountPercent: Math.max(0, Math.min(100, asNumber(row.discount_percent))) }));
 
@@ -199,7 +199,7 @@ export async function loadShowroomBootstrap() {
       secondaryCta: String(storefront.secondary_cta || 'Shop Collection'),
       heroImage: heroImagePath ? storagePublicUrl(heroImagePath) : '',
       theme: { accent: String(theme.accent || '#ff4d00'), background: String(theme.background || '#080808'), surface: String(theme.surface || '#171717'), text: String(theme.text || '#ffffff'), muted: String(theme.muted || '#a3a3a3') },
-      gallery: galleryRows.map((item) => ({ image: storagePublicUrl(String(item.path || '')), caption: String(item.caption || ''), alt: String(item.alt || 'SANDIKALE gallery') })).filter((item) => item.image),\n      heroImage: heroImagePath ? storagePublicUrl(heroImagePath) : '',\n      theme: { accent: String(theme.accent || '#ff4d00'), background: String(theme.background || '#080808'), surface: String(theme.surface || '#171717'), text: String(theme.text || '#ffffff'), muted: String(theme.muted || '#a3a3a3') },\n      gallery: galleryRows.map((item) => ({ image: storagePublicUrl(String(item.path || '')), caption: String(item.caption || ''), alt: String(item.alt || 'SANDIKALE gallery') })).filter((item) => item.image),
+      gallery: galleryRows.map((item) => ({ image: storagePublicUrl(String(item.path || '')), caption: String(item.caption || ''), alt: String(item.alt || 'SANDIKALE gallery') })).filter((item) => item.image),
     },
     categories,
     products,
