@@ -441,22 +441,20 @@ export default function App() {
     rating: number;
     comment: string;
   }) => {
-    const res = await fetch('/api/reviews', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+    const { error } = await supabase.from('showroom_product_reviews').insert({
+      product_id: payload.productId,
+      author_name: payload.authorName.trim(),
+      rating: payload.rating,
+      comment: payload.comment.trim(),
     });
-    if (res.ok) {
-      showToast('Terima kasih! Ulasan Anda telah diterbitkan.');
-    }
+    if (error) showToast(error.message);
+    else showToast('Ulasan terkirim dan menunggu moderasi admin.');
   };
 
   const handleSendChat = async (text: string, senderName: string) => {
-    await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ senderRole: 'customer', senderName, text }),
-    });
+    const message = `Halo Admin SANDIKALE, saya ${senderName}.\\n\\n${text}`;
+    const url = `https://wa.me/${adminWhatsapp}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleEnableBrowserPush = async () => {
