@@ -56,8 +56,8 @@ export async function loadShowroomBootstrap() {
     const colorNames = Array.isArray(row.available_colors) ? row.available_colors : [];
     const colors: ProductColor[] = colorNames.map((entry) => {
       const name = typeof entry === 'string' ? entry : String((entry as { name?: string })?.name ?? 'Default');
-      const match = productVariants.find((v) => v.color.toLowerCase() === name.toLowerCase());
-      return { name, hex: '#777777', image: match ? undefined : undefined };
+      const hex = typeof entry === 'object' && entry !== null && 'hex' in entry ? String((entry as { hex?: string }).hex || '#777777') : '#777777';
+      return { name, hex };
     });
     const category = categoriesRaw.find((c) => c.id === row.category_id);
     const sizes: Record<string, number> = {};
@@ -111,8 +111,9 @@ export async function loadShowroomBootstrap() {
   for (const product of productsRaw) {
     for (const value of Array.isArray(product.available_colors) ? product.available_colors : []) {
       const name = typeof value === 'string' ? value : String((value as { name?: string })?.name ?? 'Default');
+      const hex = typeof value === 'object' && value !== null && 'hex' in value ? String((value as { hex?: string }).hex || '#777777') : '#777777';
       const key = name.toLowerCase();
-      if (!colorMap.has(key)) colorMap.set(key, { id: key, name, hex: '#777777', publishedByAdmin: true });
+      if (!colorMap.has(key)) colorMap.set(key, { id: key, name, hex, publishedByAdmin: true });
     }
   }
 
