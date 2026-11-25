@@ -330,7 +330,7 @@ export default function App() {
           product_id: item.productId,
           material_id: item.fabricId,
           quantity: item.quantity,
-          garment_type: 'short',
+          garment_type: /long|lengan panjang/i.test(item.customModel || item.name) ? 'long' : 'short',
           color: item.colorName,
           sizes: [{ size: item.size, quantity: item.quantity }],
           prints: await Promise.all(placements.map(async (placement) => ({
