@@ -55,6 +55,9 @@ export default function App() {
     heroSubtitle: 'Kaos custom dan studio sablon DTF dengan pilihan bahan, visualisasi desain, serta pelacakan produksi dalam satu tempat.',
     primaryCta: 'Custom Your Style',
     secondaryCta: 'Shop Collection',
+    heroImage: '',
+    theme: { accent: '#ff4d00', background: '#080808', surface: '#171717', text: '#ffffff', muted: '#a3a3a3' },
+    gallery: [] as Array<{image:string;caption:string;alt:string}>,
   });
 
   const [activeSection, setActiveSection] = useState('hero');
@@ -592,7 +595,7 @@ export default function App() {
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F2F2F2] text-[#080808] dark:bg-[#080808] dark:text-white pb-14 md:pb-0">
+    <div className="min-h-screen flex flex-col bg-[#F2F2F2] text-[#080808] dark:bg-[#080808] dark:text-white pb-14 md:pb-0" style={{ "--brand-accent": siteContent.theme.accent, "--site-background": siteContent.theme.background, "--site-surface": siteContent.theme.surface, "--site-text": siteContent.theme.text, "--site-muted": siteContent.theme.muted } as React.CSSProperties}>
       <Navbar
         activeSection={activeSection}
         onNavigate={scrollToSection}
@@ -624,7 +627,7 @@ export default function App() {
         {/* HERO SECTION */}
         <section id="hero" className="relative min-h-[78vh] md:min-h-[84vh] flex items-end overflow-hidden bg-[#080808]">
           <img
-            src={HERO_IMAGE}
+            src={siteContent.heroImage || HERO_IMAGE}
             alt="Kampanye Streetwear SANDIKALE"
             referrerPolicy="no-referrer"
             className="absolute inset-0 w-full h-full object-cover object-center"
