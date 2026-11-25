@@ -2,6 +2,7 @@ import { Bug, ChevronLeft, ChevronRight, Compass, HelpCircle, Layers, LogOut, Ma
 import { useEffect, useState } from 'react';
 import type { ChatMessage, EmailNotification, Order, UserProfile } from '../types';
 import { formatDateTime, formatRupiah } from '../utils/format';
+import { supabase } from '../lib/supabase';
 
 interface AccountModalProps {
   open: boolean;
@@ -33,15 +34,8 @@ export function AccountModal({
 
   useEffect(() => {
     if (open && token) {
-      fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (data) {
-            setOrders(data.orders || []);
-            setEmails(data.emails || []);
-          }
-        })
-        .catch(() => {});
+      setOrders([]);
+      setEmails([]);
     }
   }, [open, token]);
 
@@ -50,18 +44,27 @@ export function AccountModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(mode === 'login' ? { email, password } : { name, email, phone, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setErrorMsg(data.error || 'Gagal memproses akun.');
-      return;
+    try {
+      const result = mode === 'login'
+        ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
+        : await supabase.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim(), phone: phone.trim() } } });
+      if (result.error) throw result.error;
+      if (!result.data.session || !result.data.user) {
+        setErrorMsg('Pendaftaran diterima. Periksa email untuk verifikasi, lalu masuk kembali.');
+        return;
+      }
+      const authUser = result.data.user;
+      onAuthSuccess({
+        id: authUser.id,
+        name: String(authUser.user_metadata?.full_name || name || email.split('@')[0]),
+        email: authUser.email || email,
+        phone: String(authUser.user_metadata?.phone || phone),
+        role: 'customer',
+        createdAt: authUser.created_at,
+      }, result.data.session.access_token);
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Gagal memproses akun.');
     }
-    onAuthSuccess(data.user, data.token);
   };
 
   return (
