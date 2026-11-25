@@ -27,7 +27,7 @@ const STATUS: Record<string, { status: string; production: string }> = {
 
 export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: () => void; onToast: (message: string) => void }) {
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('hairihabibullah2107@gmail.com');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
