@@ -8,6 +8,7 @@ import type {
   BulkDiscountRule,
   Product,
   ProductColor,
+  PrintingMethodOption,
   ShippingCourierConfig,
 } from '../types';
 
@@ -17,7 +18,7 @@ function asNumber(value: unknown, fallback = 0): number {
 }
 
 export async function loadShowroomBootstrap() {
-  const [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, reviewResult, settingsResult, mockupResult] =
+  const [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, reviewResult, settingsResult, mockupResult, printingMethodResult] =
     await Promise.all([
       supabase.from('showroom_categories').select('id,name,slug,description,image_path,sort_order,is_active').eq('is_active', true).order('sort_order'),
       supabase.from('showroom_products').select('id,category_id,name,slug,description,base_price,long_sleeve_price,model,weight_description,is_featured,is_best_seller,is_published,stock_mode,available_colors,size_surcharges,material_id,showroom_materials(name,description,surcharge)').eq('is_published', true).order('created_at', { ascending: false }),
@@ -28,9 +29,10 @@ export async function loadShowroomBootstrap() {
       supabase.from('showroom_product_reviews').select('id,product_id,author_name,rating,comment,verified_purchase,created_at').eq('is_approved', true).order('created_at', { ascending: false }),
       supabase.from('showroom_settings').select('key,value'),
       supabase.from('showroom_garment_mockups').select('garment_type,color_name,color_hex,front_storage_path,back_storage_path').eq('is_active', true),
+      supabase.from('showroom_printing_methods').select('id,name,description,pricing_type,base_price').eq('is_active', true).order('name'),
     ]);
 
-  for (const result of [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, reviewResult, settingsResult, mockupResult]) {
+  for (const result of [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, reviewResult, settingsResult, mockupResult, printingMethodResult]) {
     if (result.error) throw result.error;
   }
 
@@ -139,6 +141,8 @@ export async function loadShowroomBootstrap() {
     colorMap.set(key, { ...existing, hex: mockup.color_hex || existing.hex, mockups });
   }
 
+  const printingMethods: PrintingMethodOption[] = (printingMethodResult.data || []).map((row) => ({ id: row.id, name: row.name, description: row.description || '', pricingType: row.pricing_type, basePrice: asNumber(row.base_price) }));
+
   const dtfZones: DtfZonePrice[] = dtfPrices.map((row) => ({
     id: row.size_code,
     label: row.label,
@@ -174,6 +178,7 @@ export async function loadShowroomBootstrap() {
 
   return {
     bulkDiscounts,
+    printingMethods,
     siteContent: {
       brandName: String(brand.name || 'SANDIKALE'),
       brandTagline: String(brand.tagline || 'Design & Productions'),
