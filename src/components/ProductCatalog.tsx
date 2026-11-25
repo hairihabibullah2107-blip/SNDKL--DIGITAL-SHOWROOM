@@ -237,6 +237,20 @@ export function ProductCatalog({
                         referrerPolicy="no-referrer"
                         className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
                       />
+                      {activeColor && (
+                        <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{
+                          backgroundColor: activeColor.hex,
+                          WebkitMaskImage: `url("${primaryImage}")`,
+                          maskImage: `url("${primaryImage}")`,
+                          WebkitMaskSize: 'cover',
+                          maskSize: 'cover',
+                          WebkitMaskPosition: 'center',
+                          maskPosition: 'center',
+                          WebkitMaskRepeat: 'no-repeat',
+                          maskRepeat: 'no-repeat',
+                          mixBlendMode: 'multiply',
+                        }} />
+                      )}
 
                       <div className="absolute top-3 right-3 flex items-center gap-1.5">
                         <button
