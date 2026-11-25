@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { jsPDF } from 'jspdf';
 import { supabase } from '../lib/supabase';
 
 type Profile = { id: string; full_name: string; email: string | null; role: string; is_active: boolean };
@@ -195,6 +194,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     if (!profile) return;
     setBusy(true);
     try {
+      const { jsPDF } = await import('jspdf');
       const doc = new jsPDF();
       doc.setFillColor(8, 8, 8); doc.rect(0, 0, 210, 34, 'F');
       doc.setTextColor(255, 255, 255); doc.setFontSize(21); doc.text('SANDIKALE', 14, 15);
