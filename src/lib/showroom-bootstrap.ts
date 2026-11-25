@@ -102,6 +102,8 @@ export async function loadShowroomBootstrap() {
       isCustomBase: true,
       madeToOrder: row.stock_mode === 'made_to_order',
       variantPrices,
+      sizeSurcharges: row.size_surcharges && typeof row.size_surcharges === 'object' ? row.size_surcharges as Record<string, number> : {},
+      longSleevePrice: row.long_sleeve_price === null || row.long_sleeve_price === undefined ? undefined : asNumber(row.long_sleeve_price),
       featured: Boolean(row.is_featured || row.is_best_seller),
       rating: productReviews.length ? productReviews.reduce((sum, review) => sum + Number(review.rating), 0) / productReviews.length : 0,
       reviewCount: productReviews.length,
