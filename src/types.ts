@@ -154,6 +154,15 @@ export interface EmailNotification {
   sentAt: string;
 }
 
+export interface OrderDesign {
+  id: string;
+  productName: string;
+  approvalStatus: string;
+  designVersion: number;
+  designConfiguration: Record<string, unknown>;
+  previewUrl: string | null;
+}
+
 export interface Order {
   id: string;
   customerId?: string;
@@ -178,6 +187,8 @@ export interface Order {
   timeline: OrderTimelineEvent[];
   createdAt: string;
   updatedAt: string;
+  designs?: OrderDesign[];
+  designApprovalOpen?: boolean;
 }
 
 export interface ProductReview {
