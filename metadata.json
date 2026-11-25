@@ -1,0 +1,6 @@
+{
+  "name": "SANDIKALE — Streetwear & Custom DTF Studio",
+  "description": "Platform streetwear premium dan studio sablon DTF kustom dengan pratinjau langsung, pelacakan produksi real-time, pembayaran multibank, dan sinkronisasi inventaris webhook.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
