@@ -34,7 +34,7 @@ export function OrderTrackingSection({ recentOrders, emailOutbox, onTrackOrder }
       if (res) {
         setTrackedOrder(res.order);
         setOrderEmails(res.emails);
-        setQuery(res.order.id);
+        setQuery(targetId);
       } else {
         setErrorMsg(`Nomor pesanan "${targetId}" tidak ditemukan.`);
       }
