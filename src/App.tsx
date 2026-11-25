@@ -356,7 +356,7 @@ export default function App() {
           name: payload.customerName,
           email: payload.customerEmail,
           phone: payload.customerPhone,
-          address: payload.shippingAddress,
+          address: [payload.shippingAddress, payload.shippingCity].filter(Boolean).join(', '),
           city: payload.shippingCity,
           notes: `Kurir: ${payload.shippingCourier}; metode pembayaran: ${payload.paymentLabel}`,
         },
