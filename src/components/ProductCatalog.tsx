@@ -1,6 +1,7 @@
 import { Eye, Heart, MessageCircle, Search, ShoppingBag, SlidersHorizontal, Star } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Category, Product } from '../types';
+import defaultProductImage from '../assets/images/prod_boxy_heavy_tee_1795511847020.jpg';
 import { formatRupiah } from '../utils/format';
 
 interface ProductCatalogProps {
@@ -210,7 +211,7 @@ export function ProductCatalog({
                 const activeColor =
                   typeof activeColorIdx === 'number' ? product.colors[activeColorIdx] : undefined;
                 const selectedSize = cardSizeSelection[product.id] || '';
-                const primaryImage = activeColor?.image || product.images[0];
+                const primaryImage = activeColor?.image || product.images[0] || defaultProductImage;
                 const secondaryImage = product.images[1] || primaryImage;
                 const totalStock = Object.values(product.sizes).reduce((a, b) => a + b, 0);
                 const isWishlisted = wishlistIds.includes(product.id);
@@ -280,7 +281,7 @@ export function ProductCatalog({
                         <div className="flex items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
                           <span>{product.fabricWeight}</span>
                           <span aria-hidden="true">·</span>
-                          <span className="tabular-nums">Stok {totalStock} pcs</span>
+                          <span className="tabular-nums">{product.madeToOrder ? 'Made to order' : `Stok ${totalStock} pcs`}</span>
                         </div>
                       </div>
 
