@@ -62,6 +62,7 @@ export async function loadShowroomBootstrap() {
     for (const variant of productVariants) {
       sizes[variant.size] = (sizes[variant.size] ?? 0) + asNumber(variant.stock_quantity);
     }
+    if (!Object.keys(sizes).length) for (const size of ['S', 'M', 'L', 'XL', 'XXL']) sizes[size] = 0;
     const photoUrls = productImages.map((photo) => storagePublicUrl(photo.storage_path)).filter(Boolean);
     const material = Array.isArray(row.showroom_materials) ? row.showroom_materials[0] : row.showroom_materials;
     const price = asNumber(row.base_price);
@@ -83,6 +84,7 @@ export async function loadShowroomBootstrap() {
       colors,
       sizes,
       isCustomBase: true,
+      madeToOrder: row.stock_mode === 'made_to_order',
       featured: Boolean(row.is_featured || row.is_best_seller),
       rating: 0,
       reviewCount: 0,
