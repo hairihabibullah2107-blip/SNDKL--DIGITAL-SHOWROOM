@@ -141,3 +141,14 @@ body {
 .hero-subtitle-marquee { display:inline-block; animation:heroTextDrift 16s ease-in-out infinite alternate; }
 @keyframes heroTextDrift { from { transform:translateX(0); } to { transform:translateX(12px); } }
 @media (prefers-reduced-motion:reduce) { .hero-subtitle-marquee { animation:none !important; } }
+
+
+/* SANDIKALE storefront motion, image loading and status feedback */
+:root { --brand-accent: #7A1F2B; }
+.brand-accent-bg { background-color: var(--brand-accent) !important; }
+.brand-accent-text { color: var(--brand-accent) !important; }
+.marquee-track { animation-duration: 24s; }
+.marquee-track > div { flex-shrink: 0; }
+.image-loading { background: linear-gradient(100deg, rgba(255,255,255,.04) 20%, rgba(255,255,255,.1) 40%, rgba(255,255,255,.04) 60%); background-size: 200% 100%; animation: sandikaleShimmer 1.4s ease-in-out infinite; }
+@keyframes sandikaleShimmer { to { background-position-x: -200%; } }
+@media (prefers-reduced-motion: reduce) { .image-loading { animation: none !important; } }
