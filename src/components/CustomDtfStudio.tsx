@@ -141,8 +141,6 @@ export function CustomDtfStudio({
   const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
   const selectedFabric = fabricId ? fabrics.find((f) => f.id === fabricId) || null : null;
   const selectedColor = colorId ? availableColors.find((c) => c.id === colorId) || null : null;
-  const selectedMockup = selectedColor?.mockups?.find((item) => item.garmentType === (activeSilhouette === 'longsleeve' ? 'long' : 'short'));
-  const activeColorHex = selectedColor?.hex || '#27272A';
   const activePlacement = placements.find((p) => p.zoneId === selectedZoneId) || null;
 
   const isStudioReady = Boolean(selectedProduct && selectedFabric && selectedColor && size && placements.length > 0);
@@ -159,7 +157,6 @@ export function CustomDtfStudio({
   const activeBulkDiscount = [...bulkDiscounts].sort((a,b)=>b.minQuantity-a.minQuantity).find((rule)=>quantity>=rule.minQuantity);
   const bulkDiscountRate = Math.max(0,Math.min(100,activeBulkDiscount?.discountPercent||0))/100;
   const unitPrice = Math.round(rawUnitPrice * (1 - bulkDiscountRate));
-  const totalEstimate = unitPrice * quantity;
 
   const getAutoScaleForZone = (zoneId: string) => {
     if (zoneId === 'front-pocket' || zoneId === 'sleeve-label') return 0.92;
