@@ -1,5 +1,6 @@
 import {
   Compass,
+  RefreshCw,
   Layers,
   Menu,
   Moon,
@@ -28,6 +29,8 @@ interface NavbarProps {
   announcementText: string;
   brandName: string;
   onDismissAnnouncement: () => void;
+  onRefresh: () => void;
+  isRefreshing: boolean;
 }
 
 export function Navbar({
@@ -45,6 +48,8 @@ export function Navbar({
   announcementText,
   brandName,
   onDismissAnnouncement,
+  onRefresh,
+  isRefreshing,
 }: NavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -118,6 +123,8 @@ export function Navbar({
 
             {/* Zone 3: Primary Action Cluster */}
             <div className="flex items-center gap-2 shrink-0">
+              <button type="button" onClick={onRefresh} aria-label="Muat ulang katalog dan tampilan" title="Muat ulang katalog" disabled={isRefreshing} className="w-9 h-9 flex items-center justify-center rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer disabled:opacity-50"><RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} /></button>
+
               <button
                 type="button"
                 onClick={onToggleDark}
