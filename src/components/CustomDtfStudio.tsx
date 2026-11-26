@@ -98,6 +98,7 @@ export function CustomDtfStudio({
   const [size, setSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [removingBg, setRemovingBg] = useState(false);
+  const [mockupImageFailed, setMockupImageFailed] = useState(false);
 
   const [activeView, setActiveView] = useState<'front' | 'back' | 'sleeve'>('front');
   const [placements, setPlacements] = useState<CustomDesignPlacement[]>([]);
@@ -136,6 +137,7 @@ export function CustomDtfStudio({
   useEffect(() => {
     if (colorId && !availableColors.some((color) => color.id === colorId)) setColorId('');
   }, [availableColors, colorId]);
+  useEffect(() => { setMockupImageFailed(false); }, [selectedProductId, activeView, currentProductImage]);
   const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
   const selectedFabric = fabricId ? fabrics.find((f) => f.id === fabricId) || null : null;
   const selectedColor = colorId ? availableColors.find((c) => c.id === colorId) || null : null;
@@ -147,10 +149,10 @@ export function CustomDtfStudio({
 
   const dtfTotalPerShirt = placements.reduce((sum, p) => sum + p.price, 0);
   const currentProductImage = !selectedProduct ? '' : activeView === 'sleeve'
-    ? selectedProduct.images[2] || selectedMockup?.frontImage || selectedProduct.frontImage
+    ? selectedProduct.images[2] || selectedProduct.images[0] || selectedProduct.frontImage
     : activeView === 'back'
-      ? selectedMockup?.backImage || selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
-      : selectedMockup?.frontImage || selectedProduct.frontImage || selectedProduct.images[0];
+      ? selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
+      : selectedProduct.frontImage || selectedProduct.images[0];
   const baseGarmentPrice = selectedProduct?.price || 0;
   const selectedSizeSurcharge = selectedProduct?.sizeSurcharges?.[size] || 0;
   const rawUnitPrice = baseGarmentPrice + dtfTotalPerShirt + selectedSizeSurcharge;
@@ -413,7 +415,7 @@ export function CustomDtfStudio({
         <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-200">
           <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#7A1F2B]" />
           <span>
-            <strong>Simulasi Gambaran Publik:</strong> Studio ini berfungsi sebagai pratinjau penempatan &amp; gambaran estimasi biaya. Anda cukup <strong>menggeser posisi desain</strong> (ukuran cetak otomatis mengikuti zona yang dipilih). File desain asli dikirimkan ke <strong>WhatsApp Admin saat checkout</strong> untuk proses revisi dan konfirmasi cetak.
+            <strong>Mulai dengan 4 langkah sederhana:</strong> pilih produk, tentukan bahan/warna/ukuran, pilih posisi sablon, lalu unggah desain. Pratinjau menggunakan <strong>foto produk dari katalog</strong>. Harga akhir dan detail produksi dibahas langsung dengan Admin melalui WhatsApp.
           </span>
         </div>
 
@@ -475,12 +477,12 @@ export function CustomDtfStudio({
                   <div className="min-w-0">
                     <div className="font-bold truncate">{selectedProduct.name}</div>
                     <div className="text-[11px] text-neutral-500">
-                      Foto Mockup: {activeView === 'front' ? 'Tampak Depan' : activeView === 'back' ? 'Tampak Belakang' : 'Lengan'} · {selectedProduct.sku}
+                      Foto katalog: {activeView === 'front' ? 'Tampak Depan' : activeView === 'back' ? 'Tampak Belakang' : 'Tampak Lengan'} · {selectedProduct.sku}
                     </div>
                   </div>
                 </div>
                 <span className="text-[11px] font-mono-tabular text-[#7A1F2B] shrink-0 uppercase">
-                  {activeSilhouette}
+                  {selectedColor?.name || 'Pilih warna'}
                 </span>
               </div>
             ) : (
@@ -493,123 +495,35 @@ export function CustomDtfStudio({
               ref={canvasRef}
               className="relative aspect-[4/4.2] w-full rounded-lg overflow-hidden bg-gradient-to-b from-neutral-200 to-neutral-300 dark:from-[#1A1A1A] dark:to-[#101010] border border-black/10 dark:border-white/10 flex items-center justify-center select-none touch-none"
             >
-              {selectedProduct && (activeView !== 'sleeve' || Boolean(selectedProduct.images[2])) ? (
+              {selectedProduct && currentProductImage && !mockupImageFailed ? (
                 <>
                   <img
+                    key={currentProductImage}
                     src={currentProductImage}
-                    alt={`${selectedProduct.name} ${activeView === 'sleeve' ? 'model lengan panjang' : activeView === 'back' ? 'tampak belakang' : 'tampak depan'}`}
+                    alt={`${selectedProduct.name} ${activeView === 'sleeve' ? 'tampak lengan' : activeView === 'back' ? 'tampak belakang' : 'tampak depan'}`}
                     referrerPolicy="no-referrer"
-                    className="w-full h-full object-contain pointer-events-none"
+                    onError={() => setMockupImageFailed(true)}
+                    className="absolute inset-0 w-full h-full object-contain p-3 pointer-events-none"
                   />
-                  {selectedColor && currentProductImage && (
-                    <div
-                      aria-hidden="true"
-                      className="absolute inset-0 pointer-events-none"
-                      style={{
-                        backgroundColor: selectedColor.hex,
-                        WebkitMaskImage: `url("${currentProductImage}")`,
-                        maskImage: `url("${currentProductImage}")`,
-                        WebkitMaskSize: 'contain',
-                        maskSize: 'contain',
-                        WebkitMaskPosition: 'center',
-                        maskPosition: 'center',
-                        WebkitMaskRepeat: 'no-repeat',
-                        maskRepeat: 'no-repeat',
-                        mixBlendMode: 'multiply',
-                      }}
-                    />
-                  )}
                   {selectedColor && (
                     <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/75 text-white text-[11px] font-medium flex items-center gap-1.5 backdrop-blur-sm">
-                      <span
-                        className="w-3 h-3 rounded-full border border-white/40"
-                        style={{ backgroundColor: selectedColor.hex }}
-                      />
-                      <span>Warna: {selectedColor.name}</span>
+                      <span className="w-3 h-3 rounded-full border border-white/40" style={{ backgroundColor: selectedColor.hex }} />
+                      <span>Warna pesanan: {selectedColor.name}</span>
                     </div>
                   )}
                 </>
               ) : (
-                <svg viewBox="0 0 400 420" className="w-[88%] h-[88%] drop-shadow-xl" aria-label="Pratinjau Mockup Baju Katalog">
-                  <defs>
-                    <linearGradient id="fabricShade" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.12" />
-                      <stop offset="100%" stopColor="#000000" stopOpacity="0.24" />
-                    </linearGradient>
-                  </defs>
-
-                  {activeSilhouette === 'hoodie' ? (
-                    <g>
-                      <path
-                        d="M132,74 C150,24 250,24 268,74 L348,118 L374,244 L322,256 L300,175 L300,378 L100,378 L100,175 L78,256 L26,244 L52,118 Z"
-                        fill={activeColorHex}
-                        stroke="rgba(255,255,255,0.18)"
-                        strokeWidth="2"
-                      />
-                      <path
-                        d="M132,74 C150,24 250,24 268,74 L348,118 L374,244 L322,256 L300,175 L300,378 L100,378 L100,175 L78,256 L26,244 L52,118 Z"
-                        fill="url(#fabricShade)"
-                      />
-                      {activeView === 'front' && (
-                        <>
-                          <path d="M138,76 Q200,115 262,76" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
-                          <path d="M135,285 L265,285 L278,348 L122,348 Z" fill="rgba(0,0,0,0.14)" stroke="rgba(255,255,255,0.12)" />
-                        </>
-                      )}
-                    </g>
-                  ) : activeSilhouette === 'longsleeve' ? (
-                    <g>
-                      <path
-                        d="M145,58 Q200,82 255,58 L345,98 L378,278 L334,288 L302,162 L302,382 L98,382 L98,162 L66,288 L22,278 L55,98 Z"
-                        fill={activeColorHex}
-                        stroke="rgba(255,255,255,0.18)"
-                        strokeWidth="2"
-                      />
-                      <path
-                        d="M145,58 Q200,82 255,58 L345,98 L378,278 L334,288 L302,162 L302,382 L98,382 L98,162 L66,288 L22,278 L55,98 Z"
-                        fill="url(#fabricShade)"
-                      />
-                    </g>
-                  ) : activeSilhouette === 'regular-tee' ? (
-                    <g>
-                      <path
-                        d="M152,58 Q200,86 248,58 L318,86 L340,162 L292,178 L282,138 L282,382 L118,382 L118,138 L108,178 L60,162 L82,86 Z"
-                        fill={activeColorHex}
-                        stroke="rgba(255,255,255,0.18)"
-                        strokeWidth="2"
-                      />
-                      <path
-                        d="M152,58 Q200,86 248,58 L318,86 L340,162 L292,178 L282,138 L282,382 L118,382 L118,138 L108,178 L60,162 L82,86 Z"
-                        fill="url(#fabricShade)"
-                      />
-                      <path
-                        d={activeView === 'back' ? 'M152,58 Q200,72 248,58' : 'M152,58 Q200,92 248,58'}
-                        fill="none"
-                        stroke="rgba(255,255,255,0.22)"
-                        strokeWidth="5"
-                      />
-                    </g>
-                  ) : (
-                    <g>
-                      <path
-                        d="M142,56 Q200,88 258,56 L354,96 L376,196 L312,212 L302,158 L304,376 L96,376 L98,158 L88,212 L24,196 L46,96 Z"
-                        fill={activeColorHex}
-                        stroke="rgba(255,255,255,0.18)"
-                        strokeWidth="2"
-                      />
-                      <path
-                        d="M142,56 Q200,88 258,56 L354,96 L376,196 L312,212 L302,158 L304,376 L96,376 L98,158 L88,212 L24,196 L46,96 Z"
-                        fill="url(#fabricShade)"
-                      />
-                      <path
-                        d={activeView === 'back' ? 'M142,56 Q200,72 258,56' : 'M142,56 Q200,96 258,56'}
-                        fill="none"
-                        stroke="rgba(255,255,255,0.24)"
-                        strokeWidth="7"
-                      />
-                    </g>
-                  )}
-                </svg>
+                <div className="relative z-10 mx-5 max-w-sm rounded-2xl border border-dashed border-white/25 bg-black/55 p-6 text-center text-white backdrop-blur-sm">
+                  <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-white/10">
+                    <Info className="h-6 w-6 text-[#7A1F2B]" />
+                  </div>
+                  <p className="text-sm font-bold">{selectedProduct ? 'Foto produk belum tersedia' : 'Pilih produk dari katalog'}</p>
+                  <p className="mt-2 text-xs leading-relaxed text-white/65">
+                    {selectedProduct
+                      ? 'Admin perlu mengunggah foto produk untuk tampak ini melalui Manajemen Konten → Foto Produk.'
+                      : 'Pilih salah satu produk pada langkah pertama. Foto asli produk akan tampil di area pratinjau ini.'}
+                  </p>
+                </div>
               )}
 
               {visiblePlacements.map((pl) => {
@@ -654,7 +568,7 @@ export function CustomDtfStudio({
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[11px] font-mono-tabular px-3 py-1.5 rounded-md bg-black/75 text-white">
                 <span className="flex items-center gap-1.5">
                   <Move className="w-3.5 h-3.5 text-[#7A1F2B]" />
-                  {removingBg ? 'Menghapus background otomatis...' : 'Geser posisi desain di area garis oranye'}
+                  {removingBg ? 'Menghapus background otomatis...' : 'Geser posisi desain pada foto produk'}
                 </span>
                 <span className="truncate max-w-[160px]">
                   {activeZoneMeta ? `Auto ${activeZoneMeta.dimensionsCm}` : selectedProduct?.fit || 'Custom'}
@@ -749,14 +663,10 @@ export function CustomDtfStudio({
           {/* RIGHT: Catalog Garment Selector + Admin-Configured Material & Colors */}
           <div className="lg:col-span-6 space-y-5">
             <div className="bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 rounded-xl p-5 space-y-4">
-              <h3 className="font-display text-2xl font-bold uppercase tracking-wide">
-                1. Pilih Baju dari Katalog &amp; Material Kain
-              </h3>
+              <div className="space-y-1"><p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#7A1F2B]">Langkah 1 dari 4</p><h3 className="font-display text-2xl font-bold uppercase tracking-wide">Pilih produk &amp; bahan</h3><p className="text-xs text-neutral-500">Pilih foto produk yang ingin kamu custom. Foto ini akan menjadi dasar pratinjau desain.</p></div>
 
               <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                  Bentuk Baju Sesuai Katalog
-                </div>
+                <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Pilih foto produk dari katalog</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   {customBaseProducts.map((prod) => (
                     <button
@@ -778,9 +688,7 @@ export function CustomDtfStudio({
                       <div className="min-w-0">
                         <div className="text-xs font-bold truncate">{prod.name}</div>
                         <div className="text-[11px] text-neutral-500 truncate">{prod.fit}</div>
-                        <div className="text-[11px] font-mono-tabular text-[#7A1F2B]">
-                          {formatRupiah(prod.price)}
-                        </div>
+                        <div className="text-[11px] text-[#7A1F2B]">{prod.colors.length} pilihan warna</div>
                       </div>
                     </button>
                   ))}
@@ -789,7 +697,7 @@ export function CustomDtfStudio({
 
               <div className="space-y-2">
                 <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                  Pilih Bahan Kain (Dikelola Admin)
+                  Langkah 2 · Pilih bahan kain
                 </div>
                 {fabrics.length === 0 ? (
                   <div className="p-3.5 rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 text-xs flex items-start gap-2 text-amber-700 dark:text-amber-300">
@@ -826,7 +734,7 @@ export function CustomDtfStudio({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-black/10 dark:border-white/10">
                 <div className="space-y-2">
                   <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                    Warna: <span className="text-[#080808] dark:text-white">{selectedColor?.name || 'Belum tersedia'}</span>
+                    Langkah 2 · Pilih warna: <span className="text-[#080808] dark:text-white">{selectedColor?.name || 'Belum dipilih'}</span>
                   </div>
                   {availableColors.length === 0 ? (
                     <div className="p-2.5 rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 text-[11px] text-amber-700 dark:text-amber-300">
@@ -855,7 +763,7 @@ export function CustomDtfStudio({
 
                 <div className="space-y-2">
                   <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                    Ukuran
+                    Langkah 2 · Pilih ukuran
                   </div>
                   <div className="flex items-center gap-1.5">
                     {SIZES.map((s) => (
@@ -879,9 +787,9 @@ export function CustomDtfStudio({
 
             <div className="bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 rounded-xl p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-display text-2xl font-bold uppercase tracking-wide">
-                  2. Zona Sablon &amp; Unggah Desain DTF
-                </h3>
+                <div><p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#7A1F2B]">Langkah 3 dari 4</p><h3 className="font-display text-2xl font-bold uppercase tracking-wide">
+                  3. Pilih posisi &amp; unggah desain DTF
+                </h3></div>
                 <span className="text-xs font-mono-tabular text-neutral-500">{placements.length} Zona Aktif</span>
               </div>
 
@@ -1062,33 +970,18 @@ export function CustomDtfStudio({
 
               </div>
 
-              <div className="space-y-1.5 text-xs pt-2 border-t border-black/10 dark:border-white/10">
-                <div className="flex justify-between text-neutral-500 dark:text-neutral-400">
-                  <span>{selectedProduct?.name || 'Baju belum dipilih'} + {selectedFabric?.name || 'Kain belum dipilih'}</span>
-                  <span className="font-mono-tabular">{formatRupiah(baseGarmentPrice + (selectedFabric?.priceModifier || 0))}</span>
-                </div>
-                <div className="flex justify-between text-neutral-500 dark:text-neutral-400">
-                  <span>Total Biaya Sablon DTF ({placements.length} posisi)</span>
-                  <span className="font-mono-tabular">{formatRupiah(dtfTotalPerShirt)}</span>
-                </div>
-                <div className="flex justify-between text-sm font-bold pt-2 border-t border-black/10 dark:border-white/10">
-                  <span>
-                    Total Harga ({quantity} pcs)
-                  </span>
-                  <span className="text-lg font-mono-tabular text-[#7A1F2B]">{formatRupiah(totalEstimate)}</span>
-                </div>
-              </div>
+              <div className="rounded-xl border border-[#7A1F2B]/25 bg-[#7A1F2B]/5 p-4 space-y-1.5"><p className="text-xs font-bold uppercase tracking-wider text-[#7A1F2B]">Langkah 4 · Periksa pesanan</p><p className="text-sm font-semibold">{selectedProduct?.name || 'Produk belum dipilih'}</p><p className="text-xs text-neutral-500">{selectedColor?.name || 'Warna belum dipilih'} · {size || 'Ukuran belum dipilih'} · {quantity} pcs · {placements.length} posisi desain</p><p className="text-xs text-neutral-500">Harga akhir, ongkos kirim, dan waktu produksi akan dibahas langsung dengan Admin melalui WhatsApp.</p></div>
 
               <button
                 type="button"
                 disabled={!isStudioReady}
                 onClick={handleOrderCustom}
-                className="w-full h-12 rounded-md bg-[#7A1F2B] hover:bg-[#e04400] text-white text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-45"
+                className="w-full h-12 rounded-md bg-[#7A1F2B] hover:bg-[#651925] text-white text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-45"
               >
                 <ShoppingCart className="w-4 h-4" />
                 <span>
-                  {fabrics.length === 0 || garmentColors.length === 0
-                    ? 'Lengkapi Kain & Warna di Admin Terlebih Dahulu'
+                  {fabrics.length === 0 || availableColors.length === 0
+                    ? 'Pilihan bahan atau warna belum tersedia'
                     : !selectedProduct
                     ? 'Pilih Model Baju Terlebih Dahulu'
                     : !selectedFabric || !selectedColor || !size
