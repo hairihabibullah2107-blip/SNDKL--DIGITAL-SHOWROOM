@@ -294,7 +294,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
             }
             try {
               const imageData = await imageBlobToJpegDataUrl(imageResult.data);
-              doc.addImage(imageData, 'JPEG', 18, y, 42, 34, undefined, 'FAST);
+              doc.addImage(imageData, 'JPEG', 18, y, 42, 34, undefined, 'FAST');
               doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.text(asset.label + ' · ' + (asset.path.split('/').pop() || 'File acuan'), 64, y + 6);
               y += 37;
             } catch {
