@@ -18,12 +18,14 @@ function asNumber(value: unknown, fallback = 0): number {
 }
 
 export async function loadShowroomBootstrap() {
-  const [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, reviewResult, settingsResult, mockupResult, printingMethodResult] =
+  const [categoryResult, productResult, materialResult, variantResult, colorResult, productColorResult, imageResult, dtfResult, reviewResult, settingsResult, mockupResult, printingMethodResult] =
     await Promise.all([
       supabase.from('showroom_categories').select('id,name,slug,description,image_path,sort_order,is_active').eq('is_active', true).order('sort_order'),
       supabase.from('showroom_products').select('id,category_id,name,slug,description,base_price,long_sleeve_price,model,weight_description,is_featured,is_best_seller,is_published,stock_mode,available_colors,size_surcharges,material_id,showroom_materials(name,description,surcharge)').eq('is_published', true).order('created_at', { ascending: false }),
       supabase.from('showroom_materials').select('id,name,description,surcharge,is_active').eq('is_active', true),
       supabase.from('showroom_product_variants').select('id,product_id,color,size,sku,price_adjustment,stock_quantity,is_available').eq('is_available', true),
+      supabase.from('showroom_colors').select('id,name,hex,is_active').eq('is_active', true).order('sort_order'),
+      supabase.from('showroom_product_colors').select('id,product_id,color_id,sort_order,is_active,showroom_colors(id,name,hex,is_active)').eq('is_active', true).order('sort_order'),
       supabase.from('showroom_product_images').select('id,product_id,storage_path,alt_text,sort_order,is_primary').order('is_primary', { ascending: false }).order('sort_order'),
       supabase.from('showroom_dtf_prices').select('id,size_code,label,width_cm,height_cm,price,is_active,sort_order,placement_view,box_x,box_y,box_w,box_h').eq('is_active', true).order('sort_order'),
       supabase.from('showroom_product_reviews').select('id,product_id,author_name,rating,comment,verified_purchase,created_at').eq('is_approved', true).order('created_at', { ascending: false }),
@@ -32,7 +34,7 @@ export async function loadShowroomBootstrap() {
       supabase.from('showroom_printing_methods').select('id,name,description,pricing_type,base_price').eq('is_active', true).order('name'),
     ]);
 
-  for (const result of [categoryResult, productResult, materialResult, variantResult, imageResult, dtfResult, reviewResult, settingsResult, mockupResult, printingMethodResult]) {
+  for (const result of [categoryResult, productResult, materialResult, variantResult, colorResult, productColorResult, imageResult, dtfResult, reviewResult, settingsResult, mockupResult, printingMethodResult]) {
     if (result.error) throw result.error;
   }
 
@@ -40,6 +42,8 @@ export async function loadShowroomBootstrap() {
   const productsRaw = productResult.data ?? [];
   const materials = materialResult.data ?? [];
   const variants = variantResult.data ?? [];
+  const masterColors = colorResult.data ?? [];
+  const productColorLinks = productColorResult.data ?? [];
   const images = imageResult.data ?? [];
   const dtfPrices = dtfResult.data ?? [];
   const reviews = (reviewResult.data ?? []).map((row) => ({ id: row.id, productId: row.product_id, authorName: row.author_name, rating: row.rating, comment: row.comment, verifiedPurchase: row.verified_purchase, createdAt: row.created_at }));
@@ -57,12 +61,18 @@ export async function loadShowroomBootstrap() {
     const productVariants = variants.filter((v) => v.product_id === row.id);
     const productImages = images.filter((v) => v.product_id === row.id);
     const productReviews = reviews.filter((review) => review.productId === row.id);
-    const colorNames = Array.isArray(row.available_colors) ? row.available_colors : [];
     const colorMapForProduct = new Map<string, ProductColor>();
-    for (const entry of colorNames) {
-      const name = typeof entry === 'string' ? entry : String((entry as { name?: string })?.name ?? 'Default');
-      const hex = typeof entry === 'object' && entry !== null && 'hex' in entry ? String((entry as { hex?: string }).hex || '#777777') : '#777777';
-      colorMapForProduct.set(name.toLowerCase(), { name, hex });
+    for (const link of productColorLinks.filter((item) => item.product_id === row.id)) {
+      const color = Array.isArray(link.showroom_colors) ? link.showroom_colors[0] : link.showroom_colors;
+      if (color?.name) colorMapForProduct.set(String(color.id), { name: color.name, hex: color.hex || '#777777' });
+    }
+    // Compatibility fallback for legacy variants while existing records are migrated.
+    if (colorMapForProduct.size === 0) {
+      for (const entry of Array.isArray(row.available_colors) ? row.available_colors : []) {
+        const name = typeof entry === 'string' ? entry : String((entry as { name?: string })?.name ?? 'Default');
+        const hex = typeof entry === 'object' && entry !== null && 'hex' in entry ? String((entry as { hex?: string }).hex || '#777777') : '#777777';
+        colorMapForProduct.set(name.toLowerCase(), { name, hex });
+      }
     }
     for (const variant of productVariants) {
       const key = variant.color.toLowerCase();
@@ -126,14 +136,10 @@ export async function loadShowroomBootstrap() {
   }));
 
   const colorMap = new Map<string, GarmentColorOption>();
-  for (const product of productsRaw) {
-    for (const value of Array.isArray(product.available_colors) ? product.available_colors : []) {
-      const name = typeof value === 'string' ? value : String((value as { name?: string })?.name ?? 'Default');
-      const hex = typeof value === 'object' && value !== null && 'hex' in value ? String((value as { hex?: string }).hex || '#777777') : '#777777';
-      const key = name.toLowerCase();
-      if (!colorMap.has(key)) colorMap.set(key, { id: key, name, hex, publishedByAdmin: true });
-    }
+  for (const color of masterColors) {
+    colorMap.set(String(color.id), { id: String(color.id), name: color.name, hex: color.hex || '#777777', publishedByAdmin: true });
   }
+  // Retain colors from the legacy garment mockup library until each is linked to a master color.
 
   for (const mockup of mockupResult.data || []) {
     const key = String(mockup.color_name).toLowerCase();
