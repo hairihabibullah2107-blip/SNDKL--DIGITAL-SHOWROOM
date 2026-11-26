@@ -240,6 +240,7 @@ export default function App() {
       setReviews(data.reviews);
       setChatMessages(data.chatMessages);
       try { localStorage.setItem(CACHE_BOOTSTRAP_KEY, JSON.stringify(data)); } catch { /* optional offline cache */ }
+      return true;
     } catch (error) {
       console.error('Supabase showroom bootstrap failed:', error);
       showToast('Katalog belum dapat dimuat. Periksa koneksi database.');
@@ -262,6 +263,7 @@ export default function App() {
           setReviews(data.reviews || []);
         }
       } catch { /* ignore invalid cache */ }
+      return false;
     } finally {
       setIsInitialLoading(false);
     }
@@ -271,7 +273,7 @@ export default function App() {
   useEffect(() => { setHeroImageFailed(false); }, [siteContent.heroImage]);
   const refreshShowroom = useCallback(async () => {
     setIsRefreshing(true);
-    try { await loadBootstrap(); showToast('Data katalog dan tampilan SANDIKALE berhasil dimuat ulang.'); }
+    try { const loaded = await loadBootstrap(); showToast(loaded ? 'Data katalog dan tampilan SANDIKALE berhasil dimuat ulang.' : 'Koneksi database gagal. Tampilan sementara menggunakan data tersimpan di perangkat.'); }
     finally { setIsRefreshing(false); }
   }, [loadBootstrap, showToast]);
 
