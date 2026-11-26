@@ -53,8 +53,8 @@ export function ProductQuickViewModal({
   if (!product) return null;
 
   const activeColor = selectedColorIdx >= 0 ? product.colors[selectedColorIdx] : undefined;
-  const galleryImages = product.images.length > 0 ? product.images : ['/src/assets/images/prod_boxy_heavy_tee_1795511847020.jpg'];
-  const activeImage = activeColor?.image && imageIdx === 0 ? activeColor.image : galleryImages[imageIdx % galleryImages.length];
+  const galleryImages = product.images;
+  const activeImage = activeColor?.image && imageIdx === 0 ? activeColor.image : galleryImages.length ? galleryImages[imageIdx % galleryImages.length] : '';
   const availableSizes = Object.entries(product.sizes);
   const selectedStock = selectedSize ? (product.sizes[selectedSize] ?? 0) : 0;
   const prodReviews = reviews.filter((r) => r.productId === product.id);
@@ -109,12 +109,20 @@ export function ProductQuickViewModal({
           {/* Left Gallery with swipe/navigation */}
           <div className="space-y-3">
             <div className="relative aspect-[4/3] rounded-lg overflow-hidden bg-neutral-100 dark:bg-[#171717]">
-              <img
-                src={activeImage}
-                alt={product.name}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-contain"
-              />
+              {activeImage ? (
+                <img
+                  src={activeImage}
+                  alt={product.name}
+                  referrerPolicy="no-referrer"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-neutral-500 dark:text-neutral-400">
+                  <span className="text-4xl font-bold">S</span>
+                  <span className="text-[10px] uppercase tracking-[.18em]">Foto produk belum tersedia</span>
+                </div>
+              )}
               {activeColor && activeImage && (
                 <div
                   aria-hidden="true"
