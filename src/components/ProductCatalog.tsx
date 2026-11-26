@@ -226,6 +226,7 @@ export function ProductCatalog({
                     <div className="relative aspect-[4/3] overflow-hidden bg-neutral-100 dark:bg-[#171717]">
                       <img
                         src={primaryImage}
+                        onError={(e) => { e.currentTarget.src = defaultProductImage; }}
                         alt={product.name}
                         loading="lazy"
                         referrerPolicy="no-referrer"
@@ -233,6 +234,7 @@ export function ProductCatalog({
                       />
                       <img
                         src={secondaryImage}
+                        onError={(e) => { e.currentTarget.src = defaultProductImage; }}
                         alt={`${product.name} tampak detail`}
                         loading="lazy"
                         referrerPolicy="no-referrer"
@@ -413,7 +415,8 @@ export function ProductCatalog({
                 >
                   <div className="aspect-[4/3] bg-neutral-100 dark:bg-[#171717]">
                     <img
-                      src={item.images[0]}
+                      src={item.images[0] || defaultProductImage}
+                      onError={(e) => { e.currentTarget.src = defaultProductImage; }}
                       alt={item.name}
                       loading="lazy"
                       referrerPolicy="no-referrer"
