@@ -152,3 +152,8 @@ body {
 .image-loading { background: linear-gradient(100deg, rgba(255,255,255,.04) 20%, rgba(255,255,255,.1) 40%, rgba(255,255,255,.04) 60%); background-size: 200% 100%; animation: sandikaleShimmer 1.4s ease-in-out infinite; }
 @keyframes sandikaleShimmer { to { background-position-x: -200%; } }
 @media (prefers-reduced-motion: reduce) { .image-loading { animation: none !important; } }
+
+/* Connect every theme control to the rendered storefront surfaces */
+.dark [class~="dark:bg-[#141414]"], [class~="bg-[#141414]"] { background-color: var(--site-surface, #171717) !important; }
+.dark [class~="dark:bg-[#171717]"], [class~="bg-[#171717]"] { background-color: color-mix(in srgb, var(--site-surface, #171717) 78%, var(--site-background, #080808)) !important; }
+[class~="text-neutral-500"], [class~="dark:text-neutral-400"] { color: var(--site-muted, #a3a3a3) !important; }
