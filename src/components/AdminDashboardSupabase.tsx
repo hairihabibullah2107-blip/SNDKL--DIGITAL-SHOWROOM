@@ -39,6 +39,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<'orders' | 'catalog' | 'production' | 'website' | 'reviews'>('orders');
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
@@ -57,6 +58,8 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
   const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
+    setRefreshing(true);
+    try {
     const [o, p, c, d, r, m] = await Promise.all([
       supabase.from('showroom_orders').select('id,order_number,spk_number,status,production_status,payment_status,subtotal,total_amount,deposit_amount,created_at,estimated_completion,notes,version,design_notes,production_notes,finishing_instructions,showroom_customers(name,whatsapp,address,email),showroom_order_items(id,product_name_snapshot,quantity,subtotal,specification,showroom_order_variants(size,color,quantity))').order('created_at', { ascending: false }).limit(100),
       supabase.from('showroom_products').select('id,name,slug,base_price,is_published,is_featured,description').order('created_at', { ascending: false }),
@@ -73,6 +76,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     setPrices((d.data || []) as PriceRow[]);
     setReviews((r.data || []) as ReviewRow[]);
     setMaterials((m.data || []) as MaterialRow[]);
+    } finally { setRefreshing(false); }
   }, []);
 
   const verifySession = useCallback(async () => {
@@ -313,7 +317,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
       <div className="max-w-7xl mx-auto space-y-6">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5">
           <div><div className="text-xs tracking-[.3em] uppercase text-[#7A1F2B]">SANDIKALE · CONTROL ROOM</div><h1 className="text-2xl md:text-3xl font-bold mt-1">Dashboard Showroom</h1><p className="text-xs text-white/50 mt-1">{profile.full_name} · {profile.role}</p></div>
-          <div className="flex gap-2"><button onClick={() => void load()} className="border border-white/15 rounded-lg px-4 py-2 text-sm">Muat ulang</button><button onClick={signOut} className="bg-white text-black rounded-lg px-4 py-2 text-sm font-semibold">Keluar</button></div>
+          <div className="flex gap-2"><button type="button" onClick={() => void load().catch((e) => onToast(e.message || "Gagal memuat ulang data."))} disabled={refreshing} className="border border-white/15 rounded-lg px-4 py-2 text-sm disabled:opacity-50">{refreshing ? "Memuat…" : "Muat ulang"}</button><button onClick={signOut} className="bg-white text-black rounded-lg px-4 py-2 text-sm font-semibold">Keluar</button></div>
         </header>
         <nav className="flex flex-wrap gap-2">{(['orders','catalog','production','website','reviews'] as const).filter((key) => key === 'orders' || key === 'reviews' || ['owner','admin'].includes(profile.role)).map((key) => <button key={key} onClick={() => setTab(key)} className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${tab === key ? 'bg-[#7A1F2B] text-white' : 'bg-white/5 text-white/65 hover:bg-white/10'}`}>{({orders:'Pesanan',catalog:'Produk & Katalog',production:'Produksi & Harga',website:'Website',reviews:'Ulasan'} as Record<string,string>)[key]}</button>)}</nav>
         <section className="grid grid-cols-2 xl:grid-cols-4 gap-3">
