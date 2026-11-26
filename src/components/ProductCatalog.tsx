@@ -97,7 +97,8 @@ export function ProductCatalog({
                 >
                   <div className="aspect-[4/3] overflow-hidden bg-neutral-100 dark:bg-[#171717]">
                     <img
-                      src={cat.image}
+                      src={cat.image || defaultProductImage}
+                      onError={(e) => { e.currentTarget.src = defaultProductImage; }}
                       alt={cat.name}
                       loading="lazy"
                       referrerPolicy="no-referrer"
