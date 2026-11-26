@@ -869,8 +869,6 @@ export default function App() {
       <ProductQuickViewModal
         product={quickViewProduct}
         reviews={reviews}
-        shippingOriginCity={shippingOriginCity}
-        shippingCouriers={shippingCouriers}
         adminWhatsapp={adminWhatsapp}
         isWishlisted={quickViewProduct ? wishlistIds.includes(quickViewProduct.id) : false}
         onToggleWishlist={handleToggleWishlist}
