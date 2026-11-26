@@ -109,6 +109,21 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
 
   useEffect(() => { void verifySession(); }, [verifySession]);
   useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        setProfile(null);
+        setOrders([]);
+        setProducts([]);
+        setError('Sesi admin berakhir. Silakan masuk kembali untuk melanjutkan.');
+        return;
+      }
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        window.setTimeout(() => { void verifySession(); }, 0);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [verifySession]);
+  useEffect(() => {
     if (!profile) return;
     void load().catch((e) => onToast(e.message || 'Gagal memuat data admin.'));
     const channel = supabase.channel('showroom-admin-live')
