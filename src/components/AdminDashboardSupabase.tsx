@@ -243,7 +243,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
       const doc = new jsPDF();
       doc.setFillColor(8, 8, 8); doc.rect(0, 0, 210, 34, 'F');
       doc.setTextColor(255, 255, 255); doc.setFontSize(21); doc.text('SANDIKALE', 14, 15);
-      doc.setFontSize(10); doc.setTextColor(255, 77, 0); doc.text('SURAT PERINTAH KERJA · CUSTOM APPAREL & DTF', 14, 25);
+      doc.setFontSize(10); doc.setTextColor(122, 31, 43); doc.text('SURAT PERINTAH KERJA · CUSTOM APPAREL & DTF', 14, 25);
       doc.setTextColor(20, 20, 20); doc.setFontSize(13); doc.text('INFORMASI PESANAN', 14, 48);
       doc.setFontSize(10);
       const customer = order.showroom_customers;
