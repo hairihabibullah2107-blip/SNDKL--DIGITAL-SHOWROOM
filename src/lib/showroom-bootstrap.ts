@@ -76,7 +76,7 @@ export async function loadShowroomBootstrap() {
     }
     for (const variant of productVariants) {
       const key = variant.color.toLowerCase();
-      if (!colorMapForProduct.has(key)) colorMapForProduct.set(key, { name: variant.color, hex: '#777777' });
+      if (![...colorMapForProduct.values()].some((color) => color.name.toLowerCase() === key)) colorMapForProduct.set(key, { name: variant.color, hex: '#777777' });
     }
     const colors: ProductColor[] = [...colorMapForProduct.values()];
     const variantPrices: Record<string, number> = {};
