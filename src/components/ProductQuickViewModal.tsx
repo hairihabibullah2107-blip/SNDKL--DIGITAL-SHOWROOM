@@ -147,7 +147,7 @@ export function ProductQuickViewModal({
                     type="button"
                     onClick={() => setImageIdx((prev) => (prev - 1 + galleryImages.length) % galleryImages.length)}
                     aria-label="Foto sebelumnya"
-                    className="absolute left-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-[#FF4D00] transition-colors cursor-pointer"
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-[#7A1F2B] transition-colors cursor-pointer"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -155,7 +155,7 @@ export function ProductQuickViewModal({
                     type="button"
                     onClick={() => setImageIdx((prev) => (prev + 1) % galleryImages.length)}
                     aria-label="Foto berikutnya"
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-[#FF4D00] transition-colors cursor-pointer"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-[#7A1F2B] transition-colors cursor-pointer"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
@@ -170,7 +170,7 @@ export function ProductQuickViewModal({
                   type="button"
                   onClick={() => setImageIdx(idx)}
                   className={`w-20 aspect-[4/3] rounded-md overflow-hidden border-2 shrink-0 cursor-pointer ${
-                    imageIdx === idx ? 'border-[#FF4D00]' : 'border-transparent opacity-70 hover:opacity-100'
+                    imageIdx === idx ? 'border-[#7A1F2B]' : 'border-transparent opacity-70 hover:opacity-100'
                   }`}
                 >
                   <img src={img} alt="" referrerPolicy="no-referrer" className="w-full h-full object-contain mix-blend-multiply" />
@@ -188,7 +188,7 @@ export function ProductQuickViewModal({
                 <span aria-hidden="true">·</span>
                 <span>{product.fit}</span>
                 <span aria-hidden="true">·</span>
-                <span className="flex items-center gap-1 text-[#FF4D00] font-semibold">
+                <span className="flex items-center gap-1 text-[#7A1F2B] font-semibold">
                   <Star className="w-3.5 h-3.5 fill-current" />
                   <span className="tabular-nums">{product.rating}</span>
                   <span>({product.reviewCount})</span>
@@ -229,7 +229,7 @@ export function ProductQuickViewModal({
                       title={c.name}
                       aria-label={`Pilih warna ${c.name}`}
                       className={`w-8 h-8 rounded-full border-2 transition-transform cursor-pointer ${
-                        selectedColorIdx === idx ? 'border-[#FF4D00] scale-110' : 'border-black/20 dark:border-white/20'
+                        selectedColorIdx === idx ? 'border-[#7A1F2B] scale-110' : 'border-black/20 dark:border-white/20'
                       }`}
                       style={{ backgroundColor: c.hex }}
                     />
@@ -258,7 +258,7 @@ export function ProductQuickViewModal({
                     className={`h-10 rounded-md text-xs font-semibold border transition-colors cursor-pointer disabled:opacity-40 ${
                       selectedSize === sz
                         ? 'bg-[#080808] dark:bg-white text-white dark:text-[#080808] border-[#080808] dark:border-white'
-                        : 'border-black/15 dark:border-white/15 hover:border-[#FF4D00]'
+                        : 'border-black/15 dark:border-white/15 hover:border-[#7A1F2B]'
                     }`}
                   >
                     {sz}
@@ -307,7 +307,7 @@ export function ProductQuickViewModal({
                     });
                     onClose();
                   }}
-                  className="flex-1 h-11 px-5 rounded-md bg-[#FF4D00] hover:bg-[#e04400] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                  className="flex-1 h-11 px-5 rounded-md bg-[#7A1F2B] hover:bg-[#e04400] text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
                 >
                   <ShoppingBag className="w-4 h-4" />
                   <span>
@@ -325,8 +325,8 @@ export function ProductQuickViewModal({
                   aria-label="Simpan ke wishlist"
                   className={`w-11 h-11 rounded-md border flex items-center justify-center transition-colors cursor-pointer ${
                     isWishlisted
-                      ? 'border-[#FF4D00] text-[#FF4D00] bg-[#FF4D00]/10'
-                      : 'border-black/15 dark:border-white/15 hover:border-[#FF4D00]'
+                      ? 'border-[#7A1F2B] text-[#7A1F2B] bg-[#7A1F2B]/10'
+                      : 'border-black/15 dark:border-white/15 hover:border-[#7A1F2B]'
                   }`}
                 >
                   <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
@@ -341,7 +341,7 @@ export function ProductQuickViewModal({
                       onClose();
                       onOpenCustomStudio(product);
                     }}
-                    className="h-10 rounded-md border border-black/15 dark:border-white/15 hover:border-[#FF4D00] text-xs font-semibold uppercase tracking-wider cursor-pointer"
+                    className="h-10 rounded-md border border-black/15 dark:border-white/15 hover:border-[#7A1F2B] text-xs font-semibold uppercase tracking-wider cursor-pointer"
                   >
                     Custom Sablon DTF
                   </button>
@@ -381,7 +381,7 @@ export function ProductQuickViewModal({
                   >
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold">{rev.authorName}</span>
-                      <span className="text-[#FF4D00] font-mono-tabular">★ {rev.rating}.0</span>
+                      <span className="text-[#7A1F2B] font-mono-tabular">★ {rev.rating}.0</span>
                     </div>
                     <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">{rev.comment}</p>
                     <div className="text-[11px] text-neutral-400">
@@ -427,7 +427,7 @@ export function ProductQuickViewModal({
             <button
               type="submit"
               disabled={submittingReview}
-              className="h-9 px-4 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] text-xs font-semibold uppercase tracking-wider hover:bg-[#FF4D00] dark:hover:bg-[#FF4D00] dark:hover:text-white transition-colors cursor-pointer"
+              className="h-9 px-4 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] text-xs font-semibold uppercase tracking-wider hover:bg-[#7A1F2B] dark:hover:bg-[#7A1F2B] dark:hover:text-white transition-colors cursor-pointer"
             >
               {submittingReview ? 'Mengirim...' : 'Kirim Ulasan'}
             </button>
