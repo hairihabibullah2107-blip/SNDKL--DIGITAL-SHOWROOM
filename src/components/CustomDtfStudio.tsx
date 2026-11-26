@@ -146,9 +146,9 @@ export function CustomDtfStudio({
 
   const dtfTotalPerShirt = placements.reduce((sum, p) => sum + p.price, 0);
   const currentProductImage = !selectedProduct ? '' : activeView === 'sleeve'
-    ? selectedProduct.images[2] || selectedProduct.images[0] || selectedProduct.frontImage
+    ? selectedProduct.frontImage || selectedProduct.images[0]
     : activeView === 'back'
-      ? selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
+      ? selectedProduct.backImage || selectedProduct.frontImage || selectedProduct.images[0]
       : selectedProduct.frontImage || selectedProduct.images[0];
   useEffect(() => { setMockupImageFailed(false); }, [selectedProductId, activeView, currentProductImage]);
   const baseGarmentPrice = selectedProduct?.price || 0;
