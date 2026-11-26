@@ -781,12 +781,14 @@ export function CustomDtfStudio({
                           onClick={() => setColorId(c.id)}
                           title={c.name}
                           aria-label={`Pilih warna ${c.name}`}
-                          className={`w-8 h-8 rounded-full border-2 cursor-pointer flex items-center justify-center ${
-                            colorId === c.id ? 'border-[#7A1F2B] scale-110' : 'border-black/20 dark:border-white/20'
+                          aria-pressed={colorId === c.id}
+                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition-colors ${
+                            colorId === c.id ? 'border-[#7A1F2B] bg-[#7A1F2B]/10 text-[#7A1F2B] dark:text-white' : 'border-black/15 dark:border-white/15'
                           }`}
-                          style={{ backgroundColor: c.hex }}
                         >
-                          {colorId === c.id && <Check className="w-3.5 h-3.5 text-[#7A1F2B]" />}
+                          <span className="w-4 h-4 rounded-full border border-black/20 dark:border-white/25 shrink-0" style={{ backgroundColor: c.hex }} />
+                          <span>{c.name}</span>
+                          {colorId === c.id && <Check className="w-3.5 h-3.5" />}
                         </button>
                       ))}
                     </div>
