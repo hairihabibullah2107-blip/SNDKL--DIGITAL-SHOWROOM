@@ -231,7 +231,7 @@ export function ProductCatalog({
                           loading="lazy"
                           referrerPolicy="no-referrer"
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-0"
+                          className={"w-full h-full object-cover transition-opacity duration-300 " + (secondaryImage ? "group-hover:opacity-0" : "")}
                         />
                       ) : (
                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-neutral-500 dark:text-neutral-400">
@@ -250,10 +250,24 @@ export function ProductCatalog({
                         />
                       )}
                       {activeColor && primaryImage && (
-                        <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{
+                        <div aria-hidden="true" className={"absolute inset-0 pointer-events-none " + (secondaryImage ? "group-hover:opacity-0 transition-opacity" : "")} style={{
                           backgroundColor: activeColor.hex,
                           WebkitMaskImage: `url("${primaryImage}")`,
                           maskImage: `url("${primaryImage}")`,
+                          WebkitMaskSize: 'cover',
+                          maskSize: 'cover',
+                          WebkitMaskPosition: 'center',
+                          maskPosition: 'center',
+                          WebkitMaskRepeat: 'no-repeat',
+                          maskRepeat: 'no-repeat',
+                          mixBlendMode: 'multiply',
+                        }} />
+                      )}
+                      {activeColor && secondaryImage && (
+                        <div aria-hidden="true" className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" style={{
+                          backgroundColor: activeColor.hex,
+                          WebkitMaskImage: `url("${secondaryImage}")`,
+                          maskImage: `url("${secondaryImage}")`,
                           WebkitMaskSize: 'cover',
                           maskSize: 'cover',
                           WebkitMaskPosition: 'center',
