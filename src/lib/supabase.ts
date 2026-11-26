@@ -24,7 +24,9 @@ export async function invokeShowroom<T>(payload: Record<string, unknown>): Promi
 
 export function storagePublicUrl(path: string | null | undefined): string {
   if (!path) return '';
-  return supabase.storage.from('showroom-product-images').getPublicUrl(path).data.publicUrl;
+  if (/^(https?:)?\/\//i.test(path) || path.startsWith('data:')) return path;
+  const normalized = path.replace(/^\/+/, '').replace(/^showroom-product-images\//, '');
+  return supabase.storage.from('showroom-product-images').getPublicUrl(normalized).data.publicUrl;
 }
 
 export function dataUrlToBase64(value: string): string {
