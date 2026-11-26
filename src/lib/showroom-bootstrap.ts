@@ -170,7 +170,6 @@ export async function loadShowroomBootstrap() {
 
   const settings = Object.fromEntries((settingsResult.data || []).map((row) => [row.key, row.value || {}])) as Record<string, Record<string, unknown>>;
   const paymentSetting = settings.payment || {};
-  const shippingSetting = settings.shipping || {};
   const paymentRows = Array.isArray(paymentSetting.methods) ? paymentSetting.methods as Array<Record<string, unknown>> : [];
   const shippingRows = Array.isArray(shippingSetting.couriers) ? shippingSetting.couriers as Array<Record<string, unknown>> : [];
   const payment: PaymentMethodConfig[] = paymentRows.length ? paymentRows.map((row) => ({
