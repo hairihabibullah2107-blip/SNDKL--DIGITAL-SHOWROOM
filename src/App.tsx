@@ -60,6 +60,7 @@ export default function App() {
     primaryCta: 'Mulai Custom',
     secondaryCta: 'Jelajahi Katalog',
     heroImage: '',
+    brandDetailImage: '',
     theme: { accent: '#7A1F2B', background: '#080808', surface: '#171717', text: '#ffffff', muted: '#a3a3a3' },
     gallery: [] as Array<{image:string;caption:string;alt:string}>,
   });
@@ -766,7 +767,7 @@ export default function App() {
           <div className="max-w-[1360px] mx-auto px-4 md:px-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
             <div className="lg:col-span-6 rounded-xl overflow-hidden bg-neutral-200 dark:bg-[#141414]">
               <img
-                src={brandDetailImage}
+                src={siteContent.brandDetailImage || brandDetailImage}
                 alt="Detail hasil sablon DTF SANDIKALE"
                 loading="lazy"
                 referrerPolicy="no-referrer"
