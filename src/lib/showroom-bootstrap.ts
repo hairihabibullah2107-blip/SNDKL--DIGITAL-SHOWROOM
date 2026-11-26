@@ -201,7 +201,7 @@ export async function loadShowroomBootstrap() {
       primaryCta: String(storefront.primary_cta || 'Custom Your Style'),
       secondaryCta: String(storefront.secondary_cta || 'Shop Collection'),
       heroImage: heroImagePath ? storagePublicUrl(heroImagePath) : '',
-      theme: { accent: String(theme.accent || '#ff4d00'), background: String(theme.background || '#080808'), surface: String(theme.surface || '#171717'), text: String(theme.text || '#ffffff'), muted: String(theme.muted || '#a3a3a3') },
+      theme: { accent: String(theme.accent || '#7A1F2B'), background: String(theme.background || '#080808'), surface: String(theme.surface || '#171717'), text: String(theme.text || '#ffffff'), muted: String(theme.muted || '#a3a3a3') },
       gallery: galleryRows.map((item) => ({ image: storagePublicUrl(String(item.path || '')), caption: String(item.caption || ''), alt: String(item.alt || 'SANDIKALE gallery') })).filter((item) => item.image),
     },
     categories,
