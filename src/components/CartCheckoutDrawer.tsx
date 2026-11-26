@@ -5,7 +5,6 @@ import type {
   Order,
   PaymentMethodConfig,
   PaymentMethodId,
-  ShippingCourierConfig,
   UserProfile,
 } from '../types';
 import { formatRupiah } from '../utils/format';
@@ -15,7 +14,6 @@ interface CartCheckoutDrawerProps {
   onClose: () => void;
   items: CartItem[];
   paymentMethods: PaymentMethodConfig[];
-  shippingCouriers: ShippingCourierConfig[];
   adminWhatsapp: string;
   user: UserProfile | null;
   isOnline: boolean;
