@@ -69,12 +69,16 @@ Deno.serve(async(req:Request)=>{
    if(it.material_id){const{data:m,error:me}=await db.from("showroom_materials").select("id,name,surcharge").eq("id",it.material_id).eq("is_active",true).maybeSingle();if(me||!m)return json({error:"Pilihan bahan tidak tersedia."},400);selectedMaterial=m;}
    const qty=Math.max(1,Math.min(1000,Math.floor(Number(it.quantity)||1))),sizeRows=Array.isArray(it.sizes)?it.sizes:[],sizeTotal=sizeRows.reduce((sum,x)=>sum+Math.max(0,Math.floor(Number(x.quantity)||0)),0);
    if(sizeTotal!==qty)return json({error:"Jumlah tiap ukuran harus sama dengan total kuantitas produk."},400);
-   const garment=it.garment_type==="long"?"long":it.garment_type==="short"?"short":null,color=String(it.color||"").trim(),available=Array.isArray(p.available_colors)?p.available_colors.map((x:any)=>typeof x==="string"?x:x?.name):[];
+   const garment=it.garment_type==="long"?"long":it.garment_type==="short"?"short":null,color=String(it.color||"").trim(),legacyColors=Array.isArray(p.available_colors)?p.available_colors.map((x:any)=>typeof x==="string"?x:x?.name).filter(Boolean):[];
    if(!garment||!color)return json({error:"Model dan warna kaos wajib dipilih dari katalog."},400);
+   const{data:linkedColors,error:colorError}=await db.from("showroom_product_colors").select("showroom_colors!inner(name,is_active)").eq("product_id",p.id).eq("is_active",true).eq("showroom_colors.is_active",true);
+   if(colorError)throw colorError;
+   const canonicalColors=(linkedColors||[]).map((row:any)=>Array.isArray(row.showroom_colors)?row.showroom_colors[0]?.name:row.showroom_colors?.name).filter(Boolean);
+   const available=[...legacyColors,...canonicalColors].map((name:any)=>String(name).trim().toLowerCase());
    const{data:configuredVariants,error:variantError}=await db.from("showroom_product_variants").select("id,color,size,price_adjustment,stock_quantity,is_available").eq("product_id",p.id);
    if(variantError)throw variantError;
    const productHasVariants=(configuredVariants||[]).length>0;
-   if(!available.includes(color)&&!(configuredVariants||[]).some((v:any)=>String(v.color).toLowerCase()===color.toLowerCase()&&v.is_available))return json({error:"Warna produk tidak tersedia."},400);
+   if(!available.includes(color.toLowerCase())&&!(configuredVariants||[]).some((v:any)=>String(v.color).trim().toLowerCase()===color.toLowerCase()&&v.is_available))return json({error:"Warna produk tidak tersedia. Admin perlu menghubungkan warna ini ke produk terlebih dahulu."},400);
    for(const sizeRow of sizeRows){
     const selectedSize=String(sizeRow.size||"").trim(),selectedQty=Math.max(0,Math.floor(Number(sizeRow.quantity)||0));
     const variant=(configuredVariants||[]).find((v:any)=>String(v.color).toLowerCase()===color.toLowerCase()&&String(v.size).toLowerCase()===selectedSize.toLowerCase()&&v.is_available);
