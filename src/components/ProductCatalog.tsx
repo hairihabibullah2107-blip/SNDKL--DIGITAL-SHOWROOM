@@ -71,7 +71,7 @@ export function ProductCatalog({
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF4D00]">Koleksi &amp; Siluet</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7A1F2B]">Koleksi &amp; Siluet</p>
               <h2 className="font-display text-3xl md:text-5xl font-bold uppercase tracking-tight mt-1">
                 Kategori Streetwear
               </h2>
@@ -91,7 +91,7 @@ export function ProductCatalog({
                   onClick={() => setSelectedCategory(active ? 'all' : cat.slug)}
                   className={`group text-left rounded-lg overflow-hidden border transition-all cursor-pointer ${
                     active
-                      ? 'border-[#FF4D00] ring-1 ring-[#FF4D00]'
+                      ? 'border-[#7A1F2B] ring-1 ring-[#7A1F2B]'
                       : 'border-black/10 dark:border-white/10 hover:border-black/30 dark:hover:border-white/30'
                   } bg-white dark:bg-[#141414]`}
                 >
@@ -107,7 +107,7 @@ export function ProductCatalog({
                   <div className="p-3.5 md:p-4 space-y-1">
                     <div className="flex items-center justify-between gap-2">
                       <h3 className="font-display text-xl font-bold uppercase tracking-wide truncate">{cat.name}</h3>
-                      <span className="text-xs font-mono-tabular text-[#FF4D00] shrink-0">Eksplor →</span>
+                      <span className="text-xs font-mono-tabular text-[#7A1F2B] shrink-0">Eksplor →</span>
                     </div>
                     <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2">{cat.description}</p>
                   </div>
@@ -127,7 +127,7 @@ export function ProductCatalog({
                 className={`h-9 px-3.5 rounded-md text-xs font-semibold uppercase tracking-wider whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                   selectedCategory === 'all'
                     ? 'bg-[#080808] dark:bg-white text-white dark:text-[#080808]'
-                    : 'bg-white dark:bg-[#171717] text-neutral-600 dark:text-neutral-300 border border-black/10 dark:border-white/10 hover:border-[#FF4D00]'
+                    : 'bg-white dark:bg-[#171717] text-neutral-600 dark:text-neutral-300 border border-black/10 dark:border-white/10 hover:border-[#7A1F2B]'
                 }`}
               >
                 Semua ({products.length})
@@ -140,7 +140,7 @@ export function ProductCatalog({
                   className={`h-9 px-3.5 rounded-md text-xs font-semibold uppercase tracking-wider whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                     selectedCategory === c.slug
                       ? 'bg-[#080808] dark:bg-white text-white dark:text-[#080808]'
-                      : 'bg-white dark:bg-[#171717] text-neutral-600 dark:text-neutral-300 border border-black/10 dark:border-white/10 hover:border-[#FF4D00]'
+                      : 'bg-white dark:bg-[#171717] text-neutral-600 dark:text-neutral-300 border border-black/10 dark:border-white/10 hover:border-[#7A1F2B]'
                   }`}
                 >
                   {c.name}
@@ -157,7 +157,7 @@ export function ProductCatalog({
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Cari kaos, hoodie, 240gsm..."
                   aria-label="Cari produk"
-                  className="w-full h-9 pl-9 pr-3 rounded-md text-xs bg-white dark:bg-[#171717] border border-black/15 dark:border-white/15 focus:outline-none focus:border-[#FF4D00]"
+                  className="w-full h-9 pl-9 pr-3 rounded-md text-xs bg-white dark:bg-[#171717] border border-black/15 dark:border-white/15 focus:outline-none focus:border-[#7A1F2B]"
                 />
               </div>
 
@@ -166,7 +166,7 @@ export function ProductCatalog({
                 onClick={() => setOnlyCustomBase((v) => !v)}
                 className={`h-9 px-3 rounded-md text-xs font-medium border flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
                   onlyCustomBase
-                    ? 'border-[#FF4D00] text-[#FF4D00] bg-[#FF4D00]/10'
+                    ? 'border-[#7A1F2B] text-[#7A1F2B] bg-[#7A1F2B]/10'
                     : 'border-black/15 dark:border-white/15 bg-white dark:bg-[#171717]'
                 }`}
               >
@@ -199,7 +199,7 @@ export function ProductCatalog({
                   setSearchQuery('');
                   setOnlyCustomBase(false);
                 }}
-                className="h-9 px-4 rounded-md bg-[#FF4D00] text-white text-xs font-semibold uppercase tracking-wider cursor-pointer"
+                className="h-9 px-4 rounded-md bg-[#7A1F2B] text-white text-xs font-semibold uppercase tracking-wider cursor-pointer"
               >
                 Reset Filter
               </button>
@@ -259,8 +259,8 @@ export function ProductCatalog({
                           aria-label={`Simpan ${product.name} ke wishlist`}
                           className={`w-9 h-9 rounded-md backdrop-blur-md flex items-center justify-center transition-colors cursor-pointer ${
                             isWishlisted
-                              ? 'bg-[#FF4D00] text-white'
-                              : 'bg-black/60 text-white hover:bg-[#FF4D00]'
+                              ? 'bg-[#7A1F2B] text-white'
+                              : 'bg-black/60 text-white hover:bg-[#7A1F2B]'
                           }`}
                         >
                           <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
@@ -269,7 +269,7 @@ export function ProductCatalog({
                           type="button"
                           onClick={() => onQuickView(product)}
                           aria-label={`Lihat cepat ${product.name}`}
-                          className="w-9 h-9 rounded-md bg-black/60 text-white hover:bg-[#FF4D00] backdrop-blur-md flex items-center justify-center transition-colors cursor-pointer"
+                          className="w-9 h-9 rounded-md bg-black/60 text-white hover:bg-[#7A1F2B] backdrop-blur-md flex items-center justify-center transition-colors cursor-pointer"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
@@ -281,14 +281,14 @@ export function ProductCatalog({
                         <div className="flex items-center justify-between gap-2 text-xs text-neutral-500 dark:text-neutral-400">
                           <span className="uppercase tracking-wider">{product.categoryName}</span>
                           <span className="flex items-center gap-1 font-mono-tabular">
-                            <Star className="w-3 h-3 text-[#FF4D00] fill-current" />
+                            <Star className="w-3 h-3 text-[#7A1F2B] fill-current" />
                             {product.rating}
                           </span>
                         </div>
                         <button
                           type="button"
                           onClick={() => onQuickView(product)}
-                          className="text-left font-semibold text-base hover:text-[#FF4D00] transition-colors cursor-pointer block"
+                          className="text-left font-semibold text-base hover:text-[#7A1F2B] transition-colors cursor-pointer block"
                         >
                           {product.name}
                         </button>
@@ -313,7 +313,7 @@ export function ProductCatalog({
                                   onClick={() => setCardColorSelection((prev) => ({ ...prev, [product.id]: idx }))}
                                   className={`w-5 h-5 rounded-full border transition-transform cursor-pointer ${
                                     activeColorIdx === idx
-                                      ? 'border-[#FF4D00] ring-2 ring-[#FF4D00]/40 scale-110'
+                                      ? 'border-[#7A1F2B] ring-2 ring-[#7A1F2B]/40 scale-110'
                                       : 'border-black/20 dark:border-white/25'
                                   }`}
                                   style={{ backgroundColor: c.hex }}
@@ -363,7 +363,7 @@ export function ProductCatalog({
                                 quantity: 1,
                               });
                             }}
-                            className="h-10 px-3 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#FF4D00] dark:hover:bg-[#FF4D00] dark:hover:text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-45"
+                            className="h-10 px-3 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#7A1F2B] dark:hover:bg-[#7A1F2B] dark:hover:text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-45"
                           >
                             <ShoppingBag className="w-3.5 h-3.5" />
                             <span>{activeColor && selectedSize ? `+ Tas (${selectedSize})` : 'Pilih Opsi'}</span>
@@ -373,7 +373,7 @@ export function ProductCatalog({
                             <button
                               type="button"
                               onClick={() => onOpenCustomStudio(product)}
-                              className="h-10 px-3 rounded-md border border-black/15 dark:border-white/15 hover:border-[#FF4D00] hover:text-[#FF4D00] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
+                              className="h-10 px-3 rounded-md border border-black/15 dark:border-white/15 hover:border-[#7A1F2B] hover:text-[#7A1F2B] text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
                             >
                               Custom DTF
                             </button>
@@ -408,7 +408,7 @@ export function ProductCatalog({
                   key={item.id}
                   type="button"
                   onClick={() => onQuickView(item)}
-                  className="w-48 shrink-0 text-left rounded-lg overflow-hidden bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 hover:border-[#FF4D00] transition-colors cursor-pointer"
+                  className="w-48 shrink-0 text-left rounded-lg overflow-hidden bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 hover:border-[#7A1F2B] transition-colors cursor-pointer"
                 >
                   <div className="aspect-[4/3] bg-neutral-100 dark:bg-[#171717]">
                     <img
@@ -421,7 +421,7 @@ export function ProductCatalog({
                   </div>
                   <div className="p-2.5 space-y-0.5">
                     <div className="text-xs font-semibold truncate">{item.name}</div>
-                    <div className="text-xs font-mono-tabular text-[#FF4D00]">{formatRupiah(item.price)}</div>
+                    <div className="text-xs font-mono-tabular text-[#7A1F2B]">{formatRupiah(item.price)}</div>
                   </div>
                 </button>
               ))}
