@@ -9,7 +9,6 @@ import type {
   Product,
   ProductColor,
   PrintingMethodOption,
-  ShippingCourierConfig,
 } from '../types';
 
 function asNumber(value: unknown, fallback = 0): number {
@@ -171,16 +170,11 @@ export async function loadShowroomBootstrap() {
   const settings = Object.fromEntries((settingsResult.data || []).map((row) => [row.key, row.value || {}])) as Record<string, Record<string, unknown>>;
   const paymentSetting = settings.payment || {};
   const paymentRows = Array.isArray(paymentSetting.methods) ? paymentSetting.methods as Array<Record<string, unknown>> : [];
-  const shippingRows = Array.isArray(shippingSetting.couriers) ? shippingSetting.couriers as Array<Record<string, unknown>> : [];
   const payment: PaymentMethodConfig[] = paymentRows.length ? paymentRows.map((row) => ({
     id: String(row.id || 'qris') as PaymentMethodConfig['id'], label: String(row.label || 'Pembayaran manual'),
     group: String(row.group || 'Manual'), enabled: row.enabled !== false,
   })) : [{ id: 'qris', label: 'Pembayaran manual — konfirmasi admin', group: 'Manual', enabled: true }];
-  const shipping: ShippingCourierConfig[] = shippingRows.length ? shippingRows.map((row) => ({
-    id: String(row.id || 'manual'), name: String(row.name || 'Konfirmasi via WhatsApp'),
-    serviceArea: String(row.serviceArea || 'Indonesia'), etaLabel: String(row.etaLabel || 'Dikonfirmasi admin'),
-    etaDays: asNumber(row.etaDays), cost: asNumber(row.cost), enabled: row.enabled !== false,
-  })) : [{ id: 'confirm-shipping', name: 'Konfirmasi ongkir via WhatsApp', serviceArea: 'Indonesia', etaLabel: 'Dikonfirmasi admin', etaDays: 0, cost: 0, enabled: true }];
+
   const whatsapp = settings.whatsapp || {};
   const storefront = settings.storefront || {};
   const brand = settings.brand || {};
@@ -218,8 +212,6 @@ export async function loadShowroomBootstrap() {
     fabrics,
     garmentColors: [...colorMap.values()],
     paymentMethods: payment,
-    shippingOriginCity: String(shippingSetting.origin_city || 'Sesaot, Narmada, Lombok Barat'),
-    shippingCouriers: shipping,
     adminWhatsapp: String(whatsapp.number || '6282266412844'),
     dtfZones,
     reviews,
