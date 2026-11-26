@@ -210,6 +210,7 @@ export async function loadShowroomBootstrap() {
       primaryCta: String(storefront.primary_cta || 'Mulai Custom'),
       secondaryCta: String(storefront.secondary_cta || 'Jelajahi Katalog'),
       heroImage: heroImagePath ? storagePublicUrl(heroImagePath) : '',
+      brandDetailImage: visuals.brand_detail_image_path ? storagePublicUrl(String(visuals.brand_detail_image_path)) : '',
       theme: { accent: String(theme.accent || '#7A1F2B'), background: String(theme.background || '#080808'), surface: String(theme.surface || '#171717'), text: String(theme.text || '#ffffff'), muted: String(theme.muted || '#a3a3a3') },
       gallery: galleryRows.map((item) => ({ image: storagePublicUrl(String(item.path || '')), caption: String(item.caption || ''), alt: String(item.alt || 'SANDIKALE gallery') })).filter((item) => item.image),
     },
