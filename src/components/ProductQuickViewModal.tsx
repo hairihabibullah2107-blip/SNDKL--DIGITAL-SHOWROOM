@@ -1,13 +1,11 @@
-import { ChevronLeft, ChevronRight, Heart, MessageCircle, ShoppingBag, Star, Truck, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Heart, MessageCircle, ShoppingBag, Star, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { Product, ProductReview, ShippingCourierConfig } from '../types';
+import type { Product, ProductReview } from '../types';
 import { formatDateTime, formatRupiah } from '../utils/format';
 
 interface ProductQuickViewModalProps {
   product: Product | null;
   reviews: ProductReview[];
-  shippingOriginCity: string;
-  shippingCouriers: ShippingCourierConfig[];
   adminWhatsapp: string;
   isWishlisted: boolean;
   onToggleWishlist: (productId: string) => void;
@@ -26,8 +24,6 @@ interface ProductQuickViewModalProps {
 export function ProductQuickViewModal({
   product,
   reviews,
-  shippingOriginCity,
-  shippingCouriers,
   adminWhatsapp,
   isWishlisted,
   onToggleWishlist,
@@ -40,7 +36,6 @@ export function ProductQuickViewModal({
   const [selectedColorIdx, setSelectedColorIdx] = useState(-1);
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
-  const [selectedCourierId, setSelectedCourierId] = useState('');
 
   const [reviewName, setReviewName] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
@@ -52,14 +47,8 @@ export function ProductQuickViewModal({
     setSelectedColorIdx(-1);
     setSelectedSize('');
     setQuantity(1);
-    setSelectedCourierId('');
   }, [product?.id]);
 
-  useEffect(() => {
-    if (selectedCourierId && !shippingCouriers.some((c) => c.id === selectedCourierId)) {
-      setSelectedCourierId('');
-    }
-  }, [shippingCouriers, selectedCourierId]);
 
   if (!product) return null;
 
@@ -69,8 +58,6 @@ export function ProductQuickViewModal({
   const availableSizes = Object.entries(product.sizes);
   const selectedStock = selectedSize ? (product.sizes[selectedSize] ?? 0) : 0;
   const prodReviews = reviews.filter((r) => r.productId === product.id);
-  const activeCourier = selectedCourierId ? shippingCouriers.find((c) => c.id === selectedCourierId) || null : null;
-  const etaDays = activeCourier ? activeCourier.etaDays + 1 : 0;
 
   const waMessage = encodeURIComponent(
     `Halo SANDIKALE, saya ingin menanyakan stok & detail produk ${product.name} (${product.sku})${activeColor ? ` warna ${activeColor.name}` : ''}${selectedSize ? ` ukuran ${selectedSize}` : ''}.`
@@ -272,34 +259,9 @@ export function ProductQuickViewModal({
               </div>
             </div>
 
-            {/* Delivery Estimator (Admin-configured Origin & Couriers) */}
-            <div className="p-3 rounded-lg bg-neutral-100 dark:bg-[#171717] flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-xs">
-                <Truck className="w-4 h-4 text-[#FF4D00] shrink-0" />
-                <div>
-                  <div className="font-semibold">
-                    {activeCourier ? `Estimasi Tiba ${etaDays}–${etaDays + 1} Hari` : 'Pengiriman dari Perusahaan'}
-                  </div>
-                  <div className="text-neutral-500 dark:text-neutral-400">Asal: {shippingOriginCity}</div>
-                </div>
-              </div>
-              {shippingCouriers.length > 0 ? (
-                <select
-                  value={selectedCourierId}
-                  onChange={(e) => setSelectedCourierId(e.target.value)}
-                  aria-label="Pilih ekspedisi"
-                  className="text-xs bg-white dark:bg-[#080808] border border-black/15 dark:border-white/15 rounded-md px-2 py-1.5"
-                >
-                  <option value="">-- Pilih ekspedisi --</option>
-                  {shippingCouriers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.serviceArea})
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="text-[11px] text-neutral-400">Ekspedisi diatur Admin</span>
-              )}
+            <div className="p-3 rounded-lg bg-neutral-100 dark:bg-[#171717] flex items-start gap-2.5">
+              <MessageCircle className="w-4 h-4 text-[#7A1F2B] shrink-0 mt-0.5" />
+              <p className="text-xs text-neutral-600 dark:text-neutral-300">Biaya pengiriman dan jadwal pengerjaan dibahas langsung dengan admin SANDIKALE melalui WhatsApp setelah detail pesanan dikonfirmasi.</p>
             </div>
 
             {/* Primary Actions */}
