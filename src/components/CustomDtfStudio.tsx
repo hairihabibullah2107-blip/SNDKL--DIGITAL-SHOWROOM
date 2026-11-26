@@ -137,7 +137,6 @@ export function CustomDtfStudio({
   useEffect(() => {
     if (colorId && !availableColors.some((color) => color.id === colorId)) setColorId('');
   }, [availableColors, colorId]);
-  useEffect(() => { setMockupImageFailed(false); }, [selectedProductId, activeView, currentProductImage]);
   const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
   const selectedFabric = fabricId ? fabrics.find((f) => f.id === fabricId) || null : null;
   const selectedColor = colorId ? availableColors.find((c) => c.id === colorId) || null : null;
@@ -151,6 +150,7 @@ export function CustomDtfStudio({
     : activeView === 'back'
       ? selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
       : selectedProduct.frontImage || selectedProduct.images[0];
+  useEffect(() => { setMockupImageFailed(false); }, [selectedProductId, activeView, currentProductImage]);
   const baseGarmentPrice = selectedProduct?.price || 0;
   const selectedSizeSurcharge = selectedProduct?.sizeSurcharges?.[size] || 0;
   const rawUnitPrice = baseGarmentPrice + dtfTotalPerShirt + selectedSizeSurcharge;
