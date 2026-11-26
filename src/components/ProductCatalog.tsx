@@ -212,8 +212,8 @@ export function ProductCatalog({
                 const activeColor =
                   typeof activeColorIdx === 'number' ? product.colors[activeColorIdx] : undefined;
                 const selectedSize = cardSizeSelection[product.id] || '';
-                const primaryImage = activeColor?.image || product.images[0] || defaultProductImage;
-                const secondaryImage = product.images[1] || primaryImage;
+                const primaryImage = activeColor?.image || product.images[0] || ''; 
+                const secondaryImage = product.images[1] || ''; 
                 const totalStock = Object.values(product.sizes).reduce((a, b) => a + b, 0);
                 const isWishlisted = wishlistIds.includes(product.id);
                 const waText = encodeURIComponent(`Halo SANDIKALE, saya tertarik dengan ${product.name} (${product.sku}).`);
@@ -224,23 +224,32 @@ export function ProductCatalog({
                     className="group rounded-lg overflow-hidden bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 hover:-translate-y-0.5 transition-all duration-200 flex flex-col"
                   >
                     <div className="relative aspect-[4/3] overflow-hidden bg-neutral-100 dark:bg-[#171717]">
-                      <img
-                        src={primaryImage}
-                        onError={(e) => { e.currentTarget.src = defaultProductImage; }}
-                        alt={product.name}
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-0"
-                      />
-                      <img
-                        src={secondaryImage}
-                        onError={(e) => { e.currentTarget.src = defaultProductImage; }}
-                        alt={`${product.name} tampak detail`}
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
-                      />
-                      {activeColor && (
+                      {primaryImage ? (
+                        <img
+                          src={primaryImage}
+                          alt={product.name + ' tampak depan'}
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          className="w-full h-full object-cover transition-opacity duration-300 group-hover:opacity-0"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-neutral-500 dark:text-neutral-400">
+                          <span className="text-3xl">S</span>
+                          <span className="text-[10px] uppercase tracking-[.18em]">Foto produk belum tersedia</span>
+                        </div>
+                      )}
+                      {secondaryImage && secondaryImage !== primaryImage && (
+                        <img
+                          src={secondaryImage}
+                          alt={product.name + ' tampak belakang'}
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                        />
+                      )}
+                      {activeColor && primaryImage && (
                         <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{
                           backgroundColor: activeColor.hex,
                           WebkitMaskImage: `url("${primaryImage}")`,
@@ -414,14 +423,9 @@ export function ProductCatalog({
                   className="w-48 shrink-0 text-left rounded-lg overflow-hidden bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 hover:border-[#7A1F2B] transition-colors cursor-pointer"
                 >
                   <div className="aspect-[4/3] bg-neutral-100 dark:bg-[#171717]">
-                    <img
-                      src={item.images[0] || defaultProductImage}
-                      onError={(e) => { e.currentTarget.src = defaultProductImage; }}
-                      alt={item.name}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
-                    />
+                    {item.images[0] ? (
+                      <img src={item.images[0]} alt={item.name} loading="lazy" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="w-full h-full object-cover" />
+                    ) : <div className="w-full h-full flex items-center justify-center text-xs text-neutral-500">Foto belum tersedia</div>}
                   </div>
                   <div className="p-2.5 space-y-0.5">
                     <div className="text-xs font-semibold truncate">{item.name}</div>
