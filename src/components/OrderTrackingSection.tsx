@@ -57,7 +57,7 @@ export function OrderTrackingSection({ recentOrders, onTrackOrder, onDesignDecis
       <div className="max-w-[1360px] mx-auto px-4 md:px-6 space-y-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#FF4D00]">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7A1F2B]">
               STATUS PESANAN SANDIKALE
             </p>
             <h2 className="font-display text-3xl md:text-5xl font-bold uppercase tracking-tight mt-1">
@@ -74,13 +74,13 @@ export function OrderTrackingSection({ recentOrders, onTrackOrder, onDesignDecis
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Masukkan kode tracking pesanan"
                 aria-label="Nomor pesanan atau resi"
-                className="w-full h-10 pl-9 pr-3 rounded-md text-xs font-mono-tabular bg-white dark:bg-[#141414] border border-black/15 dark:border-white/15 focus:outline-none focus:border-[#FF4D00]"
+                className="w-full h-10 pl-9 pr-3 rounded-md text-xs font-mono-tabular bg-white dark:bg-[#141414] border border-black/15 dark:border-white/15 focus:outline-none focus:border-[#7A1F2B]"
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="h-10 px-5 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#FF4D00] dark:hover:bg-[#FF4D00] dark:hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer whitespace-nowrap"
+              className="h-10 px-5 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#7A1F2B] dark:hover:bg-[#7A1F2B] dark:hover:text-white text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer whitespace-nowrap"
             >
               {loading ? 'Mencari...' : 'Lacak'}
             </button>
@@ -98,7 +98,7 @@ export function OrderTrackingSection({ recentOrders, onTrackOrder, onDesignDecis
                 onClick={() => handleSearch(undefined, ord.id)}
                 className={`h-8 px-3 rounded-md text-xs font-mono-tabular border whitespace-nowrap shrink-0 cursor-pointer ${
                   liveOrder?.id === ord.id
-                    ? 'border-[#FF4D00] text-[#FF4D00] bg-[#FF4D00]/10'
+                    ? 'border-[#7A1F2B] text-[#7A1F2B] bg-[#7A1F2B]/10'
                     : 'border-black/10 dark:border-white/10 bg-white dark:bg-[#141414]'
                 }`}
               >
@@ -134,7 +134,7 @@ export function OrderTrackingSection({ recentOrders, onTrackOrder, onDesignDecis
                           <>
                             <textarea value={decisionNotes[design.id] || ''} onChange={(e) => setDecisionNotes((prev) => ({ ...prev, [design.id]: e.target.value }))} rows={2} placeholder="Catatan untuk revisi (opsional)" className="w-full rounded-md border border-black/10 dark:border-white/10 bg-neutral-50 dark:bg-black px-3 py-2 text-xs" />
                             <div className="flex flex-wrap gap-2">
-                              <button disabled={loading} onClick={() => void submitDesignDecision(design.id, 'approved')} className="rounded-md bg-[#FF4D00] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Setujui desain</button>
+                              <button disabled={loading} onClick={() => void submitDesignDecision(design.id, 'approved')} className="rounded-md bg-[#7A1F2B] px-3 py-2 text-xs font-semibold text-white disabled:opacity-50">Setujui desain</button>
                               <button disabled={loading} onClick={() => void submitDesignDecision(design.id, 'revision_requested')} className="rounded-md border border-black/15 dark:border-white/15 px-3 py-2 text-xs disabled:opacity-50">Minta revisi</button>
                             </div>
                           </>
@@ -162,7 +162,7 @@ export function OrderTrackingSection({ recentOrders, onTrackOrder, onDesignDecis
                 <div className="text-right space-y-1">
                   <div className="text-xs text-neutral-500">Kode Tracking Pesanan</div>
                   <div className="text-sm font-mono-tabular font-semibold">{liveOrder.trackingNumber}</div>
-                  <div className="text-xs text-[#FF4D00] font-semibold">
+                  <div className="text-xs text-[#7A1F2B] font-semibold">
                     Total {formatRupiah(liveOrder.total)} · {liveOrder.paymentStatus === 'paid' ? 'Lunas' : 'Menunggu Bayar'}
                   </div>
                 </div>
@@ -175,7 +175,7 @@ export function OrderTrackingSection({ recentOrders, onTrackOrder, onDesignDecis
                       <div
                         className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
                           step.completed
-                            ? 'bg-[#FF4D00] text-white'
+                            ? 'bg-[#7A1F2B] text-white'
                             : 'bg-neutral-200 dark:bg-[#222] text-neutral-500'
                         }`}
                       >
@@ -190,7 +190,7 @@ export function OrderTrackingSection({ recentOrders, onTrackOrder, onDesignDecis
                       {idx < liveOrder.timeline.length - 1 && (
                         <div
                           className={`w-px flex-1 my-1 ${
-                            step.completed ? 'bg-[#FF4D00]' : 'bg-black/10 dark:bg-white/10'
+                            step.completed ? 'bg-[#7A1F2B]' : 'bg-black/10 dark:bg-white/10'
                           }`}
                         />
                       )}
@@ -215,7 +215,7 @@ export function OrderTrackingSection({ recentOrders, onTrackOrder, onDesignDecis
             <div className="lg:col-span-5 space-y-5">
               <div className="bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 rounded-xl p-5 space-y-3">
                 <h4 className="font-display text-xl font-bold uppercase flex items-center gap-2">
-                  <Package className="w-4 h-4 text-[#FF4D00]" />
+                  <Package className="w-4 h-4 text-[#7A1F2B]" />
                   <span>Rincian Item Produksi</span>
                 </h4>
                 <div className="space-y-3">
@@ -236,7 +236,7 @@ export function OrderTrackingSection({ recentOrders, onTrackOrder, onDesignDecis
                           {item.colorName} · Size {item.size} · {item.quantity} pcs
                         </div>
                         {item.fabricName && (
-                          <div className="text-[11px] text-[#FF4D00] truncate">{item.fabricName}</div>
+                          <div className="text-[11px] text-[#7A1F2B] truncate">{item.fabricName}</div>
                         )}
                       </div>
                       <div className="text-xs font-mono-tabular font-semibold shrink-0">
@@ -249,11 +249,11 @@ export function OrderTrackingSection({ recentOrders, onTrackOrder, onDesignDecis
 
               <div className="bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 rounded-xl p-5 space-y-3">
                 <h4 className="font-display text-xl font-bold uppercase flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4 text-[#FF4D00]" />
+                  <MessageCircle className="w-4 h-4 text-[#7A1F2B]" />
                   <span>Bantuan Pesanan</span>
                 </h4>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Pembayaran, ongkir, dan pengiriman file desain asli dikonfirmasi langsung oleh admin SANDIKALE.</p>
-                <a href={`https://wa.me/${adminWhatsapp}?text=${encodeURIComponent('Halo Admin SANDIKALE, saya ingin bertanya tentang pesanan ' + liveOrder.id + ' (kode tracking: ' + liveOrder.trackingNumber + ').')}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-md bg-[#FF4D00] text-white px-4 py-2 text-xs font-semibold">
+                <a href={`https://wa.me/${adminWhatsapp}?text=${encodeURIComponent('Halo Admin SANDIKALE, saya ingin bertanya tentang pesanan ' + liveOrder.id + ' (kode tracking: ' + liveOrder.trackingNumber + ').')}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-md bg-[#7A1F2B] text-white px-4 py-2 text-xs font-semibold">
                   <MessageCircle className="w-4 h-4" /> Hubungi Admin via WhatsApp
                 </a>
               </div>
