@@ -26,7 +26,7 @@ export async function loadShowroomBootstrap() {
       supabase.from('showroom_product_variants').select('id,product_id,color,size,sku,price_adjustment,stock_quantity,is_available').eq('is_available', true),
       supabase.from('showroom_colors').select('id,name,hex,is_active').eq('is_active', true).order('sort_order'),
       supabase.from('showroom_product_colors').select('id,product_id,color_id,sort_order,is_active,showroom_colors(id,name,hex,is_active)').eq('is_active', true).order('sort_order'),
-      supabase.from('showroom_product_images').select('id,product_id,storage_path,alt_text,sort_order,is_primary').order('is_primary', { ascending: false }).order('sort_order'),
+      supabase.from('showroom_product_images').select('id,product_id,storage_path,alt_text,sort_order,is_primary,view_key').order('is_primary', { ascending: false }).order('sort_order'),
       supabase.from('showroom_dtf_prices').select('id,size_code,label,width_cm,height_cm,price,is_active,sort_order,placement_view,box_x,box_y,box_w,box_h').eq('is_active', true).order('sort_order'),
       supabase.from('showroom_product_reviews').select('id,product_id,author_name,rating,comment,verified_purchase,created_at').eq('is_approved', true).order('created_at', { ascending: false }),
       supabase.from('showroom_settings').select('key,value'),
@@ -87,10 +87,13 @@ export async function loadShowroomBootstrap() {
       sizes[variant.size] = (sizes[variant.size] ?? 0) + asNumber(variant.stock_quantity);
     }
     if (!Object.keys(sizes).length) for (const size of ['S', 'M', 'L', 'XL', 'XXL']) sizes[size] = 0;
-    // Use only the real product photos uploaded from Admin. Never substitute vector garment SVGs.
-    const photoUrls = productImages
-      .map((photo) => storagePublicUrl(photo.storage_path))
-      .filter(Boolean);
+    // Product photos are canonical assets shared by catalog and DTF studio.
+    const frontPhoto = productImages.find((photo) => photo.view_key === 'front') || productImages[0];
+    const backPhoto = productImages.find((photo) => photo.view_key === 'back');
+    const detailPhotos = productImages.filter((photo) => photo.view_key === 'detail');
+    const frontImage = frontPhoto ? storagePublicUrl(frontPhoto.storage_path) : '';
+    const backImage = backPhoto ? storagePublicUrl(backPhoto.storage_path) : '';
+    const photoUrls = [frontImage, backImage, ...detailPhotos.map((photo) => storagePublicUrl(photo.storage_path))].filter(Boolean);
     const material = Array.isArray(row.showroom_materials) ? row.showroom_materials[0] : row.showroom_materials;
     const price = asNumber(row.base_price);
     const modelName = String(row.model || '').toLowerCase();
@@ -108,8 +111,8 @@ export async function loadShowroomBootstrap() {
       fit: row.model ?? 'Regular Fit',
       description: row.description ?? '',
       images: photoUrls,
-      frontImage: photoUrls[0],
-      backImage: photoUrls[1],
+      frontImage,
+      backImage,
       colors,
       sizes,
       isCustomBase: true,
