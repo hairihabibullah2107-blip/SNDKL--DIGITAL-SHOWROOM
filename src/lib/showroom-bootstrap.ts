@@ -16,6 +16,11 @@ function asNumber(value: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+const safeQuery = async (query: PromiseLike<any>) => {
+  try { return await query; }
+  catch (error) { return { data: null, error }; }
+};
+
 export async function loadShowroomBootstrap() {
   const [categoryResult, productResult, materialResult, variantResult, colorResult, productColorResult, imageResult, dtfResult, reviewResult, settingsResult, mockupResult, printingMethodResult] =
     await Promise.all([
@@ -31,11 +36,16 @@ export async function loadShowroomBootstrap() {
       supabase.from('showroom_settings').select('key,value'),
       supabase.from('showroom_garment_mockups').select('garment_type,color_name,color_hex,front_storage_path,back_storage_path').eq('is_active', true),
       supabase.from('showroom_printing_methods').select('id,name,description,pricing_type,base_price').eq('is_active', true).order('name'),
-    ]);
+    ].map(safeQuery));
 
-  for (const result of [categoryResult, productResult, materialResult, variantResult, colorResult, productColorResult, imageResult, dtfResult, reviewResult, settingsResult, mockupResult, printingMethodResult]) {
-    if (result.error) throw result.error;
-  }
+  if (productResult.error) throw productResult.error;
+  const optionalFailures = [
+    ['categories', categoryResult], ['materials', materialResult], ['variants', variantResult],
+    ['master colors', colorResult], ['product colors', productColorResult], ['product photos', imageResult],
+    ['DTF prices', dtfResult], ['reviews', reviewResult], ['site settings', settingsResult],
+    ['legacy mockup colors', mockupResult], ['printing methods', printingMethodResult],
+  ].filter(([, result]) => Boolean((result as { error?: unknown }).error)).map(([name]) => name);
+  if (optionalFailures.length) console.warn('SANDIKALE showroom loaded with optional data unavailable:', optionalFailures.join(', '));
 
   const categoriesRaw = categoryResult.data ?? [];
   const productsRaw = productResult.data ?? [];
