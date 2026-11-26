@@ -331,7 +331,7 @@ export function CartCheckoutDrawer({
               })
               .join('\n');
             const waText = encodeURIComponent(
-              `Halo Admin SANDIKALE,\n\nSaya baru saja membuat pesanan di website SANDIKALE:\n- No. Pesanan: ${createdOrder.id}\n- Kode Tracking: ${createdOrder.trackingNumber}\n- Nama: ${createdOrder.customerName}\n- Metode: ${createdOrder.shippingCourier}\nAlamat: ${createdOrder.shippingAddress}, ${createdOrder.shippingCity}\nBiaya dan waktu pengiriman: mohon konfirmasi dengan admin\n- Metode: ${createdOrder.paymentLabel}\n- Estimasi Total: ${formatRupiah(createdOrder.total)}\n\nDetail Produk:\n${itemLines}\n\nBerikut saya lampirkan file desain asli (PNG/AI/CDR/PDF) untuk proses revisi & konfirmasi produksi lebih lanjut. Terima kasih!`
+              `Halo Admin SANDIKALE,\n\nSaya baru saja membuat pesanan di website SANDIKALE:\n- No. Pesanan: ${createdOrder.id}\n- Kode Tracking: ${createdOrder.trackingNumber}\n- Nama: ${createdOrder.customerName}\n- Metode: ${createdOrder.shippingCourier}\nAlamat: ${createdOrder.shippingAddress}, ${createdOrder.shippingCity}\nBiaya dan waktu pengiriman: mohon konfirmasi dengan admin\n- Metode: ${createdOrder.paymentLabel}\n- Total sementara produk: ${formatRupiah(createdOrder.total)}\n\nDetail Produk:\n${itemLines}\n\nBerikut saya lampirkan file desain asli (PNG/AI/CDR/PDF) untuk proses revisi & konfirmasi produksi lebih lanjut. Terima kasih!`
             );
             const waUrl = `https://wa.me/${cleanWa}?text=${waText}`;
 
@@ -351,7 +351,7 @@ export function CartCheckoutDrawer({
                     <span>{createdOrder.shippingCourier} · {createdOrder.paymentLabel}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm font-bold pt-2 border-t border-black/10 dark:border-white/10">
-                    <span>Estimasi Total</span>
+                    <span>Total produk</span>
                     <span className="font-mono-tabular text-[#7A1F2B]">{formatRupiah(createdOrder.total)}</span>
                   </div>
                 </div>
