@@ -297,13 +297,19 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
       const bytes = await blob.arrayBuffer();
       const digest = await crypto.subtle.digest('SHA-256', bytes);
       const hash = Array.from(new Uint8Array(digest)).map((v) => v.toString(16).padStart(2, '0')).join('');
-      const { count } = await supabase.from('showroom_spk_documents').select('id', { count: 'exact', head: true }).eq('order_id', order.id).eq('document_type', 'admin_confirmed');
-      const revision = (count || 0) + 1;
+      const countResult = await supabase.from('showroom_spk_documents').select('id', { count: 'exact', head: true }).eq('order_id', order.id).eq('document_type', 'admin_confirmed');
+      if (countResult.error) throw countResult.error;
+      const revision = (countResult.count || 0) + 1;
       const storagePath = `orders/${order.order_number}/${order.spk_number}-admin-r${revision}.pdf`;
       const { error: uploadError } = await supabase.storage.from('showroom-spk-documents').upload(storagePath, blob, { contentType: 'application/pdf', upsert: false });
       if (uploadError) throw uploadError;
-      const { data: previous } = await supabase.from('showroom_spk_documents').select('id').eq('order_id', order.id).eq('document_type', 'admin_confirmed').eq('document_status', 'active');
-      if (previous?.length) await supabase.from('showroom_spk_documents').update({ document_status: 'superseded' }).in('id', previous.map((row) => row.id));
+      const previousResult = await supabase.from('showroom_spk_documents').select('id').eq('order_id', order.id).eq('document_type', 'admin_confirmed').eq('document_status', 'active');
+      if (previousResult.error) throw previousResult.error;
+      const previous = previousResult.data || [];
+      if (previous.length) {
+        const supersedeResult = await supabase.from('showroom_spk_documents').update({ document_status: 'superseded' }).in('id', previous.map((row) => row.id));
+        if (supersedeResult.error) throw supersedeResult.error;
+      }
       const snapshot = { order, customer, items: order.showroom_order_items || [], generated_by: profile.full_name };
       const { error: insertError } = await supabase.from('showroom_spk_documents').insert({
         order_id: order.id, spk_number: order.spk_number, document_type: 'admin_confirmed',
