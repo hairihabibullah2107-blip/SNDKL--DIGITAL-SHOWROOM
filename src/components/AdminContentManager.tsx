@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { supabase, storagePublicUrl } from '../lib/supabase';
-import { Edit3, ImagePlus, Plus, Search, Trash2, UploadCloud, X, ChevronUp, ChevronDown, Eye, EyeOff, Palette } from 'lucide-react';
+import { Edit3, ImagePlus, Plus, Search, Trash2, UploadCloud, X, ChevronUp, ChevronDown, Eye, EyeOff, Palette, RefreshCw } from 'lucide-react';
 
 type Row = Record<string, any>;
 type Field = { key:string; label:string; kind?:'text'|'number'|'textarea'|'boolean'|'select'|'colors'|'surcharges'|'file'|'color'; required?:boolean; options?:{label:string;value:string}[]; hint?:string };
