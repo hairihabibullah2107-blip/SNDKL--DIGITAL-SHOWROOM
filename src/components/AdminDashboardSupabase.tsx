@@ -318,6 +318,89 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     finally { setBusy(false); }
   };
 
+  const generateInvoice = async (order: OrderRow) => {
+    if (!profile) return;
+    setBusy(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF();
+      const invoiceNumber = 'INV-' + order.order_number;
+      doc.setFillColor(20, 20, 20); doc.rect(0, 0, 210, 38, 'F');
+      doc.setTextColor(255, 255, 255); doc.setFontSize(22); doc.text('SANDIKALE', 14, 16);
+      doc.setFontSize(9); doc.setTextColor(190, 115, 125); doc.text('CUSTOM APPAREL & DTF STUDIO', 14, 25);
+      doc.setFontSize(17); doc.setTextColor(20, 20, 20); doc.text('INVOICE', 14, 54);
+      doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.text(invoiceNumber, 14, 62);
+      doc.setFont('helvetica', 'normal'); doc.text('Tanggal: ' + new Date().toLocaleDateString('id-ID'), 14, 70);
+      doc.text('Nomor pesanan: ' + order.order_number, 14, 77);
+      doc.text('Nomor SPK: ' + order.spk_number, 14, 84);
+      const customer = order.showroom_customers;
+      doc.setFont('helvetica', 'bold'); doc.text('TAGIHAN KEPADA', 120, 54);
+      doc.setFont('helvetica', 'normal'); doc.text(doc.splitTextToSize(customer?.name || 'Pelanggan SANDIKALE', 75), 120, 62);
+      doc.text(doc.splitTextToSize(customer?.whatsapp || '-', 75), 120, 72);
+      doc.text(doc.splitTextToSize(customer?.address || '-', 75), 120, 80);
+      let y = 101;
+      doc.setFillColor(245, 245, 245); doc.rect(14, y - 6, 182, 10, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+      doc.text('DESKRIPSI', 17, y); doc.text('QTY', 132, y); doc.text('JUMLAH', 158, y); y += 10;
+      doc.setFont('helvetica', 'normal');
+      for (const item of order.showroom_order_items || []) {
+        const spec = item.specification || {};
+        const color = String(spec.color || item.showroom_order_variants?.[0]?.color || '-');
+        const sizes = (item.showroom_order_variants || []).map((variant) => variant.size + ' x ' + variant.quantity).join(', ');
+        const lines = doc.splitTextToSize(item.product_name_snapshot + '\nWarna: ' + color + ' · Ukuran: ' + (sizes || '-'), 105);
+        const rowHeight = Math.max(12, lines.length * 5 + 3);
+        if (y + rowHeight > 270) { doc.addPage(); y = 20; }
+        doc.text(lines, 17, y); doc.text(String(item.quantity), 132, y);
+        doc.text(money(Number(item.subtotal)), 158, y);
+        y += rowHeight + 3;
+      }
+      y += 5;
+      const totals: Array<[string, number]> = [
+        ['Subtotal', Number(order.subtotal)],
+        ['Diskon', -Number(order.discount || 0)],
+        ['Biaya tambahan', Number(order.additional_cost || 0)],
+        ['Pengiriman', Number(order.delivery_cost || 0)],
+        ['TOTAL TAGIHAN', Number(order.total_amount)],
+        ['DP / Pembayaran diterima', Number(order.deposit_amount)],
+        ['SISA TAGIHAN', Math.max(0, Number(order.total_amount) - Number(order.deposit_amount))],
+      ];
+      for (const [label, amount] of totals) {
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.setFont('helvetica', label === 'TOTAL TAGIHAN' || label === 'SISA TAGIHAN' ? 'bold' : 'normal');
+        doc.text(label, 112, y); doc.text(money(amount), 158, y); y += 7;
+      }
+      y += 8; doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+      doc.text(doc.splitTextToSize('Catatan: Rincian desain, biaya final, dan jadwal produksi dikonfirmasi bersama admin SANDIKALE melalui WhatsApp.', 180), 14, y);
+      const blob = doc.output('blob');
+      const countResult = await supabase.from('showroom_spk_documents').select('id', { count: 'exact', head: true }).eq('order_id', order.id).eq('document_type', 'invoice');
+      if (countResult.error) throw countResult.error;
+      const revision = (countResult.count || 0) + 1;
+      const storagePath = 'orders/' + order.order_number + '/' + invoiceNumber + '-r' + revision + '.pdf';
+      const upload = await supabase.storage.from('showroom-spk-documents').upload(storagePath, blob, { contentType: 'application/pdf', upsert: false });
+      if (upload.error) throw upload.error;
+      const previousResult = await supabase.from('showroom_spk_documents').select('id').eq('order_id', order.id).eq('document_type', 'invoice').eq('document_status', 'active');
+      if (previousResult.error) throw previousResult.error;
+      if (previousResult.data?.length) {
+        const supersede = await supabase.from('showroom_spk_documents').update({ document_status: 'superseded' }).in('id', previousResult.data.map((row) => row.id));
+        if (supersede.error) throw supersede.error;
+      }
+      const bytes = await blob.arrayBuffer();
+      const digest = await crypto.subtle.digest('SHA-256', bytes);
+      const hash = Array.from(new Uint8Array(digest)).map((v) => v.toString(16).padStart(2, '0')).join('');
+      const archived = await supabase.from('showroom_spk_documents').insert({
+        order_id: order.id, spk_number: order.spk_number, document_type: 'invoice',
+        revision_number: revision, storage_path: storagePath, document_status: 'active',
+        created_by: profile.id, order_version: order.version || 1,
+        snapshot: { order, customer, items: order.showroom_order_items || [], invoice_number: invoiceNumber, generated_by: profile.full_name },
+        content_sha256: hash, supersedes_document_id: previousResult.data?.[0]?.id || null,
+      });
+      if (archived.error) throw archived.error;
+      doc.save(invoiceNumber + '.pdf');
+      onToast('Invoice ' + invoiceNumber + ' berhasil dibuat dan diarsipkan.');
+    } catch (e) { onToast(e instanceof Error ? e.message : 'Gagal membuat invoice.'); }
+    finally { setBusy(false); }
+  };
+
   const markPaid = async (order: OrderRow) => {
     if (!profile || !['owner','admin'].includes(profile.role) || !window.confirm(`Konfirmasi bahwa pembayaran pesanan ${order.order_number} sudah diterima?`)) return;
     const { error: updateError } = await supabase.from('showroom_orders').update({ payment_status: 'paid', status: 'waiting_design_review', updated_at: new Date().toISOString(), updated_by: profile.id }).eq('id', order.id);
@@ -371,7 +454,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
         {(tab === 'catalog' || tab === 'production' || tab === 'website') && ['owner','admin'].includes(profile.role) && <AdminContentManager key={tab} initialWorkspace={tab} onToast={onToast} />}
         {tab === 'reviews' && <section className="space-y-3"><h2 className="text-xl font-bold">Moderasi ulasan ({reviews.length})</h2>{reviews.map((r) => <article key={r.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 space-y-2"><div className="flex justify-between gap-3"><strong>{r.author_name} · {'★'.repeat(r.rating)}</strong><span className="text-xs text-white/50">{r.is_approved ? 'Terbit' : 'Menunggu'}</span></div><p className="text-sm text-white/75">{r.comment}</p><div className="flex gap-2"><button onClick={() => void moderateReview(r, true)} className="bg-[#7A1F2B] rounded px-3 py-2 text-xs">Terbitkan</button><button onClick={() => void moderateReview(r, false)} className="border border-white/15 rounded px-3 py-2 text-xs">Tolak</button><button onClick={() => void deleteReview(r)} className="border border-red-500/30 text-red-300 rounded px-3 py-2 text-xs">Hapus</button></div></article>)}</section>}
         {tab === 'orders' && <section className="space-y-4"><div className="flex flex-wrap justify-between gap-3"><h2 className="text-xl font-bold">Pesanan masuk ({orders.length})</h2><div className="flex gap-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nomor / nama / WhatsApp" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm" /><button onClick={exportOrdersCsv} className="rounded-lg border border-white/15 px-3 py-2 text-xs whitespace-nowrap">Export CSV</button></div></div>
-          {visibleOrders.map((order) => <article key={order.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 md:p-5 space-y-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="font-bold">{order.order_number}</div><div className="text-xs text-white/50">{order.spk_number} · {new Date(order.created_at).toLocaleString('id-ID')}</div></div><div className="text-right"><div className="font-bold">{money(Number(order.total_amount))}</div><div className="text-xs text-white/50">DP {money(Number(order.deposit_amount))} · {order.payment_status}</div></div></div><div className="text-sm">{order.showroom_customers?.name || 'Pelanggan'} · {order.showroom_customers?.whatsapp || '—'}</div><div className="text-xs text-white/60">{(order.showroom_order_items || []).map((item) => `${item.product_name_snapshot} × ${item.quantity}`).join(' · ')}</div><div className="flex flex-wrap items-center gap-3"><span className="text-xs text-white/50">Status: {order.status}</span><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => void generateSpk(order)} className="border border-white/15 rounded-lg px-3 py-2 text-xs">Buat SPK PDF</button>{order.payment_status !== 'paid' && <button disabled={!['owner','admin'].includes(profile.role)} onClick={() => void markPaid(order)} className="bg-emerald-700 rounded-lg px-3 py-2 text-xs">Konfirmasi pembayaran</button>}<select disabled={busy || !['owner','admin','staff'].includes(profile.role)} defaultValue="" onChange={(e) => { if (e.target.value) void updateStage(order, e.target.value); }} className="bg-black border border-white/15 rounded-lg px-3 py-2 text-sm"><option value="">Ubah status produksi…</option>{Object.keys(STATUS).map((s) => <option key={s} value={s}>{s}</option>)}</select><a className="text-xs text-[#A33A48]" href={`https://wa.me/${order.showroom_customers?.whatsapp || ''}`} target="_blank" rel="noreferrer">Hubungi pelanggan via WhatsApp</a></div></article>)}
+          {visibleOrders.map((order) => <article key={order.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 md:p-5 space-y-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="font-bold">{order.order_number}</div><div className="text-xs text-white/50">{order.spk_number} · {new Date(order.created_at).toLocaleString('id-ID')}</div></div><div className="text-right"><div className="font-bold">{money(Number(order.total_amount))}</div><div className="text-xs text-white/50">DP {money(Number(order.deposit_amount))} · {order.payment_status}</div></div></div><div className="text-sm">{order.showroom_customers?.name || 'Pelanggan'} · {order.showroom_customers?.whatsapp || '—'}</div><div className="text-xs text-white/60">{(order.showroom_order_items || []).map((item) => `${item.product_name_snapshot} × ${item.quantity}`).join(' · ')}</div><div className="flex flex-wrap items-center gap-3"><span className="text-xs text-white/50">Status: {order.status}</span><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => void generateInvoice(order)} className="border border-[#7A1F2B]/60 text-[#D58B95] rounded-lg px-3 py-2 text-xs">Buat Invoice PDF</button><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => void generateSpk(order)} className="border border-white/15 rounded-lg px-3 py-2 text-xs">Buat SPK PDF</button>{order.payment_status !== 'paid' && <button disabled={!['owner','admin'].includes(profile.role)} onClick={() => void markPaid(order)} className="bg-emerald-700 rounded-lg px-3 py-2 text-xs">Konfirmasi pembayaran</button>}<select disabled={busy || !['owner','admin','staff'].includes(profile.role)} defaultValue="" onChange={(e) => { if (e.target.value) void updateStage(order, e.target.value); }} className="bg-black border border-white/15 rounded-lg px-3 py-2 text-sm"><option value="">Ubah status produksi…</option>{Object.keys(STATUS).map((s) => <option key={s} value={s}>{s}</option>)}</select><a className="text-xs text-[#A33A48]" href={`https://wa.me/${order.showroom_customers?.whatsapp || ''}`} target="_blank" rel="noreferrer">Hubungi pelanggan via WhatsApp</a></div></article>)}
           {!visibleOrders.length && <p className="text-sm text-white/50">Belum ada pesanan yang cocok.</p>}</section>}
 
       </div>
