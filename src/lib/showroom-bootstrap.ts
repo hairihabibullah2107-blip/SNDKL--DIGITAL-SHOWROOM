@@ -16,26 +16,26 @@ function asNumber(value: unknown, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-const safeQuery = async (query: PromiseLike<any>) => {
+const safeQuery = async <T,>(query: PromiseLike<T>): Promise<T> => {
   try { return await query; }
-  catch (error) { return { data: null, error }; }
+  catch (error) { return { data: null, error } as T; }
 };
 
 export async function loadShowroomBootstrap() {
   const [categoryResult, productResult, materialResult, variantResult, colorResult, productColorResult, imageResult, dtfResult, reviewResult, settingsResult, printingMethodResult] =
     await Promise.all([
-      supabase.from('showroom_categories').select('id,name,slug,description,image_path,sort_order,is_active').eq('is_active', true).order('sort_order'),
-      supabase.from('showroom_products').select('id,category_id,name,slug,description,base_price,long_sleeve_price,model,weight_description,is_featured,is_best_seller,is_published,stock_mode,available_colors,size_surcharges,material_id,showroom_materials(name,description,surcharge)').eq('is_published', true).order('created_at', { ascending: false }),
-      supabase.from('showroom_materials').select('id,name,description,surcharge,is_active').eq('is_active', true),
-      supabase.from('showroom_product_variants').select('id,product_id,color,size,sku,price_adjustment,stock_quantity,is_available').eq('is_available', true),
-      supabase.from('showroom_colors').select('id,name,hex,is_active').eq('is_active', true).order('sort_order'),
-      supabase.from('showroom_product_colors').select('id,product_id,color_id,sort_order,is_active,showroom_colors(id,name,hex,is_active)').eq('is_active', true).order('sort_order'),
-      supabase.from('showroom_product_images').select('id,product_id,storage_path,alt_text,sort_order,is_primary,view_key').order('is_primary', { ascending: false }).order('sort_order'),
-      supabase.from('showroom_dtf_prices').select('id,size_code,label,width_cm,height_cm,price,is_active,sort_order,placement_view,box_x,box_y,box_w,box_h').eq('is_active', true).order('sort_order'),
-      supabase.from('showroom_product_reviews').select('id,product_id,author_name,rating,comment,verified_purchase,created_at').eq('is_approved', true).order('created_at', { ascending: false }),
-      supabase.from('showroom_settings').select('key,value'),
-      supabase.from('showroom_printing_methods').select('id,name,description,pricing_type,base_price').eq('is_active', true).order('name'),
-    ].map(safeQuery));
+      safeQuery(supabase.from('showroom_categories').select('id,name,slug,description,image_path,sort_order,is_active').eq('is_active', true).order('sort_order')),
+      safeQuery(supabase.from('showroom_products').select('id,category_id,name,slug,description,base_price,long_sleeve_price,model,weight_description,is_featured,is_best_seller,is_published,stock_mode,available_colors,size_surcharges,material_id,showroom_materials(name,description,surcharge)').eq('is_published', true).order('created_at', { ascending: false })),
+      safeQuery(supabase.from('showroom_materials').select('id,name,description,surcharge,is_active').eq('is_active', true)),
+      safeQuery(supabase.from('showroom_product_variants').select('id,product_id,color,size,sku,price_adjustment,stock_quantity,is_available').eq('is_available', true)),
+      safeQuery(supabase.from('showroom_colors').select('id,name,hex,is_active').eq('is_active', true).order('sort_order')),
+      safeQuery(supabase.from('showroom_product_colors').select('id,product_id,color_id,sort_order,is_active,showroom_colors(id,name,hex,is_active)').eq('is_active', true).order('sort_order')),
+      safeQuery(supabase.from('showroom_product_images').select('id,product_id,storage_path,alt_text,sort_order,is_primary,view_key').order('is_primary', { ascending: false }).order('sort_order')),
+      safeQuery(supabase.from('showroom_dtf_prices').select('id,size_code,label,width_cm,height_cm,price,is_active,sort_order,placement_view,box_x,box_y,box_w,box_h').eq('is_active', true).order('sort_order')),
+      safeQuery(supabase.from('showroom_product_reviews').select('id,product_id,author_name,rating,comment,verified_purchase,created_at').eq('is_approved', true).order('created_at', { ascending: false })),
+      safeQuery(supabase.from('showroom_settings').select('key,value')),
+      safeQuery(supabase.from('showroom_printing_methods').select('id,name,description,pricing_type,base_price').eq('is_active', true).order('name')),
+    ]);
 
   if (productResult.error) throw productResult.error;
   const optionalFailures = [
