@@ -503,6 +503,17 @@ export function CustomDtfStudio({
                     className="absolute inset-0 w-full h-full object-contain p-3 pointer-events-none"
                   />
                   {selectedColor && (
+                    <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{
+                      backgroundColor: selectedColor.hex,
+                      WebkitMaskImage: 'url("' + currentProductImage + '")',
+                      maskImage: 'url("' + currentProductImage + '")',
+                      WebkitMaskSize: 'contain', maskSize: 'contain',
+                      WebkitMaskPosition: 'center', maskPosition: 'center',
+                      WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
+                      mixBlendMode: 'multiply',
+                    }} />
+                  )}
+                  {selectedColor && (
                     <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/75 text-white text-[11px] font-medium flex items-center gap-1.5 backdrop-blur-sm">
                       <span className="w-3 h-3 rounded-full border border-white/40" style={{ backgroundColor: selectedColor.hex }} />
                       <span>Warna pesanan: {selectedColor.name}</span>
