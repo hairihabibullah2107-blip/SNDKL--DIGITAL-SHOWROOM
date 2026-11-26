@@ -260,7 +260,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
       const orderItems = order.showroom_order_items || [];
       const productIds = orderItems.map((item) => item.product_id).filter((id): id is string => Boolean(id));
       const { data: catalogImages, error: catalogImageError } = productIds.length
-        ? await supabase.from('showroom_product_images').select('product_id,storage_path,is_primary,sort_order').in('product_id', productIds).order('is_primary', { ascending: false }).order('sort_order')
+        ? await supabase.from('showroom_product_images').select('product_id,storage_path,is_primary,sort_order,view_key').in('product_id', productIds).order('is_primary', { ascending: false }).order('sort_order')
         : { data: [], error: null };
       if (catalogImageError) throw catalogImageError;
       for (const item of orderItems) {
@@ -273,30 +273,36 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
         const printText = printRows.map((print) => `${print.position || ''} ${print.size_label ? '(' + print.size_label + ')' : ''}`).join(', ') || String(spec.placement || 'Tanpa cetak');
         const detail = `Warna: ${String(spec.color || item.showroom_order_variants?.[0]?.color || '-')} · Ukuran: ${sizeText || '-'} · DTF: ${printText}`;
         doc.setFontSize(8); doc.text(detail.slice(0, 115), 18, y + 4); doc.setFontSize(9); y += 13;
-        const designPaths = [...new Set((item.showroom_order_designs || []).flatMap((design) => [design.front_preview_path, design.back_preview_path, design.original_storage_path].filter((path): path is string => Boolean(path))))];
-        const catalogPath = catalogImages?.find((photo) => photo.product_id === item.product_id)?.storage_path;
-        if (!designPaths.length && catalogPath) designPaths.push(catalogPath);
-        if (designPaths.length) {
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.text('GAMBAR ACUAN / DESAIN', 18, y + 2); y += 5;
-          for (const path of designPaths.slice(0, 3)) {
+        const designAssets = (item.showroom_order_designs || []).flatMap((design) => [
+          design.front_preview_path ? { path: design.front_preview_path, bucket: 'showroom-design-previews', label: 'Preview depan' } : null,
+          design.back_preview_path ? { path: design.back_preview_path, bucket: 'showroom-design-previews', label: 'Preview belakang' } : null,
+          design.original_storage_path ? { path: design.original_storage_path, bucket: 'showroom-customer-designs', label: 'Desain asli' } : null,
+        ]).filter((asset): asset is { path: string; bucket: string; label: string } => Boolean(asset));
+        const catalogAssets = (catalogImages || []).filter((photo) => photo.product_id === item.product_id)
+          .sort((a, b) => (a.view_key === 'front' ? -1 : b.view_key === 'front' ? 1 : a.sort_order - b.sort_order))
+          .slice(0, 2)
+          .map((photo) => ({ path: photo.storage_path, bucket: 'showroom-product-images', label: photo.view_key === 'back' ? 'Foto produk belakang' : 'Foto produk depan' }));
+        const imageAssets = [...designAssets, ...catalogAssets].slice(0, 5);
+        if (imageAssets.length) {
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.text('GAMBAR ACUAN PRODUK & DESAIN', 18, y + 2); y += 5;
+          for (const asset of imageAssets) {
             if (y > 245) { doc.addPage(); y = 20; }
-            const isCatalogPhoto = path === catalogPath && !item.showroom_order_designs?.length;
-            const imageResult = await supabase.storage.from(isCatalogPhoto ? 'showroom-product-images' : 'showroom-customer-designs').download(path);
+            const imageResult = await supabase.storage.from(asset.bucket).download(asset.path);
             if (imageResult.error || !imageResult.data) {
-              doc.setFont('helvetica', 'italic'); doc.setTextColor(150, 60, 60); doc.text('Gambar acuan gagal dimuat: ' + path.split('/').pop(), 18, y + 4); doc.setTextColor(20, 20, 20); y += 7;
+              doc.setFont('helvetica', 'italic'); doc.setTextColor(150, 60, 60); doc.text(asset.label + ' gagal dimuat: ' + asset.path.split('/').pop(), 18, y + 4); doc.setTextColor(20, 20, 20); y += 7;
               continue;
             }
             try {
               const imageData = await imageBlobToJpegDataUrl(imageResult.data);
-              doc.addImage(imageData, 'JPEG', 18, y, 42, 34, undefined, 'FAST');
-              doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.text(path.split('/').pop() || 'File acuan', 64, y + 6);
+              doc.addImage(imageData, 'JPEG', 18, y, 42, 34, undefined, 'FAST);
+              doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.text(asset.label + ' · ' + (asset.path.split('/').pop() || 'File acuan'), 64, y + 6);
               y += 37;
             } catch {
-              doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text('Format gambar tidak dapat diproses: ' + path.split('/').pop(), 18, y + 4); y += 7;
+              doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text(asset.label + ' tidak dapat dipratinjau sebagai gambar: ' + asset.path.split('/').pop(), 18, y + 4); y += 7;
             }
           }
         } else {
-          doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text('Belum ada gambar acuan yang diunggah untuk item ini.', 18, y + 2); y += 7;
+          doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text('Belum ada gambar acuan katalog atau desain untuk item ini.', 18, y + 2); y += 7;
         }
       }
       y += 8; doc.setFontSize(10); doc.setFont('helvetica', 'bold');
