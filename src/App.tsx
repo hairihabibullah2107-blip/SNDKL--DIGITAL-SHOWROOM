@@ -270,6 +270,14 @@ export default function App() {
   }, [showToast]);
 
   useEffect(() => { void loadBootstrap(); }, [loadBootstrap]);
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        window.setTimeout(() => { void loadBootstrap(); }, 0);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [loadBootstrap]);
   useEffect(() => { setHeroImageFailed(false); }, [siteContent.heroImage]);
   const refreshShowroom = useCallback(async () => {
     setIsRefreshing(true);
