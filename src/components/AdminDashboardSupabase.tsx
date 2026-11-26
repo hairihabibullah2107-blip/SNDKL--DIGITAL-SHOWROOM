@@ -17,6 +17,7 @@ type ReviewRow = { id: string; product_id: string; author_name: string; rating: 
 type PriceRow = { id: string; size_code: string; label: string; price: number; width_cm: number; height_cm: number; is_active: boolean };
 
 const money = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value || 0));
+const safeAdminQuery = async (query: PromiseLike<any>) => { try { return await query; } catch (error) { return { data: null, error }; } };
 
 async function imageBlobToJpegDataUrl(blob: Blob): Promise<string> {
   const bitmap = await createImageBitmap(blob);
@@ -81,9 +82,9 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
       supabase.from('showroom_dtf_prices').select('id,size_code,label,price,width_cm,height_cm,is_active').order('sort_order'),
       supabase.from('showroom_product_reviews').select('id,product_id,author_name,rating,comment,created_at,is_approved').order('created_at', { ascending: false }).limit(100),
       supabase.from('showroom_materials').select('id,name,description,surcharge,is_active').order('name'),
-    ]);
-    const failure = [o.error, p.error, c.error, d.error, r.error, m.error].find(Boolean);
-    if (failure) throw failure;
+    ].map(safeAdminQuery));
+    const failed = [['pesanan',o],['produk',p],['kategori',c],['harga DTF',d],['ulasan',r],['bahan',m]].filter(([,result])=>Boolean((result as {error?:unknown}).error)).map(([name])=>name);
+    if (failed.length) onToast('Sebagian data dashboard belum termuat: '+failed.join(', ')+'. Periksa koneksi atau sesi admin, lalu muat ulang.');
     setOrders((o.data || []) as unknown as OrderRow[]);
     setProducts((p.data || []) as ProductRow[]);
     setCategories((c.data || []) as CategoryRow[]);
@@ -91,7 +92,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     setReviews((r.data || []) as ReviewRow[]);
     setMaterials((m.data || []) as MaterialRow[]);
     } finally { setRefreshing(false); }
-  }, []);
+  }, [onToast]);
 
   const verifySession = useCallback(async () => {
     const { data } = await supabase.auth.getSession();
