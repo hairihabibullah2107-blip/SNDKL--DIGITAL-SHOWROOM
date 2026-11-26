@@ -250,8 +250,6 @@ export default function App() {
           setFabrics(data.fabrics || []);
           setGarmentColors(data.garmentColors || []);
           setPaymentMethods(data.paymentMethods || []);
-          setShippingOriginCity(data.shippingOriginCity || '');
-          setShippingCouriers(data.shippingCouriers || []);
           setAdminWhatsapp(data.adminWhatsapp || '6282266412844');
           setDtfZones(data.dtfZones || []);
           setBulkDiscounts(data.bulkDiscounts || []);
