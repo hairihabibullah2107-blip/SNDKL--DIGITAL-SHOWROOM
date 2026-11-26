@@ -1,5 +1,6 @@
 import { ArrowRight, Bell, Bug, CheckCircle2, HelpCircle, Instagram, Layers, Lock, Shield, Sparkles, Truck, X } from 'lucide-react';
 import heroImage from './assets/images/hero_sandikale_streetwear_1795511846725.jpg';
+import brandDetailImage from './assets/images/prod_cream_graphic_tee_1795511847871.jpg';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AdminDashboardSupabase } from './components/AdminDashboardSupabase';
 import { CartCheckoutDrawer } from './components/CartCheckoutDrawer';
@@ -42,6 +43,9 @@ export default function App() {
   );
   const [darkMode, setDarkMode] = useState(true);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [heroImageFailed, setHeroImageFailed] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   const [siteContent, setSiteContent] = useState({
     brandName: 'SANDIKALE',
@@ -221,7 +225,7 @@ export default function App() {
   const loadBootstrap = useCallback(async () => {
     try {
       const data = await loadShowroomBootstrap();
-      setSiteContent(data.siteContent || siteContent);
+      setSiteContent(data.siteContent);
       setCategories(data.categories);
       setProducts(data.products);
       setFabrics(data.fabrics);
@@ -258,10 +262,18 @@ export default function App() {
           setReviews(data.reviews || []);
         }
       } catch { /* ignore invalid cache */ }
+    } finally {
+      setIsInitialLoading(false);
     }
   }, [showToast]);
 
   useEffect(() => { void loadBootstrap(); }, [loadBootstrap]);
+  useEffect(() => { setHeroImageFailed(false); }, [siteContent.heroImage]);
+  const refreshShowroom = useCallback(async () => {
+    setIsRefreshing(true);
+    try { await loadBootstrap(); showToast('Data katalog dan tampilan SANDIKALE berhasil dimuat ulang.'); }
+    finally { setIsRefreshing(false); }
+  }, [loadBootstrap, showToast]);
 
   useEffect(() => {
     const channel = supabase.channel('showroom-public-catalog')
@@ -592,7 +604,7 @@ export default function App() {
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F2F2F2] text-[#080808] dark:bg-[#080808] dark:text-white pb-14 md:pb-0" style={{ "--brand-accent": '#7A1F2B', "--site-background": siteContent.theme.background, "--site-surface": siteContent.theme.surface, "--site-text": siteContent.theme.text, "--site-muted": siteContent.theme.muted, backgroundColor: siteContent.theme.background, color: siteContent.theme.text } as React.CSSProperties}>
+    <div className="min-h-screen flex flex-col bg-[#F2F2F2] text-[#080808] dark:bg-[#080808] dark:text-white pb-14 md:pb-0" style={{ "--brand-accent": siteContent.theme.accent || "#7A1F2B", "--site-background": siteContent.theme.background, "--site-surface": siteContent.theme.surface, "--site-text": siteContent.theme.text, "--site-muted": siteContent.theme.muted, backgroundColor: siteContent.theme.background, color: siteContent.theme.text } as React.CSSProperties}>
       <Navbar
         activeSection={activeSection}
         onNavigate={scrollToSection}
@@ -605,6 +617,8 @@ export default function App() {
         onToggleDark={() => setDarkMode((d) => !d)}
         isOnline={isOnline}
         showAnnouncement={showAnnouncement}
+        onRefresh={refreshShowroom}
+        isRefreshing={isRefreshing}
         announcementText={siteContent.announcement}
         brandName={siteContent.brandName}
         onDismissAnnouncement={() => setShowAnnouncement(false)}
@@ -620,11 +634,14 @@ export default function App() {
         </div>
       )}
 
+      {isInitialLoading && !isAdminRoute && <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#080808] text-white"><div className="flex flex-col items-center gap-4"><span className="h-10 w-10 rounded-full border-2 border-white/15 border-t-[#7A1F2B] animate-spin"/><span className="text-xs font-bold uppercase tracking-[.25em]">SANDIKALE · Memuat showroom</span><span className="text-[11px] text-white/45">Menyiapkan katalog dan studio DTF</span></div></div>}
+
       <main className="flex-1">
         {/* HERO SECTION */}
         <section id="hero" className="relative min-h-[78vh] md:min-h-[84vh] flex items-end overflow-hidden bg-[#080808]">
           <img
-            src={siteContent.heroImage || HERO_IMAGE}
+            src={siteContent.heroImage && !heroImageFailed ? siteContent.heroImage : HERO_IMAGE}
+            onError={() => setHeroImageFailed(true)}
             alt="Kampanye Streetwear SANDIKALE"
             referrerPolicy="no-referrer"
             className="absolute inset-0 w-full h-full object-cover object-center"
@@ -633,14 +650,14 @@ export default function App() {
 
           <div className="relative z-10 max-w-[1360px] w-full mx-auto px-4 md:px-6 py-12 md:py-20 space-y-6">
             <div className="max-w-3xl space-y-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{color:'#7A1F2B'}}>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em]" style={{color:'var(--brand-accent)'}}>
                 {siteContent.heroEyebrow}
               </p>
               <h1
                 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold uppercase tracking-tight leading-[0.94] text-white"
                 style={{ textWrap: 'balance' }}
               >
-                {siteContent.heroTitle.split('|')[0]} <span style={{color:'#7A1F2B'}}>{siteContent.heroTitle.split('|')[1] || ''}</span>
+                {siteContent.heroTitle.split('|')[0]} <span style={{color:'var(--brand-accent)'}}>{siteContent.heroTitle.split('|')[1] || ''}</span>
               </h1>
               <p className="text-sm md:text-base text-neutral-300 max-w-xl leading-relaxed">
                 <span className="hero-subtitle-marquee">{siteContent.heroSubtitle}</span>
@@ -651,7 +668,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => scrollToSection('studio')}
-                className="h-12 px-7 rounded-md text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer" style={{backgroundColor:'#7A1F2B'}}
+                className="h-12 px-7 rounded-md text-white text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer" style={{backgroundColor:'var(--brand-accent)'}}
               >
                 <Layers className="w-4 h-4" />
                 <span>{siteContent.primaryCta}</span>
@@ -677,7 +694,7 @@ export default function App() {
         </section>
 
         {/* MARQUEE */}
-        <div className="h-10 text-white overflow-hidden flex items-center border-y border-black/15" style={{backgroundColor:'#7A1F2B'}}>
+        <div className="h-10 text-white overflow-hidden flex items-center border-y border-black/15" style={{backgroundColor:'var(--brand-accent)'}}>
           <div className="marquee-track text-xs font-bold uppercase tracking-[0.2em]">
             {[0, 1].map((dup) => (
               <div key={dup} className="flex items-center gap-8 pr-8 whitespace-nowrap">
@@ -696,7 +713,7 @@ export default function App() {
           </div>
         </div>
 
-        {siteContent.gallery.length > 0 && <section id="galeri" className="py-12 md:py-16 border-b border-black/10 dark:border-white/10"><div className="max-w-[1360px] mx-auto px-4 md:px-6 space-y-6"><div><p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{color:'#7A1F2B'}}>SANDIKALE VISUAL JOURNAL</p><h2 className="font-display text-3xl md:text-5xl font-bold uppercase mt-2">Gallery / Campaigns</h2></div><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">{siteContent.gallery.map((item,index)=><figure key={item.image} className="overflow-hidden rounded-xl bg-neutral-200 dark:bg-[#171717]"><img src={item.image} alt={item.alt} loading="lazy" className="w-full aspect-[4/5] object-cover"/>{item.caption&&<figcaption className="p-3 text-xs text-neutral-600 dark:text-neutral-300">{item.caption}</figcaption>}</figure>)}</div></div></section>}
+        {siteContent.gallery.length > 0 && <section id="galeri" className="py-12 md:py-16 border-b border-black/10 dark:border-white/10"><div className="max-w-[1360px] mx-auto px-4 md:px-6 space-y-6"><div><p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{color:'var(--brand-accent)'}}>SANDIKALE VISUAL JOURNAL</p><h2 className="font-display text-3xl md:text-5xl font-bold uppercase mt-2">Gallery / Campaigns</h2></div><div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">{siteContent.gallery.map((item,index)=><figure key={item.image} className="overflow-hidden rounded-xl bg-neutral-200 dark:bg-[#171717]"><img src={item.image} alt={item.alt} loading="lazy" className="w-full aspect-[4/5] object-cover"/>{item.caption&&<figcaption className="p-3 text-xs text-neutral-600 dark:text-neutral-300">{item.caption}</figcaption>}</figure>)}</div></div></section>}
 
         {/* PRODUCT CATALOG */}
         <ProductCatalog
@@ -734,11 +751,11 @@ export default function App() {
           <div className="max-w-[1360px] mx-auto px-4 md:px-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
             <div className="lg:col-span-6 rounded-xl overflow-hidden bg-neutral-200 dark:bg-[#141414]">
               <img
-                src="/src/assets/images/prod_cream_graphic_tee_1795511847871.jpg"
+                src={brandDetailImage}
                 alt="Detail hasil sablon DTF SANDIKALE"
                 loading="lazy"
                 referrerPolicy="no-referrer"
-                className="w-full h-full object-cover min-h-[300px]"
+                className="w-full h-full object-cover min-h-[300px]" onError={(e) => { e.currentTarget.src = HERO_IMAGE; }}
               />
             </div>
 
