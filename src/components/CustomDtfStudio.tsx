@@ -21,7 +21,6 @@ import type {
   FabricOption,
   GarmentColorOption,
   Product,
-  ShippingCourierConfig,
 } from '../types';
 import { formatRupiah } from '../utils/format';
 import { removeImageBackground } from '../utils/removeBackground';
@@ -30,8 +29,6 @@ interface CustomDtfStudioProps {
   products: Product[];
   fabrics: FabricOption[];
   garmentColors: GarmentColorOption[];
-  shippingOriginCity: string;
-  shippingCouriers: ShippingCourierConfig[];
   dtfZones: DtfZonePrice[];
   bulkDiscounts: BulkDiscountRule[];
   printingMethods: PrintingMethodOption[];
