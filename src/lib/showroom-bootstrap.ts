@@ -22,7 +22,7 @@ const safeQuery = async (query: PromiseLike<any>) => {
 };
 
 export async function loadShowroomBootstrap() {
-  const [categoryResult, productResult, materialResult, variantResult, colorResult, productColorResult, imageResult, dtfResult, reviewResult, settingsResult, mockupResult, printingMethodResult] =
+  const [categoryResult, productResult, materialResult, variantResult, colorResult, productColorResult, imageResult, dtfResult, reviewResult, settingsResult, printingMethodResult] =
     await Promise.all([
       supabase.from('showroom_categories').select('id,name,slug,description,image_path,sort_order,is_active').eq('is_active', true).order('sort_order'),
       supabase.from('showroom_products').select('id,category_id,name,slug,description,base_price,long_sleeve_price,model,weight_description,is_featured,is_best_seller,is_published,stock_mode,available_colors,size_surcharges,material_id,showroom_materials(name,description,surcharge)').eq('is_published', true).order('created_at', { ascending: false }),
@@ -34,7 +34,6 @@ export async function loadShowroomBootstrap() {
       supabase.from('showroom_dtf_prices').select('id,size_code,label,width_cm,height_cm,price,is_active,sort_order,placement_view,box_x,box_y,box_w,box_h').eq('is_active', true).order('sort_order'),
       supabase.from('showroom_product_reviews').select('id,product_id,author_name,rating,comment,verified_purchase,created_at').eq('is_approved', true).order('created_at', { ascending: false }),
       supabase.from('showroom_settings').select('key,value'),
-      supabase.from('showroom_garment_mockups').select('garment_type,color_name,color_hex,front_storage_path,back_storage_path').eq('is_active', true),
       supabase.from('showroom_printing_methods').select('id,name,description,pricing_type,base_price').eq('is_active', true).order('name'),
     ].map(safeQuery));
 
@@ -43,7 +42,7 @@ export async function loadShowroomBootstrap() {
     ['categories', categoryResult], ['materials', materialResult], ['variants', variantResult],
     ['master colors', colorResult], ['product colors', productColorResult], ['product photos', imageResult],
     ['DTF prices', dtfResult], ['reviews', reviewResult], ['site settings', settingsResult],
-    ['legacy mockup colors', mockupResult], ['printing methods', printingMethodResult],
+['printing methods', printingMethodResult],
   ].filter(([, result]) => Boolean((result as { error?: unknown }).error)).map(([name]) => name);
   if (optionalFailures.length) console.warn('SANDIKALE showroom loaded with optional data unavailable:', optionalFailures.join(', '));
 
@@ -151,18 +150,7 @@ export async function loadShowroomBootstrap() {
   for (const color of masterColors) {
     colorMap.set(String(color.id), { id: String(color.id), name: color.name, hex: color.hex || '#777777', publishedByAdmin: true });
   }
-  // Retain colors from the legacy garment mockup library until each is linked to a master color.
 
-  for (const mockup of mockupResult.data || []) {
-    const key = String(mockup.color_name).toLowerCase();
-    const existing: GarmentColorOption = colorMap.get(key) || { id: key, name: mockup.color_name, hex: mockup.color_hex || '#777777', publishedByAdmin: true };
-    const mockups = [...(existing.mockups || []).filter((item) => item.garmentType !== mockup.garment_type), {
-      garmentType: mockup.garment_type as 'short' | 'long',
-      frontImage: storagePublicUrl(mockup.front_storage_path),
-      backImage: storagePublicUrl(mockup.back_storage_path),
-    }];
-    colorMap.set(key, { ...existing, hex: mockup.color_hex || existing.hex, mockups });
-  }
 
   const printingMethods: PrintingMethodOption[] = (printingMethodResult.data || []).map((row) => ({ id: row.id, name: row.name, description: row.description || '', pricingType: row.pricing_type, basePrice: asNumber(row.base_price) }));
 
