@@ -5,10 +5,10 @@ import { AdminContentManager } from './AdminContentManager';
 type Profile = { id: string; full_name: string; email: string | null; role: string; is_active: boolean };
 type OrderRow = {
   id: string; order_number: string; spk_number: string; status: string; production_status: string;
-  payment_status: string; subtotal: number; total_amount: number; deposit_amount: number;
+  payment_status: string; subtotal: number; discount: number; additional_cost: number; delivery_cost: number; total_amount: number; deposit_amount: number;
   created_at: string; estimated_completion: string | null; notes: string | null; version: number; design_notes: string | null; production_notes: string | null; finishing_instructions: string | null;
   showroom_customers?: { name: string; whatsapp: string; address?: string | null; email?: string | null } | null;
-  showroom_order_items?: Array<{ id: string; product_name_snapshot: string; quantity: number; subtotal: number; specification: Record<string, unknown>; showroom_order_variants?: Array<{ size: string; color: string; quantity: number }> }>;
+  showroom_order_items?: Array<{ id: string; product_id: string | null; product_name_snapshot: string; quantity: number; subtotal: number; specification: Record<string, unknown>; showroom_order_variants?: Array<{ size: string; color: string; quantity: number }>; showroom_order_designs?: Array<{ id: string; original_storage_path: string | null; front_preview_path: string | null; back_preview_path: string | null; design_version: number; approval_status: string }> }>;
 };
 type ProductRow = { id: string; name: string; slug: string; base_price: number; is_published: boolean; is_featured: boolean; description: string | null };
 type CategoryRow = { id: string; name: string; slug: string; is_active: boolean };
@@ -17,6 +17,20 @@ type ReviewRow = { id: string; product_id: string; author_name: string; rating: 
 type PriceRow = { id: string; size_code: string; label: string; price: number; width_cm: number; height_cm: number; is_active: boolean };
 
 const money = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value || 0));
+
+async function imageBlobToJpegDataUrl(blob: Blob): Promise<string> {
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement('canvas');
+  const scale = Math.min(1, 1400 / Math.max(bitmap.width, bitmap.height));
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Tidak dapat memproses gambar acuan.');
+  context.fillStyle = '#ffffff'; context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return canvas.toDataURL('image/jpeg', 0.88);
+}
 const STATUS: Record<string, { status: string; production: string }> = {
   'Menunggu Pembayaran': { status: 'waiting_payment', production: 'new' },
   'Verifikasi Desain DTF': { status: 'waiting_design_review', production: 'design_confirmation' },
@@ -61,7 +75,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     setRefreshing(true);
     try {
     const [o, p, c, d, r, m] = await Promise.all([
-      supabase.from('showroom_orders').select('id,order_number,spk_number,status,production_status,payment_status,subtotal,total_amount,deposit_amount,created_at,estimated_completion,notes,version,design_notes,production_notes,finishing_instructions,showroom_customers(name,whatsapp,address,email),showroom_order_items(id,product_name_snapshot,quantity,subtotal,specification,showroom_order_variants(size,color,quantity))').order('created_at', { ascending: false }).limit(100),
+      supabase.from('showroom_orders').select('id,order_number,spk_number,status,production_status,payment_status,subtotal,discount,additional_cost,delivery_cost,total_amount,deposit_amount,created_at,estimated_completion,notes,version,design_notes,production_notes,finishing_instructions,showroom_customers(name,whatsapp,address,email),showroom_order_items(id,product_id,product_name_snapshot,quantity,subtotal,specification,showroom_order_variants(size,color,quantity),showroom_order_designs(id,original_storage_path,front_preview_path,back_preview_path,design_version,approval_status))').order('created_at', { ascending: false }).limit(100),
       supabase.from('showroom_products').select('id,name,slug,base_price,is_published,is_featured,description').order('created_at', { ascending: false }),
       supabase.from('showroom_categories').select('id,name,slug,is_active').order('sort_order'),
       supabase.from('showroom_dtf_prices').select('id,size_code,label,price,width_cm,height_cm,is_active').order('sort_order'),
