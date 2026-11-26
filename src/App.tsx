@@ -278,23 +278,28 @@ export default function App() {
   }, [loadBootstrap, showToast]);
 
   useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleRefresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => { void loadBootstrap(); }, 400);
+    };
     const channel = supabase.channel('showroom-public-catalog')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_products' }, () => { void loadBootstrap(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_categories' }, () => { void loadBootstrap(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_dtf_prices' }, () => { void loadBootstrap(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_settings' }, () => { void loadBootstrap(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_materials' }, () => { void loadBootstrap(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_images' }, () => { void loadBootstrap(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_variants' }, () => { void loadBootstrap(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_materials' }, () => { void loadBootstrap(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_settings' }, () => { void loadBootstrap(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_images' }, () => { void loadBootstrap(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_variants' }, () => { void loadBootstrap(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_printing_methods' }, () => { void loadBootstrap(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_garment_mockups' }, () => { void loadBootstrap(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_pricing_rules' }, () => { void loadBootstrap(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_products' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_categories' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_dtf_prices' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_settings' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_materials' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_images' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_variants' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_colors' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_product_colors' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_printing_methods' }, scheduleRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'showroom_garment_mockups' }, scheduleRefresh)
       .subscribe();
-    return () => { void supabase.removeChannel(channel); };
+    return () => {
+      if (timer) clearTimeout(timer);
+      void supabase.removeChannel(channel);
+    };
   }, [loadBootstrap]);
 
   const scrollToSection = (id: string) => {
