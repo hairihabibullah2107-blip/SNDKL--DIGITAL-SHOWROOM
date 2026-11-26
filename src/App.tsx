@@ -27,7 +27,6 @@ import type {
   PaymentMethodId,
   Product,
   ProductReview,
-  ShippingCourierConfig,
   UserProfile,
 } from './types';
 
@@ -73,8 +72,6 @@ export default function App() {
   const [fabrics, setFabrics] = useState<FabricOption[]>([]);
   const [garmentColors, setGarmentColors] = useState<GarmentColorOption[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodConfig[]>([]);
-  const [shippingOriginCity, setShippingOriginCity] = useState('');
-  const [shippingCouriers, setShippingCouriers] = useState<ShippingCourierConfig[]>([]);
   const [adminWhatsapp, setAdminWhatsapp] = useState('6281234567890');
   const [dtfZones, setDtfZones] = useState<DtfZonePrice[]>([]);
   const [bulkDiscounts, setBulkDiscounts] = useState<BulkDiscountRule[]>([{minQuantity:6,discountPercent:6},{minQuantity:12,discountPercent:12}]);
@@ -232,8 +229,6 @@ export default function App() {
       setFabrics(data.fabrics);
       setGarmentColors(data.garmentColors);
       setPaymentMethods(data.paymentMethods);
-      setShippingOriginCity(data.shippingOriginCity);
-      setShippingCouriers(data.shippingCouriers);
       setAdminWhatsapp(data.adminWhatsapp);
       setDtfZones(data.dtfZones);
       setBulkDiscounts(data.bulkDiscounts || []);
@@ -757,8 +752,6 @@ export default function App() {
           products={products}
           fabrics={fabrics}
           garmentColors={garmentColors}
-          shippingOriginCity={shippingOriginCity}
-          shippingCouriers={shippingCouriers}
           dtfZones={dtfZones}
           bulkDiscounts={bulkDiscounts}
           printingMethods={printingMethods}
@@ -900,7 +893,6 @@ export default function App() {
         onClose={() => setCartOpen(false)}
         items={cart}
         paymentMethods={paymentMethods}
-        shippingCouriers={shippingCouriers}
         adminWhatsapp={adminWhatsapp}
         user={customerUser}
         isOnline={isOnline}
