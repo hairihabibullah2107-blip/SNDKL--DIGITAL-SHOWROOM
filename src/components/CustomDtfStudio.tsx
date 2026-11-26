@@ -825,8 +825,11 @@ export function CustomDtfStudio({
                 <span className="text-xs font-mono-tabular text-neutral-500">{placements.length} Zona Aktif</span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {printingMethods.length>0&&<div className="mb-4 rounded-xl border border-black/10 dark:border-white/10 p-3 space-y-2"><div className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">Teknik produksi tersedia</div><div className="flex flex-wrap gap-2">{printingMethods.map(method=><span key={method.id} title={method.description} className="rounded-full border border-black/10 dark:border-white/15 px-3 py-1.5 text-[11px]">{method.name}<span className="ml-1.5 text-neutral-400">{method.pricingType==='quote'?'· Penawaran admin':'· Tersedia'}</span></span>)}</div><p className="text-[10px] text-neutral-500">Pemesanan online saat ini menghitung tarif DTF. Teknik lain dapat dikonsultasikan dengan admin.</p></div>}
+              <div className="space-y-3">
+                <div className="rounded-xl border border-[#7A1F2B]/20 bg-[#7A1F2B]/5 p-3 space-y-2"><div className="text-[11px] font-bold uppercase tracking-wider text-[#7A1F2B]">Teknik cetak yang tersedia</div>{printingMethods.length > 0 ? <div className="flex flex-wrap gap-2">{printingMethods.map(method => <span key={method.id} title={method.description} className="rounded-full border border-black/10 dark:border-white/15 bg-white/70 dark:bg-black/20 px-3 py-1.5 text-[11px] font-semibold">{method.name} · {method.pricingType === "quote" ? "Konsultasi admin" : "Tersedia"}</span>)}</div> : <p className="text-xs text-neutral-500">Teknik cetak belum diaktifkan. Hubungi admin SANDIKALE.</p>}<p className="text-[10px] text-neutral-500">Harga dan detail pengerjaan dikonfirmasi admin melalui WhatsApp.</p></div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">Pilih ukuran dan posisi sablon DTF</div>
+                {dtfZones.length === 0 && <div className="rounded-lg border border-dashed border-amber-500/40 p-4 text-xs text-amber-700 dark:text-amber-300">Pilihan ukuran DTF belum tersedia. Admin perlu mengaktifkan ukuran cetak pada pengaturan DTF.</div>}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2"><div className="text-[11px] font-bold uppercase tracking-wider text-neutral-500">Teknik produksi tersedia</div><div className="flex flex-wrap gap-2">{printingMethods.map(method=><span key={method.id} title={method.description} className="rounded-full border border-black/10 dark:border-white/15 px-3 py-1.5 text-[11px]">{method.name}<span className="ml-1.5 text-neutral-400">{method.pricingType==='quote'?'· Penawaran admin':'· Tersedia'}</span></span>)}</div><p className="text-[10px] text-neutral-500">Pemesanan online saat ini menghitung tarif DTF. Teknik lain dapat dikonsultasikan dengan admin.</p></div>}
                 {dtfZones.map((zone) => {
                   const isAdded = placements.some((p) => p.zoneId === zone.id);
                   const isFocused = selectedZoneId === zone.id;
@@ -853,6 +856,7 @@ export function CustomDtfStudio({
                     </button>
                   );
                 })}
+                </div>
               </div>
 
               <div className="p-4 rounded-lg border border-dashed border-black/20 dark:border-white/20 bg-neutral-50 dark:bg-[#1A1A1A] space-y-3">
