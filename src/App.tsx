@@ -498,7 +498,7 @@ export default function App() {
         customerName: data.showroom_customers?.name || '',
         customerEmail: data.showroom_customers?.email || '',
         customerPhone: data.showroom_customers?.whatsapp || '',
-        shippingAddress: data.shipping_address || data.showroom_customers?.address || '',
+        shippingAddress: data.shipping_method === 'pickup' ? '' : data.shipping_address || data.showroom_customers?.address || '',
         shippingCity: data.shipping_city || '',
         shippingCourier: data.shipping_method === 'pickup' ? 'Ambil Sendiri di Store' : data.shipping_method === 'courier' ? 'Diantar Kurir' : 'Konfirmasi melalui WhatsApp',
         shippingEtaDays: 0,
