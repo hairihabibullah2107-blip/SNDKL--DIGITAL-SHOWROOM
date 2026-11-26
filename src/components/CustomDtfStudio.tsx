@@ -96,6 +96,7 @@ export function CustomDtfStudio({
   const [quantity, setQuantity] = useState(1);
   const [removingBg, setRemovingBg] = useState(false);
   const [mockupImageFailed, setMockupImageFailed] = useState(false);
+  const [mockupHasTransparency, setMockupHasTransparency] = useState(false);
 
   const [activeView, setActiveView] = useState<'front' | 'back' | 'sleeve'>('front');
   const [placements, setPlacements] = useState<CustomDesignPlacement[]>([]);
@@ -147,7 +148,29 @@ export function CustomDtfStudio({
     : activeView === 'back'
       ? selectedProduct.backImage || selectedProduct.frontImage || selectedProduct.images[0]
       : selectedProduct.frontImage || selectedProduct.images[0];
-  useEffect(() => { setMockupImageFailed(false); }, [selectedProductId, activeView, currentProductImage]);
+  useEffect(() => {
+    setMockupImageFailed(false);
+    setMockupHasTransparency(false);
+    if (!currentProductImage) return;
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.min(96, image.naturalWidth || 96);
+        canvas.height = Math.min(96, image.naturalHeight || 96);
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        if (!context) return;
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        let transparentPixels = 0;
+        for (let index = 3; index < pixels.length; index += 4) if (pixels[index] < 245) transparentPixels++;
+        setMockupHasTransparency(transparentPixels > pixels.length / 4 * 0.015);
+      } catch { setMockupHasTransparency(false); }
+    };
+    image.onerror = () => setMockupImageFailed(true);
+    image.src = currentProductImage;
+  }, [selectedProductId, activeView, currentProductImage]);
   const baseGarmentPrice = selectedProduct?.price || 0;
   const selectedSizeSurcharge = selectedProduct?.sizeSurcharges?.[size] || 0;
   const rawUnitPrice = baseGarmentPrice + dtfTotalPerShirt + selectedSizeSurcharge;
@@ -497,11 +520,12 @@ export function CustomDtfStudio({
                     alt={`${selectedProduct.name} ${activeView === 'sleeve' ? 'tampak lengan' : activeView === 'back' ? 'tampak belakang' : 'tampak depan'}`}
                     referrerPolicy="no-referrer"
                     onError={() => setMockupImageFailed(true)}
-                    className="absolute inset-0 w-full h-full object-contain p-3 pointer-events-none"
+                    className="absolute inset-0 w-full h-full object-contain p-3 pointer-events-none" style={{ filter: "drop-shadow(0 18px 20px rgba(0,0,0,.28)) drop-shadow(0 4px 7px rgba(0,0,0,.18))" }}
                   />
-                  {selectedColor && (
+                  {selectedColor && mockupHasTransparency && (
                     <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{
                       backgroundColor: selectedColor.hex,
+                      opacity: 0.84,
                       WebkitMaskImage: 'url("' + currentProductImage + '")',
                       maskImage: 'url("' + currentProductImage + '")',
                       WebkitMaskSize: 'contain', maskSize: 'contain',
@@ -509,6 +533,9 @@ export function CustomDtfStudio({
                       WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
                       mixBlendMode: 'multiply',
                     }} />
+                  )}
+                  {selectedColor && !mockupHasTransparency && (
+                    <div className="absolute bottom-3 left-3 right-3 rounded-lg bg-black/75 px-3 py-2 text-[10px] leading-relaxed text-white/85 backdrop-blur-sm">Warna dipilih untuk pesanan. Untuk pratinjau pewarnaan realistis, unggah foto kaos PNG transparan agar latar dan bayangan tidak ikut berubah.</div>
                   )}
                   {selectedColor && (
                     <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/75 text-white text-[11px] font-medium flex items-center gap-1.5 backdrop-blur-sm">
