@@ -1,7 +1,6 @@
 import { Eye, Heart, MessageCircle, Search, ShoppingBag, SlidersHorizontal, Star } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Category, Product } from '../types';
-import defaultProductImage from '../assets/images/prod_boxy_heavy_tee_1795511847020.jpg';
 import { formatRupiah } from '../utils/format';
 
 interface ProductCatalogProps {
@@ -96,14 +95,21 @@ export function ProductCatalog({
                   } bg-white dark:bg-[#141414]`}
                 >
                   <div className="aspect-[4/3] overflow-hidden bg-neutral-100 dark:bg-[#171717]">
-                    <img
-                      src={cat.image || defaultProductImage}
-                      onError={(e) => { e.currentTarget.src = defaultProductImage; }}
-                      alt={cat.name}
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
+                    {cat.image ? (
+                      <img
+                        src={cat.image}
+                        alt={cat.name}
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-neutral-500 dark:text-neutral-400">
+                        <span className="text-3xl font-bold">S</span>
+                        <span className="text-[10px] uppercase tracking-[.18em]">Foto kategori belum tersedia</span>
+                      </div>
+                    )}
                   </div>
                   <div className="p-3.5 md:p-4 space-y-1">
                     <div className="flex items-center justify-between gap-2">
