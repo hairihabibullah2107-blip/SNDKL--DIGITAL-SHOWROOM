@@ -64,7 +64,7 @@ export function Navbar({
     <>
       <div className="sticky top-0 z-40">
         {showAnnouncement && (
-          <div className="h-8 bg-[#FF4D00] text-white px-4 flex items-center justify-between text-xs font-medium">
+          <div className="h-8 bg-[#7A1F2B] text-white px-4 flex items-center justify-between text-xs font-medium">
             <span className="truncate mx-auto">
               {announcementText}
             </span>
@@ -107,7 +107,7 @@ export function Navbar({
                   onClick={() => handleNav(link.id)}
                   className={`whitespace-nowrap shrink-0 py-1 border-b-2 transition-colors cursor-pointer ${
                     activeSection === link.id
-                      ? 'border-[#FF4D00] text-[#080808] dark:text-white'
+                      ? 'border-[#7A1F2B] text-[#080808] dark:text-white'
                       : 'border-transparent hover:text-[#080808] dark:hover:text-white'
                   }`}
                 >
@@ -140,7 +140,7 @@ export function Navbar({
               <button
                 type="button"
                 onClick={onOpenCart}
-                className="h-9 px-4 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#FF4D00] dark:hover:bg-[#FF4D00] dark:hover:text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                className="h-9 px-4 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#7A1F2B] dark:hover:bg-[#7A1F2B] dark:hover:text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
                 <ShoppingBag className="w-4 h-4" />
                 <span className="tabular-nums">Tas ({cartCount})</span>
@@ -197,7 +197,7 @@ export function Navbar({
           type="button"
           onClick={() => handleNav('katalog')}
           className={`flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium ${
-            activeSection === 'katalog' ? 'text-[#FF4D00]' : 'text-neutral-500 dark:text-neutral-400'
+            activeSection === 'katalog' ? 'text-[#7A1F2B]' : 'text-neutral-500 dark:text-neutral-400'
           }`}
         >
           <Compass className="w-4 h-4" />
@@ -207,7 +207,7 @@ export function Navbar({
           type="button"
           onClick={() => handleNav('studio')}
           className={`flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium ${
-            activeSection === 'studio' ? 'text-[#FF4D00]' : 'text-neutral-500 dark:text-neutral-400'
+            activeSection === 'studio' ? 'text-[#7A1F2B]' : 'text-neutral-500 dark:text-neutral-400'
           }`}
         >
           <Layers className="w-4 h-4" />
@@ -217,7 +217,7 @@ export function Navbar({
           type="button"
           onClick={() => handleNav('lacak')}
           className={`flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium ${
-            activeSection === 'lacak' ? 'text-[#FF4D00]' : 'text-neutral-500 dark:text-neutral-400'
+            activeSection === 'lacak' ? 'text-[#7A1F2B]' : 'text-neutral-500 dark:text-neutral-400'
           }`}
         >
           <PackageSearch className="w-4 h-4" />
