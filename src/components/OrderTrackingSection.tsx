@@ -153,7 +153,10 @@ export function OrderTrackingSection({ recentOrders, onTrackOrder, onDesignDecis
                   <div className="text-xs font-mono-tabular text-neutral-500">{liveOrder.id}</div>
                   <h3 className="font-display text-2xl font-bold uppercase mt-0.5">{liveOrder.stage}</h3>
                   <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
-                    {liveOrder.customerName} · {liveOrder.shippingAddress || 'Alamat tersimpan'}
+                    {liveOrder.customerName}
+                  </div>
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Pengiriman: {liveOrder.shippingCourier === 'Ambil Sendiri di Store' ? 'Ambil sendiri di store SANDIKALE' : liveOrder.shippingCourier === 'Diantar Kurir' ? 'Diantar kurir · ' + (liveOrder.shippingAddress || 'Alamat belum tersedia') : 'Dikonfirmasi melalui WhatsApp'}
                   </div>
                 </div>
                 <div className="text-right space-y-1">
