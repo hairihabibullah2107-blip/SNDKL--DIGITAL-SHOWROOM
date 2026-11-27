@@ -60,7 +60,7 @@ const GARMENT_COLOR_PREVIEWS: Record<string, string> = {
 };
 
 function resolveGarmentColorPreview(value: string): string | null {
-  const normalized = value.trim().toLowerCase().replace(/\\s+/g, ' ');
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, ' ');
   if (/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(normalized)) return normalized;
   return GARMENT_COLOR_PREVIEWS[normalized] || null;
 }
