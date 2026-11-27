@@ -134,6 +134,7 @@ export interface CartItem {
   sku: string;
   name: string;
   image: string;
+  backImage?: string;
   colorName: string;
   colorHex: string;
   size: string;
