@@ -38,10 +38,19 @@ export async function loadShowroomBootstrap() {
     ]);
 
   if (productResult.error) throw productResult.error;
+  // Retry the DTF lookup with core columns if optional placement metadata is unavailable.
+  let resolvedDtfResult = dtfResult;
+  if (dtfResult.error) {
+    resolvedDtfResult = await safeQuery(
+      supabase.from('showroom_dtf_prices')
+        .select('id,size_code,label,width_cm,height_cm,price,is_active,sort_order,placement_view')
+        .eq('is_active', true).order('sort_order')
+    );
+  }
   const optionalFailures = [
     ['categories', categoryResult], ['materials', materialResult], ['variants', variantResult],
     ['master colors', colorResult], ['product colors', productColorResult], ['product photos', imageResult],
-    ['DTF prices', dtfResult], ['reviews', reviewResult], ['site settings', settingsResult],
+    ['DTF prices', resolvedDtfResult], ['reviews', reviewResult], ['site settings', settingsResult],
 ['printing methods', printingMethodResult],
   ].filter(([, result]) => Boolean((result as { error?: unknown }).error)).map(([name]) => name);
   if (optionalFailures.length) console.warn('SANDIKALE showroom loaded with optional data unavailable:', optionalFailures.join(', '));
@@ -53,7 +62,7 @@ export async function loadShowroomBootstrap() {
   const masterColors = colorResult.data ?? [];
   const productColorLinks = productColorResult.data ?? [];
   const images = imageResult.data ?? [];
-  const dtfPrices = dtfResult.data ?? [];
+  const dtfPrices = resolvedDtfResult.data ?? [];
   const reviews = (reviewResult.data ?? []).map((row) => ({ id: row.id, productId: row.product_id, authorName: row.author_name, rating: row.rating, comment: row.comment, verifiedPurchase: row.verified_purchase, createdAt: row.created_at }));
 
   const categories: Category[] = categoriesRaw.map((row) => ({
