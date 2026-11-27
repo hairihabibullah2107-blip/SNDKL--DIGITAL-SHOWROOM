@@ -106,7 +106,8 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     setPrices((d.data || []) as PriceRow[]);
     setReviews((r.data || []) as ReviewRow[]);
     setMaterials((m.data || []) as MaterialRow[]);
-    const paymentRows = Array.isArray(paymentSetting.data?.value?.methods) ? paymentSetting.data.value.methods : [];
+    const paymentValue = paymentSetting.data?.value as any;
+    const paymentRows = Array.isArray(paymentValue?.methods) ? paymentValue.methods : [];
     setPaymentMethods(paymentRows.map((row:any) => ({ id:String(row.id || crypto.randomUUID()), label:String(row.label || ''), group:String(row.group || 'Manual'), enabled:row.enabled !== false, accountName:String(row.accountName || ''), accountNumber:String(row.accountNumber || ''), instructions:String(row.instructions || '') })));
     } finally { setRefreshing(false); }
   }, [onToast, profile?.role]);
