@@ -201,7 +201,11 @@ export function CustomDtfStudio({
   }, [selectedProductId, activeView, currentProductImage]);
   const baseGarmentPrice = selectedProduct?.price || 0;
   const selectedSizeSurcharge = selectedProduct?.sizeSurcharges?.[size] || 0;
-  const rawUnitPrice = baseGarmentPrice + (selectedFabric?.priceModifier || 0) + dtfTotalPerShirt + selectedSizeSurcharge;
+  const selectedVariantKey = selectedColor && size ? selectedColor.name.toLowerCase() + '::' + size : '';
+  const selectedVariantAdjustment = selectedVariantKey
+    ? Math.max(0, Number(selectedProduct?.variantPrices?.[selectedVariantKey] || 0))
+    : 0;
+  const rawUnitPrice = baseGarmentPrice + (selectedFabric?.priceModifier || 0) + dtfTotalPerShirt + selectedSizeSurcharge + selectedVariantAdjustment;
   const activeBulkDiscount = [...bulkDiscounts].sort((a,b)=>b.minQuantity-a.minQuantity).find((rule)=>quantity>=rule.minQuantity);
   const bulkDiscountRate = Math.max(0,Math.min(100,activeBulkDiscount?.discountPercent||0))/100;
   const unitPrice = Math.round(rawUnitPrice * (1 - bulkDiscountRate));
