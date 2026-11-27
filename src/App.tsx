@@ -460,8 +460,9 @@ export default function App() {
       showToast(`Pesanan ${data.order_number} berhasil dikirim. Simpan kode tracking untuk memantau pesanan.`);
       return order;
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Pesanan gagal dikirim ke server.');
-      return null;
+      // Let checkout display the actual API validation message instead of masking it
+      // as a generic payment/shipping configuration failure.
+      throw error instanceof Error ? error : new Error('Pesanan gagal dikirim ke server.');
     }
   };
 
