@@ -383,6 +383,7 @@ export default function App() {
         return {
           product_id: item.productId,
           bulk_discount_eligible: item.type === 'custom_dtf',
+          allow_color_request: true,
           material_id: item.fabricId,
           quantity: item.quantity,
           garment_type: /long|lengan panjang/i.test(item.customModel || item.name) ? 'long' : 'short',
