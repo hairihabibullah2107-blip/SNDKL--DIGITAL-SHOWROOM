@@ -568,7 +568,7 @@ export function CustomDtfStudio({
       productId: selectedProduct.id,
       sku: selectedProduct.sku,
       name: `Custom DTF ${selectedProduct.name}`,
-      image: selectedProduct.images[0],
+      image: selectedProduct.frontImage || selectedProduct.images[0],
       colorName: selectedColor.name,
       colorHex: selectedColor.hex,
       backImage: selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0],
