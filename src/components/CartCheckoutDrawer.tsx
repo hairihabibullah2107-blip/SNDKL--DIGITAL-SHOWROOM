@@ -42,6 +42,18 @@ async function dataUrlToFile(dataUrl: string, fileName: string): Promise<File> {
 function safeFileName(value: string): string {
   return value.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'desain';
 }
+function escapeReceiptText(value: unknown): string {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char));
+}
+function printCustomerReceipt(order: Order) {
+  const popup = window.open('', '_blank', 'width=420,height=720');
+  if (!popup) { window.alert('Izinkan pop-up untuk mencetak nota struk.'); return; }
+  const itemRows = order.items.map((item) => '<div class="item"><b>' + escapeReceiptText(item.name) + '</b><div>' + escapeReceiptText(item.colorName) + ' · ' + escapeReceiptText(item.size) + ' · ' + item.quantity + ' pcs</div><div class="row"><span>' + item.quantity + ' × ' + formatRupiah(item.unitPrice) + '</span><b>' + formatRupiah(item.quantity * item.unitPrice) + '</b></div></div>').join('');
+  const html = '<!doctype html><html lang="id"><meta charset="utf-8"><title>Nota Struk ' + escapeReceiptText(order.id) + '</title><style>body{font:12px Arial,sans-serif;color:#111;width:72mm;margin:0 auto;padding:4mm}h1{text-align:center;font-size:19px;letter-spacing:2px;margin:0}p{text-align:center;margin:4px 0}.line{border-top:1px dashed #555;margin:9px 0}.row{display:flex;justify-content:space-between;gap:8px;margin:4px 0}.item{margin:8px 0}.muted{font-size:10px;color:#555}.total{font-weight:bold;font-size:14px}.stamp{border:1px solid #9a2434;color:#9a2434;text-align:center;padding:7px;font-weight:bold;margin:10px 0}@media print{@page{size:80mm auto;margin:3mm}body{width:auto;padding:0}}</style><body><h1>SANDIKALE</h1><p>CUSTOM APPAREL · DTF STUDIO</p><p class="muted">NOTA STRUK PESANAN</p><div class="line"></div><div class="row"><span>No. Pesanan</span><b>' + escapeReceiptText(order.id) + '</b></div><div class="row"><span>Tanggal</span><span>' + escapeReceiptText(new Date(order.createdAt).toLocaleString('id-ID')) + '</span></div><div class="row"><span>Customer</span><span>' + escapeReceiptText(order.customerName) + '</span></div><div class="row"><span>Pengambilan</span><span>' + (order.shippingCourier === 'Ambil Sendiri di Store' ? 'Ambil di Store' : 'Kurir') + '</span></div><div class="line"></div>' + itemRows + '<div class="line"></div><div class="row total"><span>TOTAL</span><span>' + formatRupiah(order.total) + '</span></div><div class="stamp">' + (order.paymentStatus === 'paid' ? 'PEMBAYARAN TERVERIFIKASI' : 'MENUNGGU KONFIRMASI ADMIN') + '</div><p class="muted">Nota ini adalah ringkasan pesanan, bukan bukti pembayaran lunas.</p><p>Terima kasih · SANDIKALE</p><script>window.onload=()=>window.print()<\\/script></body></html>';
+  popup.document.write(html);
+  popup.document.close();
+}
+
 async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4', compress:true });
@@ -60,13 +72,20 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   let y=44;doc.setFontSize(font(7.5));
   for(let i=0;i<4;i++){doc.setFont('helvetica','bold');doc.text(left[i][0],margin,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(left[i][1]||'-',65),margin+25,y);doc.setFont('helvetica','bold');doc.text(rightFields[i][0],111,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(rightFields[i][1]||'-',76),136,y);y+=6;}
   y+=2;doc.setDrawColor(190,190,190);doc.line(margin,y,right,y);y+=6;doc.setFont('helvetica','bold');doc.setFontSize(font(9));doc.text('RINCIAN ITEM & SPESIFIKASI',margin,y);y+=6;
+  const itemAreaBottom=258;
+  const rowHeight=Math.max(6,Math.min(28,(itemAreaBottom-y)/Math.max(1,order.items.length)));
   for(const [i,item] of order.items.entries()){
-    doc.setFillColor(242,242,242);doc.roundedRect(margin,y-4,right-margin,7,1,1,'F');doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(font(7.5));doc.text((i+1)+'. '+item.name.slice(0,66),margin+2,y);doc.setFont('helvetica','normal');doc.text(item.quantity+' pcs',right-2,y,{align:'right'});y+=6;
-    doc.setFontSize(font(6.5));doc.text(doc.splitTextToSize('Warna: '+item.colorName+' · Ukuran: '+item.size+' · Bahan: '+(item.fabricName||'-')+' · Model: '+(item.customModel||'-'),right-margin-4),margin+2,y);y+=4;
-    const placements=item.customPlacements||[];
-    if(placements.length){for(const placement of placements){doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize('DTF: '+placement.zoneLabel+' · '+placement.artworkName,right-margin-25),margin+4,y);try{const data=placement.originalDataUrl||placement.artworkDataUrl;if(data&&y<260)doc.addImage(data,right-21,y-4,17,14,undefined,'FAST');}catch{/* retain design label */}y+=Math.max(5,Math.min(14,14*density));}}
-    else{doc.setTextColor(100,100,100);doc.text('File desain asli wajib dikirim bersama SPK.',margin+4,y);doc.setTextColor(20,20,20);y+=5;}y+=1;
+    const specText='Warna: '+item.colorName+' · Ukuran: '+item.size+' · Bahan: '+(item.fabricName||'-')+' · Model: '+(item.customModel||'-');
+    const printText=(item.customPlacements||[]).map((placement)=>placement.zoneLabel+' / '+placement.artworkName).join(', ')||'File desain asli dilampirkan terpisah';
+    doc.setFillColor(242,242,242);doc.roundedRect(margin,y-3,right-margin,Math.max(4,rowHeight-1),1,1,'F');
+    doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(Math.max(5.2,Math.min(7.5,rowHeight*.34)));
+    doc.text((i+1)+'. '+item.name.slice(0,64),margin+2,y);
+    doc.setFont('helvetica','normal');doc.text(item.quantity+' pcs',right-2,y,{align:'right'});
+    if(rowHeight>7){doc.setFontSize(Math.max(5,Math.min(6.2,rowHeight*.27)));doc.text(doc.splitTextToSize(specText,right-margin-5)[0]||'-',margin+2,y+3);}
+    if(rowHeight>11){doc.setTextColor(90,90,90);doc.text(doc.splitTextToSize('DTF: '+printText,right-margin-5)[0]||'-',margin+2,y+6);doc.setTextColor(20,20,20);}
+    y+=rowHeight;
   }
+  y=Math.min(itemAreaBottom+2,y+2);
   y+=2;doc.line(margin,y,right,y);y+=7;doc.setFont('helvetica','bold');doc.setFontSize(font(8));doc.text('TOTAL PERKIRAAN',margin,y);doc.text(money(order.total),right,y,{align:'right'});y+=7;doc.setFont('helvetica','normal');doc.setFontSize(font(6.5));
   doc.text(doc.splitTextToSize('SPK ini adalah ringkasan permintaan customer, belum menjadi persetujuan produksi. Admin SANDIKALE akan memeriksa spesifikasi, file desain, harga final, dan pembayaran melalui WhatsApp.',right-margin),margin,y);
   return new File([doc.output('blob')],safeFileName((order.spkNumber||order.id)+'-SPK.pdf'),{type:'application/pdf'});
@@ -96,6 +115,7 @@ export function CartCheckoutDrawer({
   const [submitting, setSubmitting] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (paymentMethod && !paymentMethods.some((p) => p.id === paymentMethod)) {
@@ -342,28 +362,27 @@ export function CartCheckoutDrawer({
             const cleanWa=(adminWhatsapp||'').replace(/[^0-9]/g,'');
             const isManualPayment=/manual|konfirmasi admin/i.test(createdOrder.paymentLabel);
             const needsPaymentProof=!isManualPayment&&/(qris|bank|transfer|va|virtual account)/i.test(createdOrder.paymentLabel+' '+createdOrder.paymentMethod);
-            const waMessage=[
-              'Halo Admin SANDIKALE, saya '+createdOrder.customerName+'.',
-              'Pesanan: '+createdOrder.id+' · SPK: '+(createdOrder.spkNumber||createdOrder.id),
-              'Pengambilan: '+(createdOrder.shippingCourier==='Ambil Sendiri di Store'?'Ambil sendiri di store':'Diantar kurir'),
-              'Pembayaran: '+createdOrder.paymentLabel+' · Total: '+formatRupiah(createdOrder.total),
-              'Saya lampirkan SPK PDF dan file desain untuk diperiksa.',
-              needsPaymentProof?'Bukti transfer/QRIS saya lampirkan pada chat ini.':'Pembayaran dan persetujuan detail saya konfirmasi melalui WhatsApp.'
+            const waMessage = [
+              'Halo Admin SANDIKALE, konfirmasi pesanan '+createdOrder.id+'.',
+              'SPK dan file desain saya lampirkan.'+(needsPaymentProof?' Bukti transfer/QRIS juga terlampir.':''),
+              isManualPayment?'Mohon konfirmasi detail dan pembayaran melalui WhatsApp.':'Mohon periksa kelengkapan pesanan saya.'
             ].join('\\n');
             const openWhatsApp=()=>{if(cleanWa)window.open('https://wa.me/'+cleanWa+'?text='+encodeURIComponent(waMessage),'_blank','noopener,noreferrer');};
             const shareOrderFiles=async()=>{
+              if(needsPaymentProof&&!paymentProofFile){setErrorMsg('Unggah bukti transfer atau QRIS terlebih dahulu.');return;}
               try{
                 const spk=await buildCustomerSpkPdf(createdOrder),designFiles:File[]=[];
                 const placements=createdOrder.items.flatMap(item=>(item.customPlacements||[]).map(placement=>({placement})));
                 for(const [index,entry] of placements.entries()){const source=entry.placement.originalDataUrl||entry.placement.artworkDataUrl;if(source)designFiles.push(await dataUrlToFile(source,safeFileName(entry.placement.artworkName||('desain-'+(index+1)+'.png'))));}
-                const files=[spk,...designFiles];
-                if(navigator.share&&navigator.canShare?.({files}))await navigator.share({title:'SPK SANDIKALE '+(createdOrder.spkNumber||createdOrder.id),text:waMessage,files});
+                const files=[spk,...designFiles,...(paymentProofFile?[paymentProofFile]:[])];
+                if(navigator.share&&navigator.canShare?.({files}))await navigator.share({title:'Pesanan SANDIKALE '+createdOrder.id,text:waMessage,files});
                 else{for(const file of files){const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=file.name;a.click();window.setTimeout(()=>URL.revokeObjectURL(url),1500);}openWhatsApp();}
-              }catch(error){if(error instanceof Error&&error.name==='AbortError')return;setErrorMsg('File belum dapat dibagikan otomatis. Unduh SPK dan file desain, lalu lampirkan di WhatsApp.');openWhatsApp();}
+              }catch(error){if(error instanceof Error&&error.name==='AbortError')return;setErrorMsg('File belum dapat dibagikan otomatis. Unduh lampiran, lalu kirim bersama pesan WhatsApp.');openWhatsApp();}
             };
 
             return (
               <div className="space-y-4">
+                <button type="button" onClick={() => printCustomerReceipt(createdOrder)} className="w-full h-10 rounded-md border border-black/15 dark:border-white/15 text-xs font-semibold uppercase tracking-wider">Cetak Nota Struk</button>
                 <div className="p-4 rounded-xl bg-neutral-100 dark:bg-[#181818] border border-black/10 dark:border-white/10 space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-neutral-500">Nomor Pesanan</span>
@@ -383,15 +402,16 @@ export function CartCheckoutDrawer({
                   </div>
                 </div>
 
-                {/* Mandatory Public Simulation Notice + WhatsApp Design File Submission CTA */}
+                {/* Customer order handoff: SPK, design files and optional payment proof */}
                 <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/35 space-y-3">
                   <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-bold text-sm">
                     <MessageCircle className="w-5 h-5 shrink-0" />
                     <span>Kirim SPK & Desain ke Admin</span>
                   </div>
                   <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                    SPK PDF dan file desain wajib dikirim. {needsPaymentProof ? 'Lampirkan juga bukti transfer/QRIS.' : 'Pembayaran dan persetujuan dilakukan melalui WhatsApp admin.'}
+                    Wajib kirim SPK dan file desain. {needsPaymentProof ? 'Bukti transfer/QRIS juga wajib dilampirkan.' : 'Pembayaran disepakati langsung dengan admin melalui WhatsApp.'}
                   </p>
+                  {needsPaymentProof && <label className="block space-y-1 text-xs text-neutral-600 dark:text-neutral-300">Bukti pembayaran <input type="file" accept="image/*,application/pdf" onChange={(event) => setPaymentProofFile(event.target.files?.[0] || null)} className="block w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-neutral-200 file:px-3 file:py-2 dark:file:bg-neutral-700" />{paymentProofFile && <span className="block text-emerald-600">{paymentProofFile.name}</span>}</label>}
                   <button
                     type="button"
                     onClick={() => void shareOrderFiles()}
@@ -477,7 +497,7 @@ export function CartCheckoutDrawer({
                   disabled={submitting || !canSubmitCheckout}
                   className="flex-1 h-11 rounded-md bg-[#7A1F2B] hover:bg-[#e04400] text-white text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-45"
                 >
-                  {submitting ? 'Memproses...' : 'Buat Invoice Pembayaran'}
+                  {submitting ? 'Memproses...' : 'Buat Pesanan'}
                 </button>
               </div>
             )}
