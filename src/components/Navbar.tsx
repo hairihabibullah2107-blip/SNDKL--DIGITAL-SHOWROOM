@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import type { UserProfile } from '../types';
+import sandikaleLogo from '../assets/sandikale-logo.svg';
 
 interface NavbarProps {
   activeSection: string;
@@ -100,7 +101,7 @@ export function Navbar({
               onClick={() => handleNav('hero')}
               className="font-display text-2xl md:text-3xl font-extrabold tracking-wider uppercase text-[#080808] dark:text-white whitespace-nowrap shrink-0 cursor-pointer"
             >
-              {brandName}
+              <span className="flex items-center gap-2.5"><img src={sandikaleLogo} alt="Logo SANDIKALE" className="h-10 md:h-12 w-auto object-contain" /><span>{brandName}</span></span>
             </button>
 
             {/* Zone 2: 5 Clean Single-Line Nav Links */}
