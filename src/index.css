@@ -165,3 +165,7 @@ body {
 .dark [class~="dark:bg-[#141414]"], [class~="bg-[#141414]"] { background-color: var(--site-surface, #171717) !important; }
 .dark [class~="dark:bg-[#171717]"], [class~="bg-[#171717]"] { background-color: color-mix(in srgb, var(--site-surface, #171717) 78%, var(--site-background, #080808)) !important; }
 [class~="text-neutral-500"], [class~="dark:text-neutral-400"] { color: var(--site-muted, #a3a3a3) !important; }
+
+
+/* Panchang ExtraBold brand headline */
+.font-panchang { font-family: 'Panchang', 'Plus Jakarta Sans', sans-serif !important; font-weight: 800 !important; letter-spacing: -0.035em; }
