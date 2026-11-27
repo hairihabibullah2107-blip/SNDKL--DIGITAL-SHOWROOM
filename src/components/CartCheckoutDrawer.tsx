@@ -236,32 +236,42 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
     doc.setFont('helvetica','normal');doc.setFontSize(6.3);
     doc.text(doc.splitTextToSize(String(cell[1]||'-'),colW-17).slice(0,2),x+17,y);
   }));
-  const imgY=65,imgH=143,imgW=87;
-  const front=first?await makeSpkMockup(first,'front'):null, back=first?await makeSpkMockup(first,'back'):null;
+  const imgY=65,imgH=125,imgW=87;
+  const front=first?await makeSpkMockup(first,'front'):null;
+  const back=first?await makeSpkMockup(first,'back'):null;
+  const sleeve=first?await makeSpkMockup(first,'sleeve'):null;
   doc.setDrawColor(225,225,225);doc.setLineWidth(0.2);
-  const mockupRatio=900/1100,renderedW=Math.min(imgW,imgH*mockupRatio),renderedH=renderedW/mockupRatio;
-  const mockupX=(x:number)=>x+(imgW-renderedW)/2;
-  const mockupY=imgY+(imgH-renderedH)/2;
-  doc.rect(14,imgY,imgW,imgH);doc.rect(109,imgY,imgW,imgH);
-  if(front) doc.addImage(front,'PNG',mockupX(14),mockupY,renderedW,renderedH,undefined,'FAST');
-  else {doc.setFontSize(8);doc.text('MOCKUP DEPAN',57.5,imgY+70,{align:'center'});}
-  if(back) doc.addImage(back,'PNG',mockupX(109),mockupY,renderedW,renderedH,undefined,'FAST');
-  else {doc.setFontSize(8);doc.text('MOCKUP BELAKANG',152.5,imgY+70,{align:'center'});}
-  doc.setDrawColor(20,20,20);doc.setLineWidth(0.35);doc.line(m,213,R,213);
-  doc.setFont('helvetica','bold');doc.setFontSize(7.4);doc.text('KETERANGAN SABLON',m,218);doc.text('CATATAN PRODUKSI',105,218);
-  doc.setFont('helvetica','normal');doc.setFontSize(6.7);
-  const printLines=items.flatMap((item,index)=>(item.customPlacements||[]).map((p,pi)=>(index+1)+'.'+(pi+1)+' '+p.zoneLabel+' - '+p.zoneId+' ('+p.artworkName+')'));
-  doc.text(doc.splitTextToSize(printLines.length?printLines.join('\n'):'1. Desain DTF sesuai file lampiran customer',88).slice(0,6),m,224);
-  const production='Press 160°C selama 15 detik, kupas dingin (Cold Peel).\nPacking plastik klip.\n\nNo. SPK '+(order.spkNumber||order.id)+'\nPenerima order: Admin SANDIKALE\nEstimasi selesai: konfirmasi admin via WhatsApp';
-  doc.text(doc.splitTextToSize(production,88).slice(0,7),105,224);
-  doc.setDrawColor(170,170,170);doc.setLineWidth(0.25);doc.line(m,271,R,271);
-  doc.setFont('helvetica','normal');doc.setFontSize(9);
+  const renderView=(data:string|null,x:number,y:number,w:number,h:number,label:string)=>{
+    doc.rect(x,y,w,h);
+    doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(65,65,65);
+    doc.text(label,x+w/2,y+4,{align:'center'});
+    if(data){
+      const ratio=1000/1050,fitW=Math.min(w-4,(h-8)*ratio),fitH=fitW/ratio;
+      doc.addImage(data,'PNG',x+(w-fitW)/2,y+6+(h-8-fitH)/2,fitW,fitH,undefined,'FAST');
+    } else {
+      doc.setFont('helvetica','normal');doc.setFontSize(6);
+      doc.text(label==='DETAIL LENGAN'?'Foto lengan belum tersedia':'Mockup tidak tersedia',x+w/2,y+h/2,{align:'center'});
+    }
+  };
+  renderView(front,14,imgY,imgW,imgH,'TAMPAK DEPAN');
+  renderView(back,109,imgY,imgW,imgH,'TAMPAK BELAKANG');
+  renderView(sleeve,14,194,49,57,'DETAIL LENGAN');
+
+  doc.setDrawColor(20,20,20);doc.setLineWidth(0.35);doc.line(m,257,R,257);
+  doc.setFont('helvetica','bold');doc.setFontSize(7.2);
+  doc.text('KETERANGAN SABLON',m,262);doc.text('CATATAN PRODUKSI',105,262);
+  doc.setFont('helvetica','normal');doc.setFontSize(6.2);
+  const printLines=items.flatMap((item,index)=>(item.customPlacements||[]).map((placement,pi)=>(index+1)+'.'+(pi+1)+' '+placement.zoneLabel+' ('+placementWidthCm(placement)+' cm) - '+placement.artworkName));
+  doc.text(doc.splitTextToSize(printLines.length?printLines.join('\\n'):'1. Desain DTF sesuai file lampiran customer',88).slice(0,5),m,267);
+  const production='Press 160°C selama 15 detik, kupas dingin (Cold Peel).\\nPacking plastik klip.\\nNo. SPK '+(order.spkNumber||order.id)+'\\nPenerima: Admin SANDIKALE\\nEstimasi: konfirmasi admin via WhatsApp';
+  doc.text(doc.splitTextToSize(production,88).slice(0,5),105,267);
+  doc.setDrawColor(170,170,170);doc.setLineWidth(0.25);doc.line(m,282,R,282);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);
   const instagramIcon=await svgIconToPngDataUrl(instagramIconSvg),whatsappIcon=await svgIconToPngDataUrl(whatsappIconSvg);
-  if(instagramIcon)doc.addImage(instagramIcon,'PNG',65,277.5,5,5);doc.text('@_sandikale',72,282);
-  if(whatsappIcon)doc.addImage(whatsappIcon,'PNG',119,277.5,5,5);doc.text('+62 822-6641-2844',126,282);
-  doc.link(65,277.5,34,6,{url:'https://instagram.com/_sandikale'});
-  doc.link(119,277.5,76,6,{url:'https://wa.me/6282266412844'});
-  doc.setFontSize(6);doc.setTextColor(100,100,100);doc.text('SPK otomatis dari SNDKL PROJECT · Harga dan stok menunggu konfirmasi admin',W/2,289,{align:'center'});
+  if(instagramIcon)doc.addImage(instagramIcon,'PNG',65,284,4.5,4.5);doc.text('@_sandikale',71,287.5);
+  if(whatsappIcon)doc.addImage(whatsappIcon,'PNG',119,284,4.5,4.5);doc.text('+62 822-6641-2844',125,287.5);
+  doc.link(65,284,34,5,{url:'https://instagram.com/_sandikale'});
+  doc.link(119,284,76,5,{url:'https://wa.me/6282266412844'});
   return new File([doc.output('blob')],safeFileName((order.spkNumber||order.id)+'-SPK.pdf'),{type:'application/pdf'});
 }
 export function CartCheckoutDrawer({
