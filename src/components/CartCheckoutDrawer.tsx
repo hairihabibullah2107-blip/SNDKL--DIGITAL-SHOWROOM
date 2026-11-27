@@ -42,6 +42,24 @@ async function dataUrlToFile(dataUrl: string, fileName: string): Promise<File> {
 function safeFileName(value: string): string {
   return value.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'desain';
 }
+function normalizeWhatsAppNumber(value: string): string {
+  const digits = String(value || '').replace(/\\D/g, '');
+  if (!digits) return '6282266412844';
+  if (digits.startsWith('0')) return '62' + digits.slice(1);
+  if (digits.startsWith('8')) return '62' + digits;
+  return digits;
+}
+async function svgIconToPngDataUrl(svg: string): Promise<string | null> {
+  try {
+    const image = new Image();
+    image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = 96; canvas.height = 96;
+    const context = canvas.getContext('2d'); if (!context) return null;
+    context.drawImage(image, 0, 0, 96, 96);
+    return canvas.toDataURL('image/png');
+  } catch { return null; }
+}
 function escapeReceiptText(value: unknown): string {
   return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char));
 }
@@ -115,14 +133,14 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const date = new Date(order.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
   const money = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
   doc.setDrawColor(20,20,20); doc.setLineWidth(1.1); doc.rect(1.5,1.5,207,294);
-  doc.setTextColor(10,10,10); doc.setFont('helvetica','bold'); doc.setFontSize(25); doc.text('SANDIKALE', W/2,17,{align:'center'});
+  doc.setTextColor(10,10,10); doc.setFont('helvetica','bold'); doc.setFontSize(25); doc.text('SNDKL PROJECT', W/2,17,{align:'center'});
   doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('D E S I G N   &   P R O D U C T I O N S',W/2,24,{align:'center'});
   doc.setLineWidth(0.45); doc.rect(m,31,190,29);
   const colW=190/3,rowH=29/3;
   for(let i=1;i<3;i++) doc.line(m+colW*i,31,m+colW*i,60);
   for(let i=1;i<3;i++) doc.line(m,31+rowH*i,R,31+rowH*i);
   const cells=[
-    [['BRAND',order.customerName||'CUSTOMER'],['COLOR',colors||'-'],['SIZE',sizes||'-']],
+    [['NAMA',order.customerName||'CUSTOMER'],['COLOR',colors||'-'],['SIZE',sizes||'-']],
     [['MODEL',models],['DESIGNER','SANDIKALE'],['SABLON','DTF']],
     [['MATERIAL',materials],['DATE',date],['QTY',qty+' PCS']]
   ];
@@ -135,10 +153,14 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const imgY=65,imgH=143,imgW=87;
   const front=first?await makeSpkMockup(first,'front'):null, back=first?await makeSpkMockup(first,'back'):null;
   doc.setDrawColor(225,225,225);doc.setLineWidth(0.2);
-  if(front) doc.addImage(front,'PNG',14,imgY,imgW,imgH,undefined,'FAST');
-  else {doc.rect(14,imgY,imgW,imgH);doc.setFontSize(8);doc.text('MOCKUP DEPAN',57.5,imgY+70,{align:'center'});}
-  if(back) doc.addImage(back,'PNG',109,imgY,imgW,imgH,undefined,'FAST');
-  else {doc.rect(109,imgY,imgW,imgH);doc.setFontSize(8);doc.text('MOCKUP BELAKANG',152.5,imgY+70,{align:'center'});}
+  const mockupRatio=900/1100,renderedW=Math.min(imgW,imgH*mockupRatio),renderedH=renderedW/mockupRatio;
+  const mockupX=(x:number)=>x+(imgW-renderedW)/2;
+  const mockupY=imgY+(imgH-renderedH)/2;
+  doc.rect(14,imgY,imgW,imgH);doc.rect(109,imgY,imgW,imgH);
+  if(front) doc.addImage(front,'PNG',mockupX(14),mockupY,renderedW,renderedH,undefined,'FAST');
+  else {doc.setFontSize(8);doc.text('MOCKUP DEPAN',57.5,imgY+70,{align:'center'});}
+  if(back) doc.addImage(back,'PNG',mockupX(109),mockupY,renderedW,renderedH,undefined,'FAST');
+  else {doc.setFontSize(8);doc.text('MOCKUP BELAKANG',152.5,imgY+70,{align:'center'});}
   doc.setDrawColor(20,20,20);doc.setLineWidth(0.35);doc.line(m,213,R,213);
   doc.setFont('helvetica','bold');doc.setFontSize(7.4);doc.text('KETERANGAN SABLON',m,218);doc.text('CATATAN PRODUKSI',105,218);
   doc.setFont('helvetica','normal');doc.setFontSize(6.7);
@@ -147,8 +169,15 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const production='Press 160°C selama 15 detik, kupas dingin (Cold Peel).\nPacking plastik klip.\n\nNo. SPK '+(order.spkNumber||order.id)+'\nPenerima order: Admin SANDIKALE\nEstimasi selesai: konfirmasi admin via WhatsApp';
   doc.text(doc.splitTextToSize(production,88).slice(0,7),105,224);
   doc.setDrawColor(170,170,170);doc.setLineWidth(0.25);doc.line(m,271,R,271);
-  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text('_sandikale',70,282);doc.text('+62 822-6641-2844',125,282);
-  doc.setFontSize(6);doc.setTextColor(100,100,100);doc.text('SPK otomatis dari SANDIKALE Digital Showroom · Harga dan stok menunggu konfirmasi admin',W/2,289,{align:'center'});
+  doc.setFont('helvetica','normal');doc.setFontSize(9);
+  const instagramSvg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="#111111" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="#111111" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="#111111"/></svg>';
+  const whatsappSvg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.5 11.7a8.4 8.4 0 0 1-12.4 7.4L3 20l.9-4.9a8.4 8.4 0 1 1 16.6-3.4Z" fill="none" stroke="#111111" stroke-width="1.8" stroke-linejoin="round"/><path d="M8.2 7.7c.3-.5.7-.5 1-.1l1 1.7c.2.3.1.6-.2.9l-.6.6c.7 1.4 1.8 2.5 3.3 3.2l.6-.7c.2-.3.5-.3.8-.1l1.7.9c.4.2.5.6.2 1-.4.7-1.1 1.1-2 1-3.5-.5-6.8-3.7-7.2-7.1-.1-.6.5-1.1 1.4-1.3Z" fill="#111111"/></svg>';
+  const instagramIcon=await svgIconToPngDataUrl(instagramSvg),whatsappIcon=await svgIconToPngDataUrl(whatsappSvg);
+  if(instagramIcon)doc.addImage(instagramIcon,'PNG',65,277.5,5,5);doc.text('@_sandikale',72,282);
+  if(whatsappIcon)doc.addImage(whatsappIcon,'PNG',119,277.5,5,5);doc.text('+62 822-6641-2844',126,282);
+  doc.link(65,277.5,34,6,{url:'https://instagram.com/_sandikale'});
+  doc.link(119,277.5,76,6,{url:'https://wa.me/6282266412844'});
+  doc.setFontSize(6);doc.setTextColor(100,100,100);doc.text('SPK otomatis dari SNDKL PROJECT · Harga dan stok menunggu konfirmasi admin',W/2,289,{align:'center'});
   return new File([doc.output('blob')],safeFileName((order.spkNumber||order.id)+'-SPK.pdf'),{type:'application/pdf'});
 }
 export function CartCheckoutDrawer({
@@ -426,25 +455,36 @@ export function CartCheckoutDrawer({
           )}
 
           {step === 'payment' && createdOrder && (() => {
-            const cleanWa=(adminWhatsapp||'').replace(/[^0-9]/g,'');
+            const cleanWa=normalizeWhatsAppNumber(adminWhatsapp);
             const isManualPayment=/manual|konfirmasi admin/i.test(createdOrder.paymentLabel);
             const needsPaymentProof=!isManualPayment&&/(qris|bank|transfer|va|virtual account)/i.test(createdOrder.paymentLabel+' '+createdOrder.paymentMethod);
             const waMessage = [
-              'Halo Admin SANDIKALE, konfirmasi pesanan '+createdOrder.id+'.',
-              'SPK dan file desain saya lampirkan.'+(needsPaymentProof?' Bukti transfer/QRIS juga terlampir.':''),
-              isManualPayment?'Mohon konfirmasi detail dan pembayaran melalui WhatsApp.':'Mohon periksa kelengkapan pesanan saya.'
+              'Halo Admin SANDIKALE, saya ingin mengonfirmasi pesanan '+createdOrder.id+'.',
+              'Nomor SPK: '+(createdOrder.spkNumber||createdOrder.id)+'.',
+              'Saya akan melampirkan SPK dan file desain pesanan ini.',
+              needsPaymentProof?'Bukti transfer/QRIS juga saya lampirkan.':'Mohon konfirmasi detail pesanan dan pembayaran.'
             ].join('\\n');
-            const openWhatsApp=()=>{if(cleanWa)window.open('https://wa.me/'+cleanWa+'?text='+encodeURIComponent(waMessage),'_blank','noopener,noreferrer');};
+            const whatsappUrl='https://wa.me/'+cleanWa+'?text='+encodeURIComponent(waMessage);
             const shareOrderFiles=async()=>{
               if(needsPaymentProof&&!paymentProofFile){setErrorMsg('Unggah bukti transfer atau QRIS terlebih dahulu.');return;}
+              const chatWindow=window.open('about:blank','_blank');
               try{
                 const spk=await buildCustomerSpkPdf(createdOrder),designFiles:File[]=[];
                 const placements=createdOrder.items.flatMap(item=>(item.customPlacements||[]).map(placement=>({placement})));
-                for(const [index,entry] of placements.entries()){const source=entry.placement.originalDataUrl||entry.placement.artworkDataUrl;if(source)designFiles.push(await dataUrlToFile(source,safeFileName(entry.placement.artworkName||('desain-'+(index+1)+'.png'))));}
+                for(const [index,entry] of placements.entries()){
+                  const source=entry.placement.originalDataUrl||entry.placement.artworkDataUrl;
+                  if(source)designFiles.push(await dataUrlToFile(source,safeFileName(entry.placement.artworkName||('desain-'+(index+1)+'.png'))));
+                }
                 const files=[spk,...designFiles,...(paymentProofFile?[paymentProofFile]:[])];
-                if(navigator.share&&navigator.canShare?.({files}))await navigator.share({title:'Pesanan SANDIKALE '+createdOrder.id,text:waMessage,files});
-                else{for(const file of files){const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=file.name;a.click();window.setTimeout(()=>URL.revokeObjectURL(url),1500);}openWhatsApp();}
-              }catch(error){if(error instanceof Error&&error.name==='AbortError')return;setErrorMsg('File belum dapat dibagikan otomatis. Unduh lampiran, lalu kirim bersama pesan WhatsApp.');openWhatsApp();}
+                files.forEach((file,index)=>window.setTimeout(()=>downloadGeneratedFile(file),index*350));
+                if(chatWindow&&!chatWindow.closed)chatWindow.location.href=whatsappUrl;
+                else window.location.href=whatsappUrl;
+                setErrorMsg('Chat admin dibuka. Lampirkan file SPK dan desain yang baru diunduh, lalu tekan Kirim di WhatsApp.');
+              }catch(error){
+                if(chatWindow&&!chatWindow.closed)chatWindow.location.href=whatsappUrl;
+                else window.open(whatsappUrl,'_blank','noopener,noreferrer');
+                setErrorMsg('Chat admin dibuka. Jika file belum terunduh, gunakan tombol Unduh SPK dan kirim desain secara manual.');
+              }
             };
 
             return (
@@ -477,7 +517,7 @@ export function CartCheckoutDrawer({
                     <span>Kirim SPK & Desain ke Admin</span>
                   </div>
                   <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                    Wajib kirim SPK dan file desain. {needsPaymentProof ? 'Bukti transfer/QRIS juga wajib dilampirkan.' : 'Pembayaran disepakati langsung dengan admin melalui WhatsApp.'}
+                    File SPK dan desain akan diunduh, lalu chat WhatsApp Admin SANDIKALE dibuka otomatis. Lampirkan file yang diunduh dan tekan Kirim. {needsPaymentProof ? 'Bukti transfer/QRIS juga harus dilampirkan.' : 'Pembayaran dikonfirmasi langsung dengan admin.'}
                   </p>
                   {needsPaymentProof && <label className="block space-y-1 text-xs text-neutral-600 dark:text-neutral-300">Bukti pembayaran <input type="file" accept="image/*,application/pdf" onChange={(event) => setPaymentProofFile(event.target.files?.[0] || null)} className="block w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-neutral-200 file:px-3 file:py-2 dark:file:bg-neutral-700" />{paymentProofFile && <span className="block text-emerald-600">{paymentProofFile.name}</span>}</label>}
                   <button
@@ -486,7 +526,7 @@ export function CartCheckoutDrawer({
                     className="w-full h-11 px-4 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    <span>Bagikan SPK + Desain via WhatsApp</span>
+                    <span>Buka Chat Admin & Siapkan SPK + Desain</span>
                   </button>
                 </div>
 
