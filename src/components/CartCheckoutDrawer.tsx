@@ -221,12 +221,7 @@ export function CartCheckoutDrawer({
 
           {step === 'checkout' && (
             <form id="checkout-form" onSubmit={handleCheckoutSubmit} className="space-y-4">
-              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-200">
-                <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#7A1F2B]" />
-                <div>
-                  <strong>Informasi Penting:</strong> Website ini merupakan sarana gambaran katalog &amp; simulasi desain bagi publik. Setelah checkout, silakan <strong>kirimkan file desain asli melalui WhatsApp Admin</strong> agar memudahkan revisi, pengecekan resolusi, dan konfirmasi cetak.
-                </div>
-              </div>
+              <p className="text-[11px] text-neutral-500">Isi data singkat, pilih pengambilan, lalu buat pesanan.</p>
               {errorMsg && (
                 <div className="p-3 rounded-md bg-red-500/10 border border-red-500/30 text-xs text-red-500">
                   {errorMsg}
@@ -328,8 +323,25 @@ export function CartCheckoutDrawer({
                 return `${idx + 1}. ${it.name} (${it.colorName}, Size ${it.size}, Qty ${it.quantity}${it.fabricName ? `, ${it.fabricName}` : ''})${zones}`;
               })
               .join('\n');
-            const waText = encodeURIComponent(
-              `Halo Admin SANDIKALE,\n\nSaya baru saja membuat pesanan di website SANDIKALE:\n- No. Pesanan: ${createdOrder.id}\n- Kode Tracking: ${createdOrder.trackingNumber}\n- Nama: ${createdOrder.customerName}\n- Metode: ${createdOrder.shippingCourier}\nAlamat: ${createdOrder.shippingAddress}, ${createdOrder.shippingCity}\nBiaya dan waktu pengiriman: mohon konfirmasi dengan admin\n- Metode: ${createdOrder.paymentLabel}\n- Total sementara produk: ${formatRupiah(createdOrder.total)}\n\nDetail Produk:\n${itemLines}\n\nBerikut saya lampirkan file desain asli (PNG/AI/CDR/PDF) untuk proses revisi & konfirmasi produksi lebih lanjut. Terima kasih!`
+            const waText = encodeURIComponent([
+              'Halo Admin SANDIKALE,',
+              '',
+              'Saya membuat pesanan website:',
+              '- No. Pesanan: ' + createdOrder.id,
+              '- Kode Tracking: ' + createdOrder.trackingNumber,
+              '- Nama: ' + createdOrder.customerName,
+              '- Pengambilan: ' + createdOrder.shippingCourier,
+              createdOrder.shippingCourier === 'Ambil Sendiri di Store'
+                ? 'Saya akan mengambil pesanan langsung di store. Mohon konfirmasi jika sudah siap.'
+                : 'Alamat: ' + createdOrder.shippingAddress + ', ' + createdOrder.shippingCity + '\nMohon konfirmasi biaya dan waktu pengiriman.',
+              '- Pembayaran: ' + createdOrder.paymentLabel + ' (manual)',
+              '- Total: ' + formatRupiah(createdOrder.total),
+              '',
+              'Detail Produk:',
+              itemLines,
+              '',
+              'File desain asli saya lampirkan bila diperlukan. Terima kasih!'
+            ].join('\n'));
             );
             const waUrl = `https://wa.me/${cleanWa}?text=${waText}`;
 
@@ -361,7 +373,7 @@ export function CartCheckoutDrawer({
                     <span>Kirim File Desain ke WhatsApp Admin</span>
                   </div>
                   <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                    Website ini hanya menampilkan <strong>gambaran simulasi bagi publik</strong> (bukan proses cetak otomatis). Silakan kirimkan <strong>file desain asli (PNG/AI/CDR/PDF)</strong> ke WhatsApp Admin kami untuk memudahkan revisi posisi, pengecekan resolusi, dan konfirmasi akhir sebelum produksi.
+                    Pesanan tersimpan. Admin akan memeriksa detail dan mengonfirmasi pembayaran manual melalui WhatsApp. Pengambilan sendiri tidak menggunakan kurir.
                   </p>
                   <a
                     href={waUrl}
@@ -378,10 +390,10 @@ export function CartCheckoutDrawer({
                   <div className="p-4 rounded-xl bg-neutral-100 dark:bg-[#181818] border border-emerald-500/30 space-y-3">
                     <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
                       <CheckCircle2 className="w-5 h-5" />
-                      <span>Simulasi Pembayaran Tercatat!</span>
+                      <span>Pesanan Tercatat</span>
                     </div>
                     <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                      Pesanan tersimpan di database dan berstatus <strong>{createdOrder.stage}</strong> sambil menunggu file desain Anda di WhatsApp Admin.
+                      Pesanan tersimpan dan menunggu verifikasi pembayaran manual oleh admin. Status: <strong>{createdOrder.stage}</strong>.
                     </p>
                     <button
                       type="button"
@@ -399,18 +411,10 @@ export function CartCheckoutDrawer({
                   </div>
                 ) : (
                   <div className="space-y-2.5 pt-2 border-t border-black/10 dark:border-white/10">
-                    <div className="p-3 rounded-lg border border-black/10 dark:border-white/10 text-xs flex items-center gap-2 text-neutral-500 dark:text-neutral-300">
+                    <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs flex items-center gap-2 text-neutral-600 dark:text-neutral-300">
                       <ShieldCheck className="w-4 h-4 text-[#7A1F2B] shrink-0" />
-                      <span>Opsional: Klik tombol di bawah untuk mencatat simulasi pembayaran di sistem pelacakan setelah konfirmasi WhatsApp.</span>
+                      <span>Menunggu verifikasi pembayaran manual. Pesanan belum lunas sampai admin mengonfirmasi.</span>
                     </div>
-                    <button
-                      type="button"
-                      disabled={submitting}
-                      onClick={handlePayNow}
-                      className="w-full h-10 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#7A1F2B] dark:hover:bg-[#7A1F2B] dark:hover:text-white text-xs font-bold uppercase tracking-widest cursor-pointer transition-colors"
-                    >
-                      {submitting ? 'Memproses...' : `Catat Simulasi Pembayaran (${formatRupiah(createdOrder.total)})`}
-                    </button>
                   </div>
                 )}
               </div>
@@ -426,7 +430,7 @@ export function CartCheckoutDrawer({
                 <span className="font-mono-tabular">{formatRupiah(subtotal)}</span>
               </div>
               <div className="flex justify-between text-neutral-500">
-                <span className="flex items-center gap-1"><Truck className="w-3.5 h-3.5" /> Pengiriman</span><span className="font-mono-tabular text-[11px]">Dikonfirmasi via WhatsApp</span>
+                <span className="flex items-center gap-1"><Truck className="w-3.5 h-3.5" /> {shippingCourier === 'Ambil Sendiri di Store' ? 'Pengambilan' : 'Pengiriman'}</span><span className="font-mono-tabular text-[11px]">{shippingCourier === 'Ambil Sendiri di Store' ? 'Ambil di Store · Rp0' : 'Konfirmasi via WhatsApp'}</span>
               </div>
               <div className="flex justify-between text-sm font-bold pt-1.5 border-t border-black/10 dark:border-white/10">
                 <span>Total</span>
