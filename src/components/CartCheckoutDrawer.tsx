@@ -220,6 +220,30 @@ async function loadSandikaleLogoPng(): Promise<string | null> {
   } catch { return null; }
 }
 
+async function renderPanchangTitlePng(text: string, color = '#0a0a0a'): Promise<string | null> {
+  try {
+    await document.fonts.load('800 120px "Panchang"');
+    const canvas = document.createElement('canvas');
+    const measure = canvas.getContext('2d');
+    if (!measure) return null;
+    measure.font = '800 120px "Panchang"';
+    const width = Math.ceil(measure.measureText(text).width + 32);
+    canvas.width = Math.max(320, width);
+    canvas.height = 160;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '800 120px "Panchang"';
+    ctx.fillStyle = color;
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(text, 12, 124);
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.warn('Panchang font unavailable while generating SPK title:', error);
+    return null;
+  }
+}
+
 async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
@@ -232,8 +256,14 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const date = new Date(order.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
   const money = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
   doc.setDrawColor(20,20,20); doc.setLineWidth(1.1); doc.rect(1.5,1.5,207,294);
-  doc.setTextColor(10,10,10); const logoPng = await loadSandikaleLogoPng(); if (logoPng) doc.addImage(logoPng,'PNG',12,5,8,12); doc.setFont('helvetica','bold'); doc.setFontSize(25); doc.text('SNDKL PROJECT', W/2,17,{align:'center'});
-  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('D E S I G N   &   P R O D U C T I O N S',W/2,24,{align:'center'});
+  doc.setTextColor(10,10,10);
+  const logoPng = await loadSandikaleLogoPng();
+  if (logoPng) doc.addImage(logoPng,'PNG',52,5,11,16);
+  const projectTitle = await renderPanchangTitlePng('SNDKL PROJECT');
+  if (projectTitle) doc.addImage(projectTitle,'PNG',69,8,88,11);
+  else { doc.setFont('helvetica','bold'); doc.setFontSize(22); doc.text('SNDKL PROJECT',69,17); }
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
+  doc.text('DESIGN & PRODUCTIONS',69,24);
   doc.setLineWidth(0.45); doc.rect(m,31,190,29);
   const colW=190/3,rowH=29/3;
   for(let i=1;i<3;i++) doc.line(m+colW*i,31,m+colW*i,60);
@@ -249,7 +279,7 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
     doc.setFont('helvetica','normal');doc.setFontSize(6.3);
     doc.text(doc.splitTextToSize(String(cell[1]||'-'),colW-17).slice(0,2),x+17,y);
   }));
-  const imgY=65,imgH=125,imgW=87;
+  const imgY=65,imgH=120,imgW=87;
   const front=first?await makeSpkMockup(first,'front'):null;
   const back=first?await makeSpkMockup(first,'back'):null;
   const sleeve=first?await makeSpkMockup(first,'sleeve'):null;
@@ -268,23 +298,23 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   };
   renderView(front,14,imgY,imgW,imgH,'TAMPAK DEPAN');
   renderView(back,109,imgY,imgW,imgH,'TAMPAK BELAKANG');
-  renderView(sleeve,14,194,49,57,'DETAIL LENGAN');
+  renderView(sleeve,61,191,87,61,'DETAIL LENGAN');
 
-  doc.setDrawColor(20,20,20);doc.setLineWidth(0.35);doc.line(m,257,R,257);
+  doc.setDrawColor(20,20,20);doc.setLineWidth(0.35);doc.line(m,258,R,258);
   doc.setFont('helvetica','bold');doc.setFontSize(7.2);
-  doc.text('KETERANGAN SABLON',m,262);doc.text('CATATAN PRODUKSI',105,262);
+  doc.text('KETERANGAN SABLON',m,263);doc.text('CATATAN PRODUKSI',105,263);
   doc.setFont('helvetica','normal');doc.setFontSize(6.2);
   const printLines=items.flatMap((item,index)=>(item.customPlacements||[]).map((placement,pi)=>(index+1)+'.'+(pi+1)+' '+placement.zoneLabel+' ('+placementWidthCm(placement)+' cm) - '+placement.artworkName));
   doc.text(doc.splitTextToSize(printLines.length?printLines.join('\\n'):'1. Desain DTF sesuai file lampiran customer',88).slice(0,5),m,267);
   const production='Press 160°C selama 15 detik, kupas dingin (Cold Peel).\\nPacking plastik klip.\\nNo. SPK '+(order.spkNumber||order.id)+'\\nPenerima: Admin SANDIKALE\\nEstimasi: konfirmasi admin via WhatsApp';
-  doc.text(doc.splitTextToSize(production,88).slice(0,5),105,267);
-  doc.setDrawColor(170,170,170);doc.setLineWidth(0.25);doc.line(m,282,R,282);
+  doc.text(doc.splitTextToSize(production,88).slice(0,4),105,268);
+  doc.setDrawColor(170,170,170);doc.setLineWidth(0.25);doc.line(m,283,R,283);
   doc.setFont('helvetica','normal');doc.setFontSize(8);
   const instagramIcon=await svgIconToPngDataUrl(instagramIconSvg),whatsappIcon=await svgIconToPngDataUrl(whatsappIconSvg);
-  if(instagramIcon)doc.addImage(instagramIcon,'PNG',65,284,4.5,4.5);doc.text('@_sandikale',71,287.5);
-  if(whatsappIcon)doc.addImage(whatsappIcon,'PNG',119,284,4.5,4.5);doc.text('+62 822-6641-2844',125,287.5);
-  doc.link(65,284,34,5,{url:'https://instagram.com/_sandikale'});
-  doc.link(119,284,76,5,{url:'https://wa.me/6282266412844'});
+  if(instagramIcon)doc.addImage(instagramIcon,'PNG',65,285,4.5,4.5);doc.text('@_sandikale',71,288.5);
+  if(whatsappIcon)doc.addImage(whatsappIcon,'PNG',119,285,4.5,4.5);doc.text('+62 822-6641-2844',125,288.5);
+  doc.link(65,285,34,5,{url:'https://instagram.com/_sandikale'});
+  doc.link(119,285,76,5,{url:'https://wa.me/6282266412844'});
   return new File([doc.output('blob')],safeFileName((order.spkNumber||order.id)+'-SPK.pdf'),{type:'application/pdf'});
 }
 export function CartCheckoutDrawer({
