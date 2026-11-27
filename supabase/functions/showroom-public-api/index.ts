@@ -69,8 +69,9 @@ Deno.serve(async(req:Request)=>{
    if(it.material_id){const{data:m,error:me}=await db.from("showroom_materials").select("id,name,surcharge").eq("id",it.material_id).eq("is_active",true).maybeSingle();if(me||!m)return json({error:"Pilihan bahan tidak tersedia."},400);selectedMaterial=m;}
    const qty=Math.max(1,Math.min(1000,Math.floor(Number(it.quantity)||1))),sizeRows=Array.isArray(it.sizes)?it.sizes:[],sizeTotal=sizeRows.reduce((sum,x)=>sum+Math.max(0,Math.floor(Number(x.quantity)||0)),0);
    if(sizeTotal!==qty)return json({error:"Jumlah tiap ukuran harus sama dengan total kuantitas produk."},400);
-   const garment=it.garment_type==="long"?"long":it.garment_type==="short"?"short":null,color=String(it.color||"").trim(),legacyColors=Array.isArray(p.available_colors)?p.available_colors.map((x:any)=>typeof x==="string"?x:x?.name).filter(Boolean):[];
-   if(!garment||!color)return json({error:"Model dan warna kaos wajib dipilih dari katalog."},400);
+   const isCustomRequest=it.bulk_discount_eligible===true,isCustomerColorRequest=it.allow_color_request===true||isCustomRequest;
+   const garment=it.garment_type==="long"?"long":it.garment_type==="short"?"short":null,color=String(it.color||"").trim().slice(0,60),legacyColors=Array.isArray(p.available_colors)?p.available_colors.map((x:any)=>typeof x==="string"?x:x?.name).filter(Boolean):[];
+   if(!garment||!color)return json({error:"Model kaos dan warna yang diminta wajib diisi."},400);
    const{data:linkedColors,error:colorError}=await db.from("showroom_product_colors").select("showroom_colors!inner(name,is_active)").eq("product_id",p.id).eq("is_active",true).eq("showroom_colors.is_active",true);
    if(colorError)throw colorError;
    const canonicalColors=(linkedColors||[]).map((row:any)=>Array.isArray(row.showroom_colors)?row.showroom_colors[0]?.name:row.showroom_colors?.name).filter(Boolean);
@@ -78,12 +79,13 @@ Deno.serve(async(req:Request)=>{
    const{data:configuredVariants,error:variantError}=await db.from("showroom_product_variants").select("id,color,size,price_adjustment,stock_quantity,is_available").eq("product_id",p.id);
    if(variantError)throw variantError;
    if(p.stock_mode==="unavailable")return json({error:"Produk sedang tidak menerima pesanan. Silakan pilih produk lain."},409);
-   if(!available.includes(color.toLowerCase())&&!(configuredVariants||[]).some((v:any)=>String(v.color).trim().toLowerCase()===color.toLowerCase()&&v.is_available))return json({error:"Warna produk tidak tersedia. Admin perlu menghubungkan warna ini ke produk terlebih dahulu."},400);
+   if(!isCustomerColorRequest&&!available.includes(color.toLowerCase())&&!(configuredVariants||[]).some((v:any)=>String(v.color).trim().toLowerCase()===color.toLowerCase()&&v.is_available))return json({error:"Warna produk tidak tersedia. Pilih warna yang tersedia di katalog."},400);
+   // Custom DTF color is a customer request, not a stock reservation. Admin confirms stock over WhatsApp.
    for(const sizeRow of sizeRows){
     const selectedSize=String(sizeRow.size||"").trim(),selectedQty=Math.max(0,Math.floor(Number(sizeRow.quantity)||0));
     const variant=(configuredVariants||[]).find((v:any)=>String(v.color).toLowerCase()===color.toLowerCase()&&String(v.size).toLowerCase()===selectedSize.toLowerCase()&&v.is_available);
-    if(p.stock_mode==="tracked"&&!variant)return json({error:"Stok untuk varian "+color+" / "+selectedSize+" belum tersedia. Admin perlu menambahkan varian atau mengubah pengelolaan stok menjadi Made to order."},409);
-    if(p.stock_mode==="tracked"&&variant&&variant.stock_quantity!==null&&variant.stock_quantity!==undefined&&selectedQty>Number(variant.stock_quantity))return json({error:"Stok "+color+" / "+selectedSize+" hanya tersisa "+variant.stock_quantity+" pcs."},409);
+    if(!isCustomerColorRequest&&p.stock_mode==="tracked"&&!variant)return json({error:"Stok untuk varian "+color+" / "+selectedSize+" belum tersedia. Admin perlu menambahkan varian atau mengubah pengelolaan stok menjadi Made to order."},409);
+    if(!isCustomRequest&&p.stock_mode==="tracked"&&variant&&variant.stock_quantity!==null&&variant.stock_quantity!==undefined&&selectedQty>Number(variant.stock_quantity))return json({error:"Stok "+color+" / "+selectedSize+" hanya tersisa "+variant.stock_quantity+" pcs."},409);
    }
    const prints=Array.isArray(it.prints)?it.prints:[];if(prints.length>6)return json({error:"Setiap pesanan maksimal memiliki 6 posisi sablon."},400);
    const seen=new Set();let dtfUnit=0;const uploadedPrints=[];

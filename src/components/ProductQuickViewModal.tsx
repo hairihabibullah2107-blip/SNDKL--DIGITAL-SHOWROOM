@@ -33,7 +33,7 @@ export function ProductQuickViewModal({
   onOpenCustomStudio,
 }: ProductQuickViewModalProps) {
   const [imageIdx, setImageIdx] = useState(0);
-  const [selectedColorIdx, setSelectedColorIdx] = useState(-1);
+  const [requestedColor, setRequestedColor] = useState('');
   const [selectedSize, setSelectedSize] = useState('');
   const [quantity, setQuantity] = useState(1);
 
@@ -44,7 +44,7 @@ export function ProductQuickViewModal({
 
   useEffect(() => {
     setImageIdx(0);
-    setSelectedColorIdx(-1);
+    setRequestedColor('');
     setSelectedSize('');
     setQuantity(1);
   }, [product?.id]);
@@ -52,15 +52,14 @@ export function ProductQuickViewModal({
 
   if (!product) return null;
 
-  const activeColor = selectedColorIdx >= 0 ? product.colors[selectedColorIdx] : undefined;
   const galleryImages = product.images;
-  const activeImage = activeColor?.image && imageIdx === 0 ? activeColor.image : galleryImages.length ? galleryImages[imageIdx % galleryImages.length] : '';
+  const activeImage = galleryImages.length ? galleryImages[imageIdx % galleryImages.length] : '';
   const availableSizes = Object.entries(product.sizes);
   const selectedStock = selectedSize ? (product.sizes[selectedSize] ?? 0) : 0;
   const prodReviews = reviews.filter((r) => r.productId === product.id);
 
   const waMessage = encodeURIComponent(
-    `Halo SANDIKALE, saya ingin menanyakan stok & detail produk ${product.name} (${product.sku})${activeColor ? ` warna ${activeColor.name}` : ''}${selectedSize ? ` ukuran ${selectedSize}` : ''}.`
+    `Halo SANDIKALE, saya ingin menanyakan stok & detail produk ${product.name} (${product.sku}) ${requestedColor.trim() ? ` warna yang diminta ${requestedColor.trim()}` : ''}${selectedSize ? ` ukuran ${selectedSize}` : ''}.`
   );
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
@@ -123,24 +122,7 @@ export function ProductQuickViewModal({
                   <span className="text-[10px] uppercase tracking-[.18em]">Foto produk belum tersedia</span>
                 </div>
               )}
-              {activeColor && activeImage && (
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    backgroundColor: activeColor.hex,
-                    WebkitMaskImage: `url("${activeImage}")`,
-                    maskImage: `url("${activeImage}")`,
-                    WebkitMaskSize: 'contain',
-                    maskSize: 'contain',
-                    WebkitMaskPosition: 'center',
-                    maskPosition: 'center',
-                    WebkitMaskRepeat: 'no-repeat',
-                    maskRepeat: 'no-repeat',
-                    mixBlendMode: 'multiply',
-                  }}
-                />
-              )}
+
               {galleryImages.length > 1 && (
                 <>
                   <button
@@ -206,36 +188,18 @@ export function ProductQuickViewModal({
 
             <p className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">{product.description}</p>
 
-            {/* Color Switch (Admin-configured) */}
             <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                Warna:{' '}
-                <span className="text-[#080808] dark:text-white">
-                  {product.colors.length === 0
-                    ? 'Menunggu konfigurasi warna dari Admin'
-                    : activeColor?.name || 'Belum dipilih — silakan pilih warna'}
-                </span>
-              </div>
-              {product.colors.length > 0 && (
-                <div className="flex items-center gap-2.5">
-                  {product.colors.map((c, idx) => (
-                    <button
-                      key={c.name}
-                      type="button"
-                      onClick={() => {
-                        setSelectedColorIdx(idx);
-                        setImageIdx(0);
-                      }}
-                      title={c.name}
-                      aria-label={`Pilih warna ${c.name}`}
-                      className={`w-8 h-8 rounded-full border-2 transition-transform cursor-pointer ${
-                        selectedColorIdx === idx ? 'border-[#7A1F2B] scale-110' : 'border-black/20 dark:border-white/20'
-                      }`}
-                      style={{ backgroundColor: c.hex }}
-                    />
-                  ))}
-                </div>
-              )}
+              <label className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400" htmlFor="quickview-requested-color">Warna yang diinginkan</label>
+              <input
+                id="quickview-requested-color"
+                type="text"
+                maxLength={60}
+                value={requestedColor}
+                onChange={(e) => setRequestedColor(e.target.value)}
+                placeholder="Contoh: hitam, navy, maroon, sage..."
+                className="w-full h-10 px-3 rounded-md text-xs bg-neutral-50 dark:bg-[#171717] border border-black/15 dark:border-white/15"
+              />
+              <p className="text-[11px] text-neutral-500">Stok warna akan diperiksa dan dikonfirmasi admin melalui WhatsApp sebelum pesanan diproses.</p>
             </div>
 
             {/* Size Selector + Stock */}
@@ -295,13 +259,13 @@ export function ProductQuickViewModal({
 
                 <button
                   type="button"
-                  disabled={!activeColor || !selectedSize || selectedStock <= 0 || product.colors.length === 0}
+                  disabled={!requestedColor.trim() || !selectedSize || selectedStock <= 0}
                   onClick={() => {
-                    if (!activeColor || !selectedSize) return;
+                    if (!requestedColor.trim() || !selectedSize) return;
                     onAddToCart({
                       product,
-                      colorName: activeColor.name,
-                      colorHex: activeColor.hex,
+                      colorName: requestedColor.trim(),
+                      colorHex: '#777777',
                       size: selectedSize,
                       quantity,
                     });
@@ -311,11 +275,7 @@ export function ProductQuickViewModal({
                 >
                   <ShoppingBag className="w-4 h-4" />
                   <span>
-                    {product.colors.length === 0
-                      ? 'Warna Belum Diisi Admin'
-                      : !activeColor || !selectedSize
-                      ? 'Pilih Warna & Ukuran'
-                      : 'Tambah ke Tas'}
+                    {!requestedColor.trim() || !selectedSize ? 'Isi Warna & Ukuran' : 'Tambah ke Tas'}
                   </span>
                 </button>
 

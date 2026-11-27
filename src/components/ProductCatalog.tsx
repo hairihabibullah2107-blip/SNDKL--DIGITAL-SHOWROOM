@@ -36,7 +36,7 @@ export function ProductCatalog({
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'rating'>('featured');
   const [onlyCustomBase, setOnlyCustomBase] = useState(false);
-  const [cardColorSelection, setCardColorSelection] = useState<Record<string, number>>({});
+  const [cardRequestedColors, setCardRequestedColors] = useState<Record<string, string>>({});
   const [cardSizeSelection, setCardSizeSelection] = useState<Record<string, string>>({});
 
   const filteredProducts = useMemo(() => {
@@ -214,11 +214,9 @@ export function ProductCatalog({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProducts.map((product) => {
-                const activeColorIdx = cardColorSelection[product.id];
-                const activeColor =
-                  typeof activeColorIdx === 'number' ? product.colors[activeColorIdx] : undefined;
+                const requestedColor = cardRequestedColors[product.id] || '';
                 const selectedSize = cardSizeSelection[product.id] || '';
-                const primaryImage = activeColor?.image || product.images[0] || ''; 
+                const primaryImage = product.images[0] || ''; 
                 const secondaryImage = product.images[1] || ''; 
                 const totalStock = Object.values(product.sizes).reduce((a, b) => a + b, 0);
                 const isWishlisted = wishlistIds.includes(product.id);
@@ -255,34 +253,7 @@ export function ProductCatalog({
                           className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
                         />
                       )}
-                      {activeColor && primaryImage && (
-                        <div aria-hidden="true" className={"absolute inset-0 pointer-events-none " + (secondaryImage ? "group-hover:opacity-0 transition-opacity" : "")} style={{
-                          backgroundColor: activeColor.hex,
-                          WebkitMaskImage: `url("${primaryImage}")`,
-                          maskImage: `url("${primaryImage}")`,
-                          WebkitMaskSize: 'cover',
-                          maskSize: 'cover',
-                          WebkitMaskPosition: 'center',
-                          maskPosition: 'center',
-                          WebkitMaskRepeat: 'no-repeat',
-                          maskRepeat: 'no-repeat',
-                          mixBlendMode: 'multiply',
-                        }} />
-                      )}
-                      {activeColor && secondaryImage && (
-                        <div aria-hidden="true" className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" style={{
-                          backgroundColor: activeColor.hex,
-                          WebkitMaskImage: `url("${secondaryImage}")`,
-                          maskImage: `url("${secondaryImage}")`,
-                          WebkitMaskSize: 'cover',
-                          maskSize: 'cover',
-                          WebkitMaskPosition: 'center',
-                          maskPosition: 'center',
-                          WebkitMaskRepeat: 'no-repeat',
-                          maskRepeat: 'no-repeat',
-                          mixBlendMode: 'multiply',
-                        }} />
-                      )}
+
 
                       <div className="absolute top-3 right-3 flex items-center gap-1.5">
                         <button
@@ -332,33 +303,19 @@ export function ProductCatalog({
                       </div>
 
                       <div className="space-y-3">
-                        {/* On-card Color Switch (Admin-configured) */}
                         <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5 min-h-[20px]">
-                            {product.colors.length > 0 ? (
-                              product.colors.map((c, idx) => (
-                                <button
-                                  key={c.name}
-                                  type="button"
-                                  title={c.name}
-                                  aria-label={`Pilih warna ${c.name}`}
-                                  onClick={() => setCardColorSelection((prev) => ({ ...prev, [product.id]: idx }))}
-                                  className={`w-5 h-5 rounded-full border transition-transform cursor-pointer ${
-                                    activeColorIdx === idx
-                                      ? 'border-[#7A1F2B] ring-2 ring-[#7A1F2B]/40 scale-110'
-                                      : 'border-black/20 dark:border-white/25'
-                                  }`}
-                                  style={{ backgroundColor: c.hex }}
-                                />
-                              ))
-                            ) : (
-                              <span className="text-[11px] text-neutral-400">Warna belum diisi admin</span>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <span className="text-base font-bold font-mono-tabular">{formatRupiah(product.price)}</span>
-                          </div>
+                          <label className="text-[11px] text-neutral-500">Warna pesanan</label>
+                          <span className="text-base font-bold font-mono-tabular">{formatRupiah(product.price)}</span>
                         </div>
+                        <input
+                          type="text"
+                          maxLength={60}
+                          value={requestedColor}
+                          onChange={(e) => setCardRequestedColors((prev) => ({ ...prev, [product.id]: e.target.value }))}
+                          placeholder="Tulis warna yang diinginkan"
+                          aria-label={`Warna yang diinginkan untuk ${product.name}`}
+                          className="w-full h-9 px-3 rounded-md text-xs bg-neutral-50 dark:bg-[#1A1A1A] border border-black/15 dark:border-white/15"
+                        />
 
                         <div className="flex items-center gap-2">
                           <select
@@ -376,21 +333,19 @@ export function ProductCatalog({
                               </option>
                             ))}
                           </select>
-                          <span className="text-[11px] text-neutral-400 truncate max-w-[110px]">
-                            {activeColor ? activeColor.name : 'Pilih warna'}
-                          </span>
+
                         </div>
 
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             type="button"
-                            disabled={product.colors.length === 0 || !activeColor || !selectedSize}
+                            disabled={!requestedColor.trim() || !selectedSize}
                             onClick={() => {
-                              if (!activeColor || !selectedSize) return;
+                              if (!requestedColor.trim() || !selectedSize) return;
                               onQuickAdd({
                                 product,
-                                colorName: activeColor.name,
-                                colorHex: activeColor.hex,
+                                colorName: requestedColor.trim(),
+                                colorHex: '#777777',
                                 size: selectedSize,
                                 quantity: 1,
                               });
@@ -398,7 +353,7 @@ export function ProductCatalog({
                             className="h-10 px-3 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#7A1F2B] dark:hover:bg-[#7A1F2B] dark:hover:text-white text-xs font-semibold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-45"
                           >
                             <ShoppingBag className="w-3.5 h-3.5" />
-                            <span>{activeColor && selectedSize ? `+ Tas (${selectedSize})` : 'Pilih Opsi'}</span>
+                            <span>{requestedColor.trim() && selectedSize ? `+ Tas (${selectedSize})` : 'Isi Warna & Ukuran'}</span>
                           </button>
 
                           {product.isCustomBase ? (

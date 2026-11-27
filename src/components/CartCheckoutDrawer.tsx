@@ -232,8 +232,8 @@ export function CartCheckoutDrawer({
       } else {
         setErrorMsg('Pesanan ditolak. Pastikan metode pembayaran dan pengiriman masih aktif.');
       }
-    } catch {
-      setErrorMsg('Gagal memproses pesanan. Periksa koneksi Anda.');
+    } catch (error) {
+      setErrorMsg(error instanceof Error ? error.message : 'Gagal memproses pesanan. Periksa koneksi Anda.');
     } finally {
       setSubmitting(false);
     }

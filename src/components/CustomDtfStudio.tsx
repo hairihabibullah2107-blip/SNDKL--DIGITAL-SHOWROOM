@@ -106,7 +106,7 @@ export function CustomDtfStudio({
   useEffect(() => { loadStudioDraft(DRAFT_STORAGE_KEY).then((draft) => setHasSavedDraft(Boolean(draft))).catch(() => setHasSavedDraft(false)); }, []);
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
-  const draggingRef = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const draggingRef = useRef<{ zoneId: string; startX: number; startY: number; origX: number; origY: number; canvasWidth: number; canvasHeight: number } | null>(null);
 
   useEffect(() => {
     if (preselectedProduct && preselectedProduct.isCustomBase) {
@@ -362,25 +362,32 @@ export function CustomDtfStudio({
     }
   };
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (!activePlacement) return;
+  const handlePointerDown = (e: React.PointerEvent, placement: CustomDesignPlacement) => {
+    if (!canvasRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedZoneId(placement.zoneId);
     e.currentTarget.setPointerCapture(e.pointerId);
+    const rect = canvasRef.current.getBoundingClientRect();
     draggingRef.current = {
+      zoneId: placement.zoneId,
       startX: e.clientX,
       startY: e.clientY,
-      origX: activePlacement.xOffset,
-      origY: activePlacement.yOffset,
+      origX: placement.xOffset,
+      origY: placement.yOffset,
+      canvasWidth: rect.width,
+      canvasHeight: rect.height,
     };
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!draggingRef.current || !canvasRef.current || !activePlacement) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const dxPct = ((e.clientX - draggingRef.current.startX) / rect.width) * 100;
-    const dyPct = ((e.clientY - draggingRef.current.startY) / rect.height) * 100;
-    const clampedX = Math.max(-22, Math.min(22, Math.round(draggingRef.current.origX + dxPct)));
-    const clampedY = Math.max(-22, Math.min(22, Math.round(draggingRef.current.origY + dyPct)));
-    updateActivePlacement({ xOffset: clampedX, yOffset: clampedY });
+    const drag = draggingRef.current;
+    if (!drag) return;
+    const dxPct = ((e.clientX - drag.startX) / drag.canvasWidth) * 100;
+    const dyPct = ((e.clientY - drag.startY) / drag.canvasHeight) * 100;
+    const nextX = Math.max(-50, Math.min(50, Math.round(drag.origX + dxPct)));
+    const nextY = Math.max(-50, Math.min(50, Math.round(drag.origY + dyPct)));
+    setPlacements((prev) => prev.map((placement) => placement.zoneId === drag.zoneId ? { ...placement, xOffset: nextX, yOffset: nextY } : placement));
   };
 
   const handlePointerUp = () => {
@@ -602,38 +609,33 @@ export function CustomDtfStudio({
                 const zMeta = dtfZones.find((z) => z.id === pl.zoneId);
                 if (!zMeta) return null;
                 const isSelected = pl.zoneId === selectedZoneId;
+                const baseWidth = Math.min(78, Math.max(8, (zMeta.maxWidthCm / 58) * 100));
                 return (
                   <div
                     key={pl.zoneId}
                     onClick={() => setSelectedZoneId(pl.zoneId)}
+                    onPointerDown={(e) => handlePointerDown(e, pl)}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerUp}
                     style={{
-                      left: /logo|pocket|saku/i.test(zMeta.id + ' ' + zMeta.label) ? '35%' : zMeta.view === 'sleeve' ? '20%' : '50%',
-                      top: /logo|pocket|saku/i.test(zMeta.id + ' ' + zMeta.label) ? '32%' : zMeta.view === 'back' ? '38%' : '40%',
-                      width: `${Math.min(78, Math.max(14, (zMeta.maxWidthCm / 58) * 100))}%`,
+                      left: `${50 + pl.xOffset}%`,
+                      top: `${50 + pl.yOffset}%`,
+                      width: `${baseWidth * pl.scale}%`,
                       aspectRatio: `${zMeta.maxWidthCm} / ${zMeta.maxHeightCm}`,
-                      height: 'auto',
-                      transform: 'translateX(-50%)',
+                      transform: 'translate(-50%, -50%)',
+                      touchAction: 'none',
+                      zIndex: isSelected ? 30 : 20,
                     }}
-                    className={`absolute flex items-center justify-center border ${
-                      isSelected ? 'border-dashed border-[#7A1F2B] bg-[#7A1F2B]/5' : 'border-dashed border-white/35'
-                    }`}
+                    className={`absolute flex items-center justify-center cursor-grab active:cursor-grabbing ${isSelected ? 'outline outline-1 outline-dashed outline-[#7A1F2B] bg-[#7A1F2B]/5' : 'outline outline-1 outline-dashed outline-white/30'}`}
                   >
-                    <div
-                      onPointerDown={handlePointerDown}
-                      onPointerMove={handlePointerMove}
-                      onPointerUp={handlePointerUp}
-                      style={{
-                        transform: `translate(${pl.xOffset}%, ${pl.yOffset}%) scale(${pl.scale})`,
-                      }}
-                      className="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
-                    >
-                      <img
-                        src={pl.artworkDataUrl}
-                        alt={pl.artworkName}
-                        draggable={false}
-                        className="max-w-full max-h-full object-contain pointer-events-none drop-shadow"
-                      />
-                    </div>
+                    <img
+                      src={pl.artworkDataUrl}
+                      alt={pl.artworkName}
+                      draggable={false}
+                      className="w-full h-full object-contain pointer-events-none drop-shadow"
+                      style={{ transform: `rotate(${pl.rotation}deg)` }}
+                    />
                   </div>
                 );
               })}
@@ -761,7 +763,7 @@ export function CustomDtfStudio({
                       <div className="min-w-0">
                         <div className="text-xs font-bold truncate">{prod.name}</div>
                         <div className="text-[11px] text-neutral-500 truncate">{prod.fit}</div>
-                        <div className="text-[11px] text-[#7A1F2B]">{prod.colors.length} pilihan warna</div>
+                        <div className="text-[11px] text-[#7A1F2B]">Warna dikonfirmasi admin</div>
                       </div>
                     </button>
                   ))}
