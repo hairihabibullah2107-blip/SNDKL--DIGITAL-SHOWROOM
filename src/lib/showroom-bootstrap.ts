@@ -40,7 +40,7 @@ export async function loadShowroomBootstrap() {
   if (productResult.error) throw productResult.error;
   // Retry the DTF lookup with core columns if optional placement metadata is unavailable.
   let resolvedDtfResult = dtfResult;
-  if (dtfResult.error) {
+  if (dtfResult.error || !(dtfResult.data || []).length) {
     resolvedDtfResult = await safeQuery(
       supabase.from('showroom_dtf_prices')
         .select('id,size_code,label,width_cm,height_cm,price,is_active,sort_order,placement_view')
