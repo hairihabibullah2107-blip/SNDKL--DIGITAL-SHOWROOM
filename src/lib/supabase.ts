@@ -35,17 +35,24 @@ export function dataUrlToBase64(value: string): string {
 }
 
 export async function artworkForUpload(dataUrl: string, fileName: string): Promise<{ design_base64: string; design_name: string }> {
-  const isSvg = fileName.toLowerCase().endsWith('.svg') || dataUrl.startsWith('data:image/svg+xml');
-  if (!isSvg) return { design_base64: dataUrlToBase64(dataUrl), design_name: fileName || 'artwork.png' };
-  const image = new Image();
-  image.src = dataUrl;
-  await image.decode();
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.min(4096, Math.max(512, image.naturalWidth || 1200));
-  canvas.height = Math.min(4096, Math.max(512, image.naturalHeight || 1200));
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Browser tidak dapat memproses file SVG.');
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  const pngName = fileName.toLowerCase().endsWith('.svg') ? fileName.slice(0, -4) + '.png' : 'artwork.png';
-  return { design_base64: dataUrlToBase64(canvas.toDataURL('image/png')), design_name: pngName };
+  const sourceName = fileName || 'artwork';
+  const mime = /^data:([^;,]+)/i.exec(dataUrl)?.[1]?.toLowerCase() || '';
+  if (mime === 'application/pdf' || sourceName.toLowerCase().endsWith('.pdf')) {
+    return { design_base64: dataUrlToBase64(dataUrl), design_name: sourceName.toLowerCase().endsWith('.pdf') ? sourceName : sourceName + '.pdf' };
+  }
+  if (mime.startsWith('image/')) {
+    const image = new Image();
+    image.src = dataUrl;
+    await image.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.min(4096, Math.max(512, image.naturalWidth || 1200));
+    canvas.height = Math.min(4096, Math.max(512, image.naturalHeight || 1200));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Browser tidak dapat memproses file desain.');
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const baseName = sourceName.replace(/\.[^.]+$/, '') || 'artwork';
+    return { design_base64: dataUrlToBase64(canvas.toDataURL('image/png')), design_name: baseName + '.png' };
+  }
+  const fallbackName = /\.(png|jpe?g|webp|pdf)$/i.test(sourceName) ? sourceName : sourceName + '.png';
+  return { design_base64: dataUrlToBase64(dataUrl), design_name: fallbackName };
 }
