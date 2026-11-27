@@ -342,7 +342,6 @@ export function CartCheckoutDrawer({
               '',
               'File desain asli saya lampirkan bila diperlukan. Terima kasih!'
             ].join('\n'));
-            );
             const waUrl = `https://wa.me/${cleanWa}?text=${waText}`;
 
             return (
@@ -390,7 +389,7 @@ export function CartCheckoutDrawer({
                   <div className="p-4 rounded-xl bg-neutral-100 dark:bg-[#181818] border border-emerald-500/30 space-y-3">
                     <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
                       <CheckCircle2 className="w-5 h-5" />
-                      <span>Pesanan Tercatat</span>
+                      <span>Pembayaran Terverifikasi</span>
                     </div>
                     <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
                       Pesanan tersimpan dan menunggu verifikasi pembayaran manual oleh admin. Status: <strong>{createdOrder.stage}</strong>.
