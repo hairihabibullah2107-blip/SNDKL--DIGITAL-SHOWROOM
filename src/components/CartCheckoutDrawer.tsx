@@ -43,7 +43,7 @@ function safeFileName(value: string): string {
   return value.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'desain';
 }
 function normalizeWhatsAppNumber(value: string): string {
-  const digits = String(value || '').replace(/\\D/g, '');
+  const digits = String(value || '').replace(new RegExp('[^0-9]', 'g'), '');
   if (!digits) return '6282266412844';
   if (digits.startsWith('0')) return '62' + digits.slice(1);
   if (digits.startsWith('8')) return '62' + digits;
