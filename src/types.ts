@@ -71,14 +71,7 @@ export interface FabricOption {
   publishedByAdmin: boolean;
 }
 
-export type PaymentMethodId =
-  | 'va_bca'
-  | 'va_mandiri'
-  | 'va_bni'
-  | 'va_bri'
-  | 'qris'
-  | 'ewallet_gopay'
-  | 'intl_card_wise';
+export type PaymentMethodId = string;
 
 export interface PrintingMethodOption { id: string; name: string; description: string; pricingType: string; basePrice: number }
 
@@ -89,6 +82,9 @@ export interface PaymentMethodConfig {
   label: string;
   group: string;
   enabled: boolean;
+  accountName?: string;
+  accountNumber?: string;
+  instructions?: string;
 }
 
 export interface ShippingCourierConfig {

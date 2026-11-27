@@ -62,7 +62,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [tab, setTab] = useState<'orders' | 'catalog' | 'production' | 'website'>('orders');
+  const [tab, setTab] = useState<'orders' | 'catalog' | 'production' | 'website' | 'payments'>('orders');
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
@@ -78,18 +78,25 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
   const [productImage, setProductImage] = useState<File | null>(null);
   const [priceDraft, setPriceDraft] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
+  const [paymentMethods, setPaymentMethods] = useState<Array<{id:string;label:string;group:string;enabled:boolean;accountName?:string;accountNumber?:string;instructions?:string}>>([]);
+  const [newPaymentLabel, setNewPaymentLabel] = useState('');
+  const [newPaymentGroup, setNewPaymentGroup] = useState('Transfer Bank');
+  const [newPaymentAccountName, setNewPaymentAccountName] = useState('');
+  const [newPaymentAccountNumber, setNewPaymentAccountNumber] = useState('');
+  const [newPaymentInstructions, setNewPaymentInstructions] = useState('');
 
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
     const canManageCatalog = profile && ['owner','admin'].includes(profile.role);
-    const [o, p, c, d, r, m] = await Promise.all([
+    const [o, p, c, d, r, m, paymentSetting] = await Promise.all([
       supabase.from('showroom_orders').select('id,order_number,spk_number,status,production_status,payment_status,subtotal,discount,additional_cost,delivery_cost,total_amount,deposit_amount,created_at,estimated_completion,notes,shipping_method,shipping_address,shipping_city,version,design_notes,production_notes,finishing_instructions,showroom_customers(name,whatsapp,address,email),showroom_order_items(id,product_id,product_name_snapshot,quantity,subtotal,specification,showroom_order_variants(size,color,quantity),showroom_order_designs(id,original_storage_path,front_preview_path,back_preview_path,design_version,approval_status))').order('created_at', { ascending: false }).limit(100),
       canManageCatalog ? supabase.from('showroom_products').select('id,name,slug,base_price,is_published,is_featured,description').order('created_at', { ascending: false }) : Promise.resolve({data:[],error:null}),
       canManageCatalog ? supabase.from('showroom_categories').select('id,name,slug,is_active').order('sort_order') : Promise.resolve({data:[],error:null}),
       canManageCatalog ? supabase.from('showroom_dtf_prices').select('id,size_code,label,price,width_cm,height_cm,is_active').order('sort_order') : Promise.resolve({data:[],error:null}),
       canManageCatalog ? supabase.from('showroom_product_reviews').select('id,product_id,author_name,rating,comment,created_at,is_approved').order('created_at', { ascending: false }).limit(100) : Promise.resolve({data:[],error:null}),
       canManageCatalog ? supabase.from('showroom_materials').select('id,name,description,surcharge,is_active').order('name') : Promise.resolve({data:[],error:null}),
+      canManageCatalog ? supabase.from('showroom_settings').select('value').eq('key','payment').maybeSingle() : Promise.resolve({data:null,error:null}),
     ].map(safeAdminQuery));
     const failed = [['pesanan',o],['produk',p],['kategori',c],['harga DTF',d],['ulasan',r],['bahan',m]].filter(([,result])=>Boolean((result as {error?:unknown}).error)).map(([name])=>name);
     if (failed.length) onToast('Sebagian data dashboard belum termuat: '+failed.join(', ')+'. Periksa koneksi atau sesi admin, lalu muat ulang.');
@@ -99,6 +106,9 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     setPrices((d.data || []) as PriceRow[]);
     setReviews((r.data || []) as ReviewRow[]);
     setMaterials((m.data || []) as MaterialRow[]);
+    const paymentValue = paymentSetting.data?.value as any;
+    const paymentRows = Array.isArray(paymentValue?.methods) ? paymentValue.methods : [];
+    setPaymentMethods(paymentRows.map((row:any) => ({ id:String(row.id || crypto.randomUUID()), label:String(row.label || ''), group:String(row.group || 'Manual'), enabled:row.enabled !== false, accountName:String(row.accountName || ''), accountNumber:String(row.accountNumber || ''), instructions:String(row.instructions || '') })));
     } finally { setRefreshing(false); }
   }, [onToast, profile?.role]);
 
@@ -156,6 +166,23 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     const csv = [header,...rows].map((row) => row.map((value) => '"' + String(value ?? '').replace(/"/g,'""') + '"').join(',')).join('\r\n');
     const url = URL.createObjectURL(new Blob(['\ufeff',csv],{type:'text/csv;charset=utf-8;'}));
     const link = document.createElement('a'); link.href=url; link.download='SANDIKALE-laporan-pesanan.csv'; link.click(); URL.revokeObjectURL(url);
+  };
+
+  const savePaymentSettings = async (next: typeof paymentMethods) => {
+    if (!profile || !['owner','admin'].includes(profile.role)) return;
+    const { error: saveError } = await supabase.from('showroom_settings').update({ value: { mode: 'manual', methods: next, verification: 'admin' }, updated_by: profile.id, updated_at: new Date().toISOString() }).eq('key','payment');
+    if (saveError) { onToast('Gagal menyimpan metode pembayaran: ' + saveError.message); return; }
+    setPaymentMethods(next);
+    try { localStorage.removeItem('sandikale_offline_bootstrap_v2'); } catch { /* ignore cache cleanup failure */ }
+    onToast('Metode pembayaran berhasil disimpan dan diperbarui di checkout.');
+  };
+
+  const addPaymentMethod = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!newPaymentLabel.trim()) { onToast('Nama metode pembayaran wajib diisi.'); return; }
+    const next = [...paymentMethods, { id: 'custom_' + crypto.randomUUID().replace(/-/g,'').slice(0,12), label: newPaymentLabel.trim(), group: newPaymentGroup, enabled: true, accountName: newPaymentAccountName.trim(), accountNumber: newPaymentAccountNumber.trim(), instructions: newPaymentInstructions.trim() }];
+    await savePaymentSettings(next);
+    setNewPaymentLabel(''); setNewPaymentAccountName(''); setNewPaymentAccountNumber(''); setNewPaymentInstructions('');
   };
 
   const signIn = async (event: React.FormEvent) => {
@@ -371,12 +398,28 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
           <div><div className="text-xs tracking-[.3em] uppercase text-[#7A1F2B]">SANDIKALE · CONTROL ROOM</div><h1 className="text-2xl md:text-3xl font-bold mt-1">Dashboard Showroom</h1><p className="text-xs text-white/50 mt-1">{profile.full_name} · {profile.role}</p></div>
           <div className="flex gap-2"><button type="button" onClick={() => void load().catch((e) => onToast(e.message || "Gagal memuat ulang data."))} disabled={refreshing} className="border border-white/15 rounded-lg px-4 py-2 text-sm disabled:opacity-50">{refreshing ? "Memuat…" : "Muat ulang"}</button><button onClick={signOut} className="bg-white text-black rounded-lg px-4 py-2 text-sm font-semibold">Keluar</button></div>
         </header>
-        <nav className="flex flex-wrap gap-2">{(['orders','catalog','production','website'] as const).filter((key) => ['owner','admin'].includes(profile.role) || (key === 'orders' && ['staff','production'].includes(profile.role))).map((key) => <button key={key} onClick={() => setTab(key)} className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${tab === key ? 'bg-[#7A1F2B] text-white' : 'bg-white/5 text-white/65 hover:bg-white/10'}`}>{({orders:'Pesanan',catalog:'Katalog',production:'Produksi',website:'Website & Ulasan'} as Record<string,string>)[key]}</button>)}</nav>
+        <nav className="flex flex-wrap gap-2">{(['orders','catalog','production','website','payments'] as const).filter((key) => ['owner','admin'].includes(profile.role) || (key === 'orders' && ['staff','production'].includes(profile.role))).map((key) => <button key={key} onClick={() => setTab(key)} className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${tab === key ? 'bg-[#7A1F2B] text-white' : 'bg-white/5 text-white/65 hover:bg-white/10'}`}>{({orders:'Pesanan',catalog:'Katalog',production:'Produksi',website:'Website & Ulasan',payments:'Pembayaran'} as Record<string,string>)[key]}</button>)}</nav>
         <section className="grid grid-cols-2 xl:grid-cols-4 gap-3">
           {[{label:'Total pesanan',value:orders.length,detail:'100 pesanan terbaru'},{label:'Pendapatan terbayar',value:money(paidRevenue),detail:'Pembayaran terverifikasi'},{label:'Menunggu pembayaran',value:pendingPayments,detail:'Perlu tindak lanjut'},{label:'Dalam proses',value:activeProduction,detail:'Pesanan belum selesai'}].map((item)=><article key={item.label} className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[.07] to-transparent p-4"><p className="text-xs text-white/45">{item.label}</p><p className="text-xl md:text-2xl font-bold mt-2">{item.value}</p><p className="text-[10px] text-white/35 mt-1">{item.detail}</p></article>)}
         </section>
         {(['owner','admin'].includes(profile.role) && (tab === 'catalog' || tab === 'production' || tab === 'website')) && <AdminContentManager key={tab} initialWorkspace={tab} allowedWorkspaces={['catalog','production','website']} onToast={onToast} />}
         {tab === 'website' && <section className="space-y-3 mt-6"><h2 className="text-xl font-bold">Moderasi ulasan ({reviews.length})</h2>{reviews.map((r) => <article key={r.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 space-y-2"><div className="flex justify-between gap-3"><strong>{r.author_name} · {'★'.repeat(r.rating)}</strong><span className="text-xs text-white/50">{r.is_approved ? 'Terbit' : 'Menunggu'}</span></div><p className="text-sm text-white/75">{r.comment}</p><div className="flex gap-2"><button onClick={() => void moderateReview(r, true)} className="bg-[#7A1F2B] rounded px-3 py-2 text-xs">Terbitkan</button><button onClick={() => void moderateReview(r, false)} className="border border-white/15 rounded px-3 py-2 text-xs">Tolak</button><button onClick={() => void deleteReview(r)} className="border border-red-500/30 text-red-300 rounded px-3 py-2 text-xs">Hapus</button></div></article>)}</section>}
+        {tab === 'payments' && ['owner','admin'].includes(profile.role) && <section className="space-y-5">
+          <div><h2 className="text-xl font-bold">Metode Pembayaran</h2><p className="text-sm text-white/50 mt-1">Tambahkan rekening atau kanal pembayaran. Metode aktif akan muncul di checkout pelanggan.</p></div>
+          <form onSubmit={(e)=>void addPaymentMethod(e)} className="grid grid-cols-1 md:grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-[#121212] p-4">
+            <label className="text-xs space-y-2">Nama metode<input required value={newPaymentLabel} onChange={e=>setNewPaymentLabel(e.target.value)} placeholder="Contoh: BCA Transfer" className="w-full rounded-lg bg-black border border-white/15 px-3 py-2.5 text-sm"/></label>
+            <label className="text-xs space-y-2">Kategori<select value={newPaymentGroup} onChange={e=>setNewPaymentGroup(e.target.value)} className="w-full rounded-lg bg-black border border-white/15 px-3 py-2.5 text-sm"><option>Transfer Bank</option><option>QRIS</option><option>E-Wallet</option><option>Tunai</option><option>Manual</option><option>Lainnya</option></select></label>
+            <label className="text-xs space-y-2">Nama pemilik / penerima<input value={newPaymentAccountName} onChange={e=>setNewPaymentAccountName(e.target.value)} placeholder="Nama pemilik rekening" className="w-full rounded-lg bg-black border border-white/15 px-3 py-2.5 text-sm"/></label>
+            <label className="text-xs space-y-2">Nomor rekening / ID tujuan<input value={newPaymentAccountNumber} onChange={e=>setNewPaymentAccountNumber(e.target.value)} placeholder="Nomor rekening atau nomor e-wallet" className="w-full rounded-lg bg-black border border-white/15 px-3 py-2.5 text-sm"/></label>
+            <label className="text-xs space-y-2 md:col-span-2">Instruksi pembayaran<textarea value={newPaymentInstructions} onChange={e=>setNewPaymentInstructions(e.target.value)} placeholder="Petunjuk transfer, konfirmasi, atau catatan untuk pelanggan" rows={3} className="w-full rounded-lg bg-black border border-white/15 px-3 py-2.5 text-sm"/></label>
+            <div className="md:col-span-2"><button disabled={busy} className="rounded-lg bg-[#7A1F2B] px-5 py-3 text-sm font-semibold disabled:opacity-50">Tambah metode pembayaran</button></div>
+          </form>
+          <div className="space-y-3">{paymentMethods.map((method)=><article key={method.id} className="rounded-xl border border-white/10 bg-[#121212] p-4 flex flex-col md:flex-row md:items-center gap-3">
+            <div className="flex-1 min-w-0"><div className="font-semibold">{method.label}</div><div className="text-xs text-white/50">{method.group}{method.accountName?' · '+method.accountName:''}{method.accountNumber?' · '+method.accountNumber:''}</div>{method.instructions&&<p className="text-xs text-white/45 mt-1 whitespace-pre-line">{method.instructions}</p>}</div>
+            <div className="flex gap-2"><button type="button" onClick={()=>void savePaymentSettings(paymentMethods.map(item=>item.id===method.id?{...item,enabled:!item.enabled}:item))} className={`rounded-lg px-3 py-2 text-xs font-semibold ${method.enabled?'bg-emerald-800':'bg-white/10'}`}>{method.enabled?'Aktif':'Nonaktif'}</button><button type="button" onClick={()=>{if(window.confirm('Hapus metode pembayaran '+method.label+'?'))void savePaymentSettings(paymentMethods.filter(item=>item.id!==method.id));}} className="rounded-lg border border-red-500/30 text-red-300 px-3 py-2 text-xs">Hapus</button></div>
+          </article>)}</div>
+          {!paymentMethods.length&&<p className="text-sm text-white/45">Belum ada metode. Tambahkan metode pembayaran pertama di atas.</p>}
+        </section>}
         {tab === 'orders' && <section className="space-y-4"><div className="flex flex-wrap justify-between gap-3"><h2 className="text-xl font-bold">Pesanan masuk ({orders.length})</h2><div className="flex gap-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nomor / nama / WhatsApp" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm" /><button onClick={exportOrdersCsv} className="rounded-lg border border-white/15 px-3 py-2 text-xs whitespace-nowrap">Export CSV</button></div></div>
           {visibleOrders.map((order) => <article key={order.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 md:p-5 space-y-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="font-bold">{order.order_number}</div><div className="text-xs text-white/50">{order.spk_number} · {new Date(order.created_at).toLocaleString('id-ID')}</div></div><div className="text-right"><div className="font-bold">{money(Number(order.total_amount))}</div><div className="text-xs text-white/50">DP {money(Number(order.deposit_amount))} · {order.payment_status}</div></div></div><div className="text-sm">{order.showroom_customers?.name || 'Pelanggan'} · {order.showroom_customers?.whatsapp || '—'}</div><div className="text-xs text-white/60">Pengiriman: {order.shipping_method==='pickup'?'Ambil sendiri di store':order.shipping_method==='courier'?'Diantar kurir':'Belum tercatat'}{order.shipping_method==='courier'&&[order.shipping_address,order.shipping_city].filter(Boolean).length?' · '+[order.shipping_address,order.shipping_city].filter(Boolean).join(', '):''}</div><div className="text-xs text-white/60">{(order.showroom_order_items || []).map((item) => `${item.product_name_snapshot} × ${item.quantity}`).join(' · ')}</div><div className="flex flex-wrap items-center gap-3"><span className="text-xs text-white/50">Status: {order.status}</span><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => openReceiptDesk(order)} className="border border-[#7A1F2B]/60 text-[#D58B95] rounded-lg px-3 py-2 text-xs">Cetak Nota Struk</button><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => void generateSpk(order)} className="border border-white/15 rounded-lg px-3 py-2 text-xs">Buat SPK PDF</button>{order.payment_status !== 'paid' && <button disabled={!['owner','admin'].includes(profile.role)} onClick={() => void markPaid(order)} className="bg-emerald-700 rounded-lg px-3 py-2 text-xs">Konfirmasi pembayaran</button>}<select disabled={busy || !['owner','admin','staff'].includes(profile.role)} defaultValue="" onChange={(e) => { if (e.target.value) void updateStage(order, e.target.value); }} className="bg-black border border-white/15 rounded-lg px-3 py-2 text-sm"><option value="">Ubah status produksi…</option>{Object.keys(STATUS).map((s) => <option key={s} value={s}>{s}</option>)}</select><a className="text-xs text-[#A33A48]" href={`https://wa.me/${order.showroom_customers?.whatsapp || ''}`} target="_blank" rel="noreferrer">Hubungi pelanggan via WhatsApp</a></div></article>)}
           {!visibleOrders.length && <p className="text-sm text-white/50">Belum ada pesanan yang cocok.</p>}</section>}

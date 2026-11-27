@@ -1,5 +1,7 @@
 import { AlertCircle, CheckCircle2, CreditCard, MessageCircle, ShieldCheck, ShoppingBag, ShoppingCart, Trash2, Truck, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import instagramIconSvg from '../assets/icons/instagram-uploaded.svg?raw';
+import whatsappIconSvg from '../assets/icons/whatsapp-uploaded.svg?raw';
 import type {
   CartItem,
   Order,
@@ -170,9 +172,7 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   doc.text(doc.splitTextToSize(production,88).slice(0,7),105,224);
   doc.setDrawColor(170,170,170);doc.setLineWidth(0.25);doc.line(m,271,R,271);
   doc.setFont('helvetica','normal');doc.setFontSize(9);
-  const instagramSvg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="#111111" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="#111111" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="#111111"/></svg>';
-  const whatsappSvg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.5 11.7a8.4 8.4 0 0 1-12.4 7.4L3 20l.9-4.9a8.4 8.4 0 1 1 16.6-3.4Z" fill="none" stroke="#111111" stroke-width="1.8" stroke-linejoin="round"/><path d="M8.2 7.7c.3-.5.7-.5 1-.1l1 1.7c.2.3.1.6-.2.9l-.6.6c.7 1.4 1.8 2.5 3.3 3.2l.6-.7c.2-.3.5-.3.8-.1l1.7.9c.4.2.5.6.2 1-.4.7-1.1 1.1-2 1-3.5-.5-6.8-3.7-7.2-7.1-.1-.6.5-1.1 1.4-1.3Z" fill="#111111"/></svg>';
-  const instagramIcon=await svgIconToPngDataUrl(instagramSvg),whatsappIcon=await svgIconToPngDataUrl(whatsappSvg);
+  const instagramIcon=await svgIconToPngDataUrl(instagramIconSvg),whatsappIcon=await svgIconToPngDataUrl(whatsappIconSvg);
   if(instagramIcon)doc.addImage(instagramIcon,'PNG',65,277.5,5,5);doc.text('@_sandikale',72,282);
   if(whatsappIcon)doc.addImage(whatsappIcon,'PNG',119,277.5,5,5);doc.text('+62 822-6641-2844',126,282);
   doc.link(65,277.5,34,6,{url:'https://instagram.com/_sandikale'});
@@ -448,6 +448,14 @@ export function CartCheckoutDrawer({
                         <span className="text-[10px] text-neutral-400">{opt.group}</span>
                       </label>
                     ))}
+                    {selectedPayment && (selectedPayment.accountName || selectedPayment.accountNumber || selectedPayment.instructions) && (
+                      <div className="rounded-lg border border-[#7A1F2B]/25 bg-[#7A1F2B]/5 p-3 text-xs space-y-1.5">
+                        <div className="font-semibold">{selectedPayment.label}</div>
+                        {selectedPayment.accountName && <div>Atas nama: <b>{selectedPayment.accountName}</b></div>}
+                        {selectedPayment.accountNumber && <div>Nomor rekening / tujuan: <b className="select-all">{selectedPayment.accountNumber}</b></div>}
+                        {selectedPayment.instructions && <p className="text-neutral-500 whitespace-pre-line">{selectedPayment.instructions}</p>}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -509,6 +517,13 @@ export function CartCheckoutDrawer({
                     <span className="font-mono-tabular text-[#7A1F2B]">{formatRupiah(createdOrder.total)}</span>
                   </div>
                 </div>
+
+                {selectedPayment && (selectedPayment.accountName || selectedPayment.accountNumber || selectedPayment.instructions) && <div className="p-4 rounded-xl border border-[#7A1F2B]/25 bg-[#7A1F2B]/5 space-y-1.5 text-xs">
+                  <div className="font-bold">{selectedPayment.label}</div>
+                  {selectedPayment.accountName && <div>Atas nama: <b>{selectedPayment.accountName}</b></div>}
+                  {selectedPayment.accountNumber && <div>Nomor rekening / tujuan: <b className="select-all">{selectedPayment.accountNumber}</b></div>}
+                  {selectedPayment.instructions && <p className="whitespace-pre-line text-neutral-500">{selectedPayment.instructions}</p>}
+                </div>}
 
                 {/* Customer order handoff: SPK, design files and optional payment proof */}
                 <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/35 space-y-3">
