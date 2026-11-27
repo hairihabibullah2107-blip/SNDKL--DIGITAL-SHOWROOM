@@ -97,6 +97,7 @@ export function CustomDtfStudio({
   const [removingBg, setRemovingBg] = useState(false);
   const [mockupImageFailed, setMockupImageFailed] = useState(false);
   const [mockupHasTransparency, setMockupHasTransparency] = useState(false);
+  const [mockupImageSrc, setMockupImageSrc] = useState('');
 
   const [activeView, setActiveView] = useState<'front' | 'back' | 'sleeve'>('front');
   const [placements, setPlacements] = useState<CustomDesignPlacement[]>([]);
@@ -149,31 +150,58 @@ export function CustomDtfStudio({
       ? selectedProduct.backImage || selectedProduct.frontImage || selectedProduct.images[0]
       : selectedProduct.frontImage || selectedProduct.images[0];
   useEffect(() => {
+    let cancelled = false;
     setMockupImageFailed(false);
     setMockupHasTransparency(false);
-    if (!currentProductImage) return;
+    setMockupImageSrc('');
+    if (!currentProductImage) return () => { cancelled = true; };
+
     const image = new Image();
     image.crossOrigin = 'anonymous';
-    image.onload = () => {
+    image.onload = async () => {
+      if (cancelled) return;
       try {
         const canvas = document.createElement('canvas');
         canvas.width = Math.min(96, image.naturalWidth || 96);
         canvas.height = Math.min(96, image.naturalHeight || 96);
         const context = canvas.getContext('2d', { willReadFrequently: true });
-        if (!context) return;
+        if (!context) throw new Error('Canvas preview unavailable');
         context.drawImage(image, 0, 0, canvas.width, canvas.height);
         const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
         let transparentPixels = 0;
-        for (let index = 3; index < pixels.length; index += 4) if (pixels[index] < 245) transparentPixels++;
-        setMockupHasTransparency(transparentPixels > pixels.length / 4 * 0.015);
-      } catch { setMockupHasTransparency(false); }
+        for (let index = 3; index < pixels.length; index += 4) {
+          if (pixels[index] < 245) transparentPixels++;
+        }
+        const alreadyTransparent = transparentPixels > pixels.length / 4 * 0.015;
+        if (alreadyTransparent) {
+          setMockupImageSrc(currentProductImage);
+          setMockupHasTransparency(true);
+          return;
+        }
+
+        // Isolate a flat studio backdrop automatically so garment recoloring
+        // affects the shirt silhouette instead of tinting the entire photo.
+        const isolated = await removeImageBackground(currentProductImage, { tolerance: 28, feather: 20 });
+        if (!cancelled) {
+          setMockupImageSrc(isolated);
+          setMockupHasTransparency(true);
+        }
+      } catch {
+        if (!cancelled) {
+          setMockupImageSrc(currentProductImage);
+          setMockupHasTransparency(false);
+        }
+      }
     };
-    image.onerror = () => setMockupImageFailed(true);
+    image.onerror = () => {
+      if (!cancelled) setMockupImageFailed(true);
+    };
     image.src = currentProductImage;
+    return () => { cancelled = true; };
   }, [selectedProductId, activeView, currentProductImage]);
   const baseGarmentPrice = selectedProduct?.price || 0;
   const selectedSizeSurcharge = selectedProduct?.sizeSurcharges?.[size] || 0;
-  const rawUnitPrice = baseGarmentPrice + dtfTotalPerShirt + selectedSizeSurcharge;
+  const rawUnitPrice = baseGarmentPrice + (selectedFabric?.priceModifier || 0) + dtfTotalPerShirt + selectedSizeSurcharge;
   const activeBulkDiscount = [...bulkDiscounts].sort((a,b)=>b.minQuantity-a.minQuantity).find((rule)=>quantity>=rule.minQuantity);
   const bulkDiscountRate = Math.max(0,Math.min(100,activeBulkDiscount?.discountPercent||0))/100;
   const unitPrice = Math.round(rawUnitPrice * (1 - bulkDiscountRate));
@@ -515,8 +543,8 @@ export function CustomDtfStudio({
               {selectedProduct && currentProductImage && !mockupImageFailed ? (
                 <>
                   <img
-                    key={currentProductImage}
-                    src={currentProductImage}
+                    key={mockupImageSrc || currentProductImage}
+                    src={mockupImageSrc || currentProductImage}
                     alt={`${selectedProduct.name} ${activeView === 'sleeve' ? 'tampak lengan' : activeView === 'back' ? 'tampak belakang' : 'tampak depan'}`}
                     referrerPolicy="no-referrer"
                     onError={() => setMockupImageFailed(true)}
@@ -526,16 +554,13 @@ export function CustomDtfStudio({
                     <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{
                       backgroundColor: selectedColor.hex,
                       opacity: 0.84,
-                      WebkitMaskImage: 'url("' + currentProductImage + '")',
-                      maskImage: 'url("' + currentProductImage + '")',
+                      WebkitMaskImage: 'url("' + (mockupImageSrc || currentProductImage) + '")',
+                      maskImage: 'url("' + (mockupImageSrc || currentProductImage) + '")',
                       WebkitMaskSize: 'contain', maskSize: 'contain',
                       WebkitMaskPosition: 'center', maskPosition: 'center',
                       WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
                       mixBlendMode: 'multiply',
                     }} />
-                  )}
-                  {selectedColor && !mockupHasTransparency && (
-                    <div className="absolute bottom-3 left-3 right-3 rounded-lg bg-black/75 px-3 py-2 text-[10px] leading-relaxed text-white/85 backdrop-blur-sm">Warna dipilih untuk pesanan. Untuk pratinjau pewarnaan realistis, unggah foto kaos PNG transparan agar latar dan bayangan tidak ikut berubah.</div>
                   )}
                   {selectedColor && (
                     <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/75 text-white text-[11px] font-medium flex items-center gap-1.5 backdrop-blur-sm">
@@ -773,25 +798,27 @@ export function CustomDtfStudio({
                       Pilihan warna belum diisi oleh Admin.
                     </div>
                   ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {availableColors.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => setColorId(c.id)}
-                          title={c.name}
-                          aria-label={`Pilih warna ${c.name}`}
-                          aria-pressed={colorId === c.id}
-                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-medium transition-colors ${
-                            colorId === c.id ? 'border-[#7A1F2B] bg-[#7A1F2B]/10 text-[#7A1F2B] dark:text-white' : 'border-black/15 dark:border-white/15'
-                          }`}
-                        >
-                          <span className="w-4 h-4 rounded-full border border-black/20 dark:border-white/25 shrink-0" style={{ backgroundColor: c.hex }} />
-                          <span>{c.name}</span>
-                          {colorId === c.id && <Check className="w-3.5 h-3.5" />}
-                        </button>
-                      ))}
-                    </div>
+                    <>
+                      <div className="grid grid-cols-5 sm:grid-cols-6 gap-3">
+                        {availableColors.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => setColorId(c.id)}
+                            title={c.name}
+                            aria-label={`Pilih warna ${c.name}`}
+                            aria-pressed={colorId === c.id}
+                            className={`relative mx-auto flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#7A1F2B] ${
+                              colorId === c.id ? 'border-[#7A1F2B] scale-110 shadow-[0_0_0_3px_rgba(122,31,43,.18)]' : 'border-black/15 dark:border-white/20 hover:scale-105'
+                            }`}
+                            style={{ backgroundColor: c.hex }}
+                          >
+                            {colorId === c.id && <Check className={`h-4 w-4 ${['#ffffff','#fff','#f5f5f5','#eeeeee'].includes(c.hex.toLowerCase()) ? 'text-black' : 'text-white'}`} />}
+                          </button>
+                        ))}
+                      </div>
+                      {selectedColor && <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Warna terpilih: <strong className="text-neutral-800 dark:text-white">{selectedColor.name}</strong></p>}
+                    </>
                   )}
                 </div>
 

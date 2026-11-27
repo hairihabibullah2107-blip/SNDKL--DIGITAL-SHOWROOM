@@ -107,7 +107,9 @@ export async function loadShowroomBootstrap() {
     const material = Array.isArray(row.showroom_materials) ? row.showroom_materials[0] : row.showroom_materials;
     const price = asNumber(row.base_price);
     const modelName = String(row.model || '').toLowerCase();
-    const silhouette = modelName.includes('hood') ? 'hoodie' : modelName.includes('boxy') ? 'boxy-tee' : modelName.includes('long') ? 'longsleeve' : 'regular-tee';
+    const productName = String(row.name || '').toLowerCase();
+    const isLongSleeve = modelName.includes('long') || productName.includes('lengan panjang') || productName.includes('long sleeve') || productName.includes('longsleeve');
+    const silhouette = modelName.includes('hood') || productName.includes('hoodie') ? 'hoodie' : modelName.includes('boxy') || productName.includes('boxy') ? 'boxy-tee' : isLongSleeve ? 'longsleeve' : 'regular-tee';
     return {
       id: row.id,
       sku: productVariants.find((v) => v.sku)?.sku ?? row.slug.toUpperCase().replace(/-/g, '-'),
