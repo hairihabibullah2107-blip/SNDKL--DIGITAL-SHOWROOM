@@ -572,6 +572,7 @@ export function CustomDtfStudio({
       colorName: selectedColor.name,
       colorHex: selectedColor.hex,
       backImage: selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0],
+      sleeveImage: selectedProduct.sleeveImage || undefined,
       size,
       quantity,
       unitPrice,
