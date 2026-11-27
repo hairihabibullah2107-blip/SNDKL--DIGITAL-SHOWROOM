@@ -19,6 +19,12 @@ type PriceRow = { id: string; size_code: string; label: string; price: number; w
 const money = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value || 0));
 const safeAdminQuery = async (query: PromiseLike<any>) => { try { return await query; } catch (error) { return { data: null, error }; } };
 
+async function getVerifiedPaymentTotal(orderId: string): Promise<number> {
+  const { data, error } = await supabase.from('showroom_payments').select('amount').eq('order_id', orderId).eq('payment_status', 'verified');
+  if (error) throw error;
+  return (data || []).reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+}
+
 async function imageBlobToJpegDataUrl(blob: Blob): Promise<string> {
   const bitmap = await createImageBitmap(blob);
   const canvas = document.createElement('canvas');
@@ -255,6 +261,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
       doc.setTextColor(20, 20, 20); doc.setFontSize(13); doc.text('INFORMASI PESANAN', 14, 48);
       doc.setFontSize(10);
       const customer = order.showroom_customers;
+      const paidTotal = await getVerifiedPaymentTotal(order.id);
       const rows = [
         ['Nomor SPK', order.spk_number], ['Nomor Pesanan', order.order_number],
         ['Tanggal', new Date(order.created_at).toLocaleString('id-ID')],
@@ -315,8 +322,8 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
       }
       y += 8; doc.setFontSize(10); doc.setFont('helvetica', 'bold');
       doc.text(`Subtotal: ${money(Number(order.subtotal))}`, 14, y); y += 7;
-      doc.text(`DP: ${money(Number(order.deposit_amount))}`, 14, y); y += 7;
-      doc.text(`Sisa: ${money(Math.max(0, Number(order.total_amount) - Number(order.deposit_amount)))}`, 14, y); y += 12;
+      doc.text(`Pembayaran diterima: ${money(paidTotal)}`, 14, y); y += 7;
+      doc.text(`Sisa: ${money(Math.max(0, Number(order.total_amount) - paidTotal))}`, 14, y); y += 12;
       doc.setFont('helvetica', 'normal'); doc.text('Catatan desain:', 14, y); y += 6; doc.text(doc.splitTextToSize(order.design_notes || '-', 180), 14, y); y += 14;
       doc.text('Catatan produksi:', 14, y); y += 6; doc.text(doc.splitTextToSize(order.production_notes || order.notes || '-', 180), 14, y); y += 14;
       doc.text('Instruksi finishing:', 14, y); y += 6; doc.text(doc.splitTextToSize(order.finishing_instructions || '-', 180), 14, y); y += 18;
@@ -360,6 +367,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
       const { jsPDF } = await import('jspdf');
       const doc = new jsPDF();
       const invoiceNumber = 'INV-' + order.order_number;
+      const paidTotal = await getVerifiedPaymentTotal(order.id);
       doc.setFillColor(20, 20, 20); doc.rect(0, 0, 210, 38, 'F');
       doc.setTextColor(255, 255, 255); doc.setFontSize(22); doc.text('SANDIKALE', 14, 16);
       doc.setFontSize(9); doc.setTextColor(190, 115, 125); doc.text('CUSTOM APPAREL & DTF STUDIO', 14, 25);
@@ -396,8 +404,8 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
         ['Biaya tambahan', Number(order.additional_cost || 0)],
         ['Pengiriman', Number(order.delivery_cost || 0)],
         ['TOTAL TAGIHAN', Number(order.total_amount)],
-        ['DP / Pembayaran diterima', Number(order.deposit_amount)],
-        ['SISA TAGIHAN', Math.max(0, Number(order.total_amount) - Number(order.deposit_amount))],
+        ['Pembayaran diterima', paidTotal],
+        ['SISA TAGIHAN', Math.max(0, Number(order.total_amount) - paidTotal)],
       ];
       for (const [label, amount] of totals) {
         if (y > 270) { doc.addPage(); y = 20; }
@@ -469,12 +477,13 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
         });
         if (paymentInsert.error) throw paymentInsert.error;
       }
+      const nextOrderStatus = order.status === 'waiting_payment' ? 'waiting_design_review' : order.status;
       const { error: updateError } = await supabase.from('showroom_orders').update({
-        payment_status: 'paid', status: 'waiting_design_review', updated_at: new Date().toISOString(), updated_by: profile.id,
+        payment_status: 'paid', status: nextOrderStatus, updated_at: new Date().toISOString(), updated_by: profile.id,
       }).eq('id', order.id);
       if (updateError) throw updateError;
       const { error: historyError } = await supabase.from('showroom_order_status_history').insert({
-        order_id: order.id, previous_status: order.status, new_status: 'waiting_design_review',
+        order_id: order.id, previous_status: order.status, new_status: nextOrderStatus,
         changed_by: profile.id, notes: 'Pembayaran dikonfirmasi admin.',
       });
       await load();
