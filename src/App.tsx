@@ -388,8 +388,12 @@ export default function App() {
           garment_type: /long|lengan panjang/i.test(item.customModel || item.name) ? 'long' : 'short',
           color: item.colorName,
           sizes: [{ size: item.size, quantity: item.quantity }],
-          prints: await Promise.all(placements.map(async (placement) => ({
-            position: ({ A6: 'Depan - Dada kiri', A5: 'Lengan kiri', A4: 'Depan - Tengah', A3: 'Belakang - Tengah' } as Record<string, string>)[placement.zoneId] || 'Depan - Tengah',
+          prints: await Promise.all(placements.map(async (placement) => {
+            const zone = dtfZones.find((entry) => entry.id === placement.zoneId);
+            const legacyPosition = ({ A6: 'Depan - Dada kiri', A5: 'Lengan kiri', A4: 'Depan - Tengah', A3: 'Belakang - Tengah' } as Record<string, string>)[placement.zoneId];
+            const position = zone?.view === 'sleeve' ? 'Lengan kiri' : zone?.view === 'back' ? 'Belakang - Tengah' : /logo/i.test(zone?.id || zone?.label || '') ? 'Depan - Dada kiri' : zone?.view === 'front' ? 'Depan - Tengah' : legacyPosition || 'Depan - Tengah';
+            return {
+            position,
             size_code: placement.zoneId,
             ...await artworkForUpload(placement.artworkDataUrl, placement.artworkName || 'design.png'),
             transform: {
@@ -399,7 +403,8 @@ export default function App() {
               scale: placement.scale,
               rotation: placement.rotation,
             },
-          }))),
+            };
+          })),
         };
       }));
       const data = await invokeShowroom<{
