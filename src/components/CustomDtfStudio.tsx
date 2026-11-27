@@ -59,6 +59,53 @@ const GARMENT_COLOR_PREVIEWS: Record<string, string> = {
   cokelat: '#80543A', brown: '#80543A',
 };
 
+type GarmentPreviewBounds = { centerX: number; centerY: number; widthPct: number; heightPct: number };
+
+const DEFAULT_GARMENT_BOUNDS: GarmentPreviewBounds = { centerX: 50, centerY: 50, widthPct: 68, heightPct: 86 };
+
+const measureGarmentPreviewBounds = (src: string): Promise<GarmentPreviewBounds> => new Promise((resolve) => {
+  const image = new Image();
+  image.crossOrigin = 'anonymous';
+  image.onload = () => {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) return resolve(DEFAULT_GARMENT_BOUNDS);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      let minX = canvas.width, minY = canvas.height, maxX = -1, maxY = -1;
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          if (pixels[(y * canvas.width + x) * 4 + 3] > 28) {
+            minX = Math.min(minX, x); minY = Math.min(minY, y);
+            maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+          }
+        }
+      }
+      if (maxX < minX || maxY < minY) return resolve(DEFAULT_GARMENT_BOUNDS);
+      const containerAspect = 4 / 4.2;
+      const imageAspect = (image.naturalWidth || 1) / (image.naturalHeight || 1);
+      const fitWidthPct = Math.min(1, imageAspect / containerAspect) * 100;
+      const fitHeightPct = Math.min(1, containerAspect / imageAspect) * 100;
+      const leftOffset = (100 - fitWidthPct) / 2;
+      const topOffset = (100 - fitHeightPct) / 2;
+      const left = leftOffset + (minX / canvas.width) * fitWidthPct;
+      const right = leftOffset + ((maxX + 1) / canvas.width) * fitWidthPct;
+      const top = topOffset + (minY / canvas.height) * fitHeightPct;
+      const bottom = topOffset + ((maxY + 1) / canvas.height) * fitHeightPct;
+      resolve({ centerX: (left + right) / 2, centerY: (top + bottom) / 2, widthPct: right - left, heightPct: bottom - top });
+    } catch {
+      resolve(DEFAULT_GARMENT_BOUNDS);
+    }
+  };
+  image.onerror = () => resolve(DEFAULT_GARMENT_BOUNDS);
+  image.src = src;
+});
+
+const GARMENT_WIDTH_CM_BY_SIZE: Record<string, number> = { S: 48, M: 50, L: 52, XL: 54, XXL: 56 };
+
 function resolveGarmentColorPreview(value: string): string | null {
   const normalized = value.trim().toLowerCase().replace(/\s+/g, ' ');
   if (/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(normalized)) return normalized;
@@ -124,6 +171,7 @@ export function CustomDtfStudio({
   const [mockupImageFailed, setMockupImageFailed] = useState(false);
   const [mockupHasTransparency, setMockupHasTransparency] = useState(false);
   const [mockupImageSrc, setMockupImageSrc] = useState('');
+  const [garmentBounds, setGarmentBounds] = useState<GarmentPreviewBounds>(DEFAULT_GARMENT_BOUNDS);
 
   const [activeView, setActiveView] = useState<'front' | 'back' | 'sleeve'>('front');
   const [placements, setPlacements] = useState<CustomDesignPlacement[]>([]);
@@ -181,6 +229,9 @@ export function CustomDtfStudio({
   const previewColorHex = resolveGarmentColorPreview(requestedColor);
   const selectedColor = requestedColor.trim() ? { name: requestedColor.trim(), hex: previewColorHex || '#777777' } : null;
   const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
+  const referenceGarmentWidthCm = GARMENT_WIDTH_CM_BY_SIZE[size] || 50;
+  const getZonePreviewWidth = (zone: DtfZonePrice) =>
+    Math.min(garmentBounds.widthPct * 0.96, Math.max(2, garmentBounds.widthPct * (zone.maxWidthCm / referenceGarmentWidthCm)));
   const selectedFabric = fabricId ? fabrics.find((f) => f.id === fabricId) || null : null;
   const activePlacement = placements.find((p) => p.zoneId === selectedZoneId) || null;
 
@@ -197,6 +248,7 @@ export function CustomDtfStudio({
     setMockupImageFailed(false);
     setMockupHasTransparency(false);
     setMockupImageSrc('');
+    setGarmentBounds(DEFAULT_GARMENT_BOUNDS);
     if (!currentProductImage) return () => { cancelled = true; };
 
     const image = new Image();
@@ -219,20 +271,24 @@ export function CustomDtfStudio({
         if (alreadyTransparent) {
           setMockupImageSrc(currentProductImage);
           setMockupHasTransparency(true);
+          const bounds = await measureGarmentPreviewBounds(currentProductImage);
+          if (!cancelled) setGarmentBounds(bounds);
           return;
         }
 
-        // Isolate a flat studio backdrop automatically so garment recoloring
-        // affects the shirt silhouette instead of tinting the entire photo.
+        // Remove the flat studio backdrop, then measure the visible shirt silhouette.
         const isolated = await removeImageBackground(currentProductImage, { tolerance: 28, feather: 20 });
+        const bounds = await measureGarmentPreviewBounds(isolated);
         if (!cancelled) {
           setMockupImageSrc(isolated);
           setMockupHasTransparency(true);
+          setGarmentBounds(bounds);
         }
       } catch {
         if (!cancelled) {
           setMockupImageSrc(currentProductImage);
           setMockupHasTransparency(false);
+          setGarmentBounds(DEFAULT_GARMENT_BOUNDS);
         }
       }
     };
@@ -686,7 +742,7 @@ export function CustomDtfStudio({
                 const zMeta = dtfZones.find((z) => z.id === pl.zoneId);
                 if (!zMeta) return null;
                 const isSelected = pl.zoneId === selectedZoneId;
-                const baseWidth = Math.min(78, Math.max(8, (zMeta.maxWidthCm / 58) * 100));
+                const baseWidth = getZonePreviewWidth(zMeta);
                 return (
                   <div
                     key={pl.zoneId}
@@ -696,8 +752,8 @@ export function CustomDtfStudio({
                     onPointerUp={handlePointerUp}
                     onPointerCancel={handlePointerUp}
                     style={{
-                      left: `${50 + pl.xOffset}%`,
-                      top: `${50 + pl.yOffset}%`,
+                      left: `${garmentBounds.centerX + pl.xOffset}%`,
+                      top: `${garmentBounds.centerY + pl.yOffset}%`,
                       width: `${baseWidth * pl.scale}%`,
                       aspectRatio: `${zMeta.maxWidthCm} / ${zMeta.maxHeightCm}`,
                       transform: 'translate(-50%, -50%)',
@@ -1137,8 +1193,8 @@ export function CustomDtfStudio({
               {visiblePlacements.map((placement) => {
                 const zone = dtfZones.find((item) => item.id === placement.zoneId);
                 if (!zone) return null;
-                const width = Math.min(78, Math.max(8, (zone.maxWidthCm / 58) * 100));
-                return <div key={placement.zoneId} className="absolute flex items-center justify-center" style={{ left: `${50 + placement.xOffset}%`, top: `${50 + placement.yOffset}%`, width: `${width * placement.scale}%`, aspectRatio: `${zone.maxWidthCm} / ${zone.maxHeightCm}`, transform: 'translate(-50%, -50%)' }}>
+                const width = getZonePreviewWidth(zone);
+                return <div key={placement.zoneId} className="absolute flex items-center justify-center" style={{ left: `${garmentBounds.centerX + placement.xOffset}%`, top: `${garmentBounds.centerY + placement.yOffset}%`, width: `${width * placement.scale}%`, aspectRatio: `${zone.maxWidthCm} / ${zone.maxHeightCm}`, transform: 'translate(-50%, -50%)' }}>
                   <img src={placement.artworkDataUrl} alt="" className="w-full h-full object-contain" style={{ transform: `rotate(${placement.rotation}deg)` }} />
                 </div>;
               })}
