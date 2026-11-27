@@ -399,7 +399,7 @@ export default function App() {
             transform: {
               x: 50 + placement.xOffset,
               y: 50 + placement.yOffset,
-              width: 30 * placement.scale,
+              width: zone?.maxWidthCm || 12,
               scale: placement.scale,
               rotation: placement.rotation,
             },
