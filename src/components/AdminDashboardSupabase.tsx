@@ -78,12 +78,13 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
   const [productImage, setProductImage] = useState<File | null>(null);
   const [priceDraft, setPriceDraft] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
-  const [paymentMethods, setPaymentMethods] = useState<Array<{id:string;label:string;group:string;enabled:boolean;accountName?:string;accountNumber?:string;instructions?:string}>>([]);
+  const [paymentMethods, setPaymentMethods] = useState<Array<{id:string;label:string;group:string;enabled:boolean;accountName?:string;accountNumber?:string;instructions?:string;qrImageUrl?:string}>>([]);
   const [newPaymentLabel, setNewPaymentLabel] = useState('');
   const [newPaymentGroup, setNewPaymentGroup] = useState('Transfer Bank');
   const [newPaymentAccountName, setNewPaymentAccountName] = useState('');
   const [newPaymentAccountNumber, setNewPaymentAccountNumber] = useState('');
   const [newPaymentInstructions, setNewPaymentInstructions] = useState('');
+  const [newPaymentQrFile, setNewPaymentQrFile] = useState<File | null>(null);
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -108,7 +109,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     setMaterials((m.data || []) as MaterialRow[]);
     const paymentValue = paymentSetting.data?.value as any;
     const paymentRows = Array.isArray(paymentValue?.methods) ? paymentValue.methods : [];
-    setPaymentMethods(paymentRows.map((row:any) => ({ id:String(row.id || crypto.randomUUID()), label:String(row.label || ''), group:String(row.group || 'Manual'), enabled:row.enabled !== false, accountName:String(row.accountName || ''), accountNumber:String(row.accountNumber || ''), instructions:String(row.instructions || '') })));
+    setPaymentMethods(paymentRows.map((row:any) => ({ id:String(row.id || crypto.randomUUID()), label:String(row.label || ''), group:String(row.group || 'Manual'), enabled:row.enabled !== false, accountName:String(row.accountName || ''), accountNumber:String(row.accountNumber || ''), instructions:String(row.instructions || ''), qrImageUrl:String(row.qrImageUrl || '') })));
     } finally { setRefreshing(false); }
   }, [onToast, profile?.role]);
 
@@ -168,21 +169,42 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     const link = document.createElement('a'); link.href=url; link.download='SANDIKALE-laporan-pesanan.csv'; link.click(); URL.revokeObjectURL(url);
   };
 
-  const savePaymentSettings = async (next: typeof paymentMethods) => {
-    if (!profile || !['owner','admin'].includes(profile.role)) return;
+  const savePaymentSettings = async (next: typeof paymentMethods): Promise<boolean> => {
+    if (!profile || !['owner','admin'].includes(profile.role)) return false;
     const { error: saveError } = await supabase.from('showroom_settings').update({ value: { mode: 'manual', methods: next, verification: 'admin' }, updated_by: profile.id, updated_at: new Date().toISOString() }).eq('key','payment');
-    if (saveError) { onToast('Gagal menyimpan metode pembayaran: ' + saveError.message); return; }
+    if (saveError) { onToast('Gagal menyimpan metode pembayaran: ' + saveError.message); return false; }
     setPaymentMethods(next);
     try { localStorage.removeItem('sandikale_offline_bootstrap_v2'); } catch { /* ignore cache cleanup failure */ }
     onToast('Metode pembayaran berhasil disimpan dan diperbarui di checkout.');
+    return true;
   };
 
   const addPaymentMethod = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!newPaymentLabel.trim()) { onToast('Nama metode pembayaran wajib diisi.'); return; }
-    const next = [...paymentMethods, { id: 'custom_' + crypto.randomUUID().replace(/-/g,'').slice(0,12), label: newPaymentLabel.trim(), group: newPaymentGroup, enabled: true, accountName: newPaymentAccountName.trim(), accountNumber: newPaymentAccountNumber.trim(), instructions: newPaymentInstructions.trim() }];
-    await savePaymentSettings(next);
-    setNewPaymentLabel(''); setNewPaymentAccountName(''); setNewPaymentAccountNumber(''); setNewPaymentInstructions('');
+    if (newPaymentGroup === 'QRIS' && !newPaymentQrFile) { onToast('Unggah gambar QRIS untuk metode QRIS.'); return; }
+    setBusy(true);
+    let uploadedPath = '';
+    try {
+      let qrImageUrl = '';
+      if (newPaymentQrFile) {
+        if (!['image/png','image/jpeg','image/webp'].includes(newPaymentQrFile.type) || newPaymentQrFile.size > 5 * 1024 * 1024) throw new Error('QRIS harus berupa PNG, JPG, atau WEBP maksimal 5 MB.');
+        const safeName = newPaymentQrFile.name.toLowerCase().replace(/[^a-z0-9.-]+/g,'-');
+        uploadedPath = 'payment/qris/' + crypto.randomUUID() + '-' + safeName;
+        const { error: uploadError } = await supabase.storage.from('showroom-product-images').upload(uploadedPath,newPaymentQrFile,{contentType:newPaymentQrFile.type,upsert:false});
+        if (uploadError) throw uploadError;
+        qrImageUrl = supabase.storage.from('showroom-product-images').getPublicUrl(uploadedPath).data.publicUrl;
+      }
+      const next = [...paymentMethods, { id: 'custom_' + crypto.randomUUID().replace(/-/g,'').slice(0,12), label: newPaymentLabel.trim(), group: newPaymentGroup, enabled: true, accountName: newPaymentAccountName.trim(), accountNumber: newPaymentAccountNumber.trim(), instructions: newPaymentInstructions.trim(), qrImageUrl }];
+      const saved = await savePaymentSettings(next);
+      if (!saved && uploadedPath) await supabase.storage.from('showroom-product-images').remove([uploadedPath]);
+      if (saved) {
+        setNewPaymentLabel(''); setNewPaymentAccountName(''); setNewPaymentAccountNumber(''); setNewPaymentInstructions(''); setNewPaymentQrFile(null);
+      }
+    } catch (e) {
+      if (uploadedPath) await supabase.storage.from('showroom-product-images').remove([uploadedPath]);
+      onToast(e instanceof Error ? e.message : 'Gagal menambahkan metode pembayaran.');
+    } finally { setBusy(false); }
   };
 
   const signIn = async (event: React.FormEvent) => {
@@ -412,10 +434,11 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
             <label className="text-xs space-y-2">Nama pemilik / penerima<input value={newPaymentAccountName} onChange={e=>setNewPaymentAccountName(e.target.value)} placeholder="Nama pemilik rekening" className="w-full rounded-lg bg-black border border-white/15 px-3 py-2.5 text-sm"/></label>
             <label className="text-xs space-y-2">Nomor rekening / ID tujuan<input value={newPaymentAccountNumber} onChange={e=>setNewPaymentAccountNumber(e.target.value)} placeholder="Nomor rekening atau nomor e-wallet" className="w-full rounded-lg bg-black border border-white/15 px-3 py-2.5 text-sm"/></label>
             <label className="text-xs space-y-2 md:col-span-2">Instruksi pembayaran<textarea value={newPaymentInstructions} onChange={e=>setNewPaymentInstructions(e.target.value)} placeholder="Petunjuk transfer, konfirmasi, atau catatan untuk pelanggan" rows={3} className="w-full rounded-lg bg-black border border-white/15 px-3 py-2.5 text-sm"/></label>
+            {newPaymentGroup === 'QRIS' && <label className="text-xs space-y-2 md:col-span-2">Upload gambar QRIS (PNG/JPG/WEBP, maksimal 5 MB)<input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>setNewPaymentQrFile(e.target.files?.[0]||null)} className="block w-full rounded-lg bg-black border border-white/15 px-3 py-2.5 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-2"/>{newPaymentQrFile&&<span className="text-emerald-400">{newPaymentQrFile.name}</span>}</label>}
             <div className="md:col-span-2"><button disabled={busy} className="rounded-lg bg-[#7A1F2B] px-5 py-3 text-sm font-semibold disabled:opacity-50">Tambah metode pembayaran</button></div>
           </form>
           <div className="space-y-3">{paymentMethods.map((method)=><article key={method.id} className="rounded-xl border border-white/10 bg-[#121212] p-4 flex flex-col md:flex-row md:items-center gap-3">
-            <div className="flex-1 min-w-0"><div className="font-semibold">{method.label}</div><div className="text-xs text-white/50">{method.group}{method.accountName?' · '+method.accountName:''}{method.accountNumber?' · '+method.accountNumber:''}</div>{method.instructions&&<p className="text-xs text-white/45 mt-1 whitespace-pre-line">{method.instructions}</p>}</div>
+            <div className="flex-1 min-w-0"><div className="font-semibold">{method.label}</div><div className="text-xs text-white/50">{method.group}{method.accountName?' · '+method.accountName:''}{method.accountNumber?' · '+method.accountNumber:''}</div>{method.instructions&&<p className="text-xs text-white/45 mt-1 whitespace-pre-line">{method.instructions}</p>}{method.qrImageUrl&&<img src={method.qrImageUrl} alt={'QRIS '+method.label} loading="lazy" decoding="async" className="mt-3 w-44 max-w-full rounded-lg bg-white p-2 object-contain"/>}</div>
             <div className="flex gap-2"><button type="button" onClick={()=>void savePaymentSettings(paymentMethods.map(item=>item.id===method.id?{...item,enabled:!item.enabled}:item))} className={`rounded-lg px-3 py-2 text-xs font-semibold ${method.enabled?'bg-emerald-800':'bg-white/10'}`}>{method.enabled?'Aktif':'Nonaktif'}</button><button type="button" onClick={()=>{if(window.confirm('Hapus metode pembayaran '+method.label+'?'))void savePaymentSettings(paymentMethods.filter(item=>item.id!==method.id));}} className="rounded-lg border border-red-500/30 text-red-300 px-3 py-2 text-xs">Hapus</button></div>
           </article>)}</div>
           {!paymentMethods.length&&<p className="text-sm text-white/45">Belum ada metode. Tambahkan metode pembayaran pertama di atas.</p>}

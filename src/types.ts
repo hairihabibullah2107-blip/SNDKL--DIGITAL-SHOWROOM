@@ -86,6 +86,7 @@ export interface PaymentMethodConfig {
   accountName?: string;
   accountNumber?: string;
   instructions?: string;
+  qrImageUrl?: string;
 }
 
 export interface ShippingCourierConfig {
