@@ -545,7 +545,75 @@ export function CustomDtfStudio({
     } catch { onToast('Gagal memuat draf dari penyimpanan browser.'); }
   };
 
-  const handleOrderCustom = () => {
+  const buildExactStudioSnapshot = async (view: 'front' | 'back' | 'sleeve'): Promise<string | undefined> => {
+    if (!selectedProduct) return undefined;
+    const source = view === 'front'
+      ? selectedProduct.frontImage || selectedProduct.images[0]
+      : view === 'back'
+        ? selectedProduct.backImage || selectedProduct.frontImage || selectedProduct.images[1] || selectedProduct.images[0]
+        : selectedProduct.sleeveImage || selectedProduct.frontImage || selectedProduct.images[0];
+    if (!source) return undefined;
+    try {
+      const loadImage = async (src: string) => {
+        const image = new Image(); image.crossOrigin = 'anonymous'; image.src = src; await image.decode(); return image;
+      };
+      let image = await loadImage(source);
+      const probe = document.createElement('canvas'); probe.width = Math.min(96, image.naturalWidth || 96); probe.height = Math.min(96, image.naturalHeight || 96);
+      const probeCtx = probe.getContext('2d', { willReadFrequently: true }); if (!probeCtx) return undefined;
+      probeCtx.drawImage(image, 0, 0, probe.width, probe.height);
+      const pixels = probeCtx.getImageData(0, 0, probe.width, probe.height).data;
+      let transparentPixels = 0; for (let i = 3; i < pixels.length; i += 4) if (pixels[i] < 245) transparentPixels++;
+      let hasTransparency = transparentPixels > pixels.length / 4 * 0.015;
+      if (!hasTransparency) {
+        try { image = await loadImage(await removeImageBackground(source, { tolerance: 28, feather: 20 })); hasTransparency = true; }
+        catch { /* Keep the original exactly as the live studio does when isolation fails. */ }
+      }
+      const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 1260;
+      const ctx = canvas.getContext('2d'); if (!ctx) return undefined;
+      const inset = 36, fit = Math.min((canvas.width - inset * 2) / image.naturalWidth, (canvas.height - inset * 2) / image.naturalHeight);
+      const drawW = image.naturalWidth * fit, drawH = image.naturalHeight * fit;
+      ctx.drawImage(image, (canvas.width - drawW) / 2, (canvas.height - drawH) / 2, drawW, drawH);
+      if (hasTransparency && previewColorHex) {
+        // source-atop confines the tint to the garment's alpha; transparent canvas stays transparent.
+        ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.globalAlpha = 0.84;
+        ctx.fillStyle = previewColorHex; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.restore();
+      }
+      const imageAspect = image.naturalWidth / image.naturalHeight, containerAspect = 4 / 4.2;
+      const fitWidthPct = Math.min(1, imageAspect / containerAspect) * 100, fitHeightPct = Math.min(1, containerAspect / imageAspect) * 100;
+      const leftOffset = (100 - fitWidthPct) / 2, topOffset = (100 - fitHeightPct) / 2;
+      const boundsCanvas = document.createElement('canvas'); boundsCanvas.width = 128; boundsCanvas.height = 128;
+      const boundsCtx = boundsCanvas.getContext('2d', { willReadFrequently: true }); if (!boundsCtx) return undefined;
+      boundsCtx.drawImage(image, 0, 0, 128, 128);
+      const alpha = boundsCtx.getImageData(0, 0, 128, 128).data;
+      let minX = 128, minY = 128, maxX = -1, maxY = -1;
+      for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) if (alpha[(y * 128 + x) * 4 + 3] > 28) {
+        minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+      }
+      if (maxX < minX || maxY < minY) return undefined;
+      const bounds = {
+        centerX: leftOffset + ((minX + maxX + 1) / 256) * fitWidthPct,
+        centerY: topOffset + ((minY + maxY + 1) / 256) * fitHeightPct,
+        widthPct: ((maxX - minX + 1) / 128) * fitWidthPct,
+      };
+      const refWidth = GARMENT_WIDTH_CM_BY_SIZE[size] || 50;
+      for (const placement of placements) {
+        const zone = dtfZones.find((entry) => entry.id === placement.zoneId);
+        if (!zone || zone.view !== view) continue;
+        const art = await loadImage(placement.artworkDataUrl);
+        const baseWidth = Math.min(bounds.widthPct * 0.96, Math.max(2, bounds.widthPct * (zone.maxWidthCm / refWidth)));
+        const boxW = (baseWidth * placement.scale / 100) * canvas.width, boxH = boxW * zone.maxHeightCm / zone.maxWidthCm;
+        const centerX = ((bounds.centerX + placement.xOffset) / 100) * canvas.width;
+        const centerY = ((bounds.centerY + placement.yOffset) / 100) * canvas.height;
+        const artFit = Math.min(boxW / art.naturalWidth, boxH / art.naturalHeight);
+        const artW = art.naturalWidth * artFit, artH = art.naturalHeight * artFit;
+        ctx.save(); ctx.translate(centerX, centerY); ctx.rotate((placement.rotation || 0) * Math.PI / 180);
+        ctx.drawImage(art, -artW / 2, -artH / 2, artW, artH); ctx.restore();
+      }
+      return canvas.toDataURL('image/png');
+    } catch (error) { console.error('Exact SPK preview capture failed:', view, error); return undefined; }
+  };
+
+  const handleOrderCustom = async () => {
     if (!selectedProduct) {
       onToast('Pilih model baju dari katalog terlebih dahulu.');
       return;
@@ -562,8 +630,14 @@ export function CustomDtfStudio({
       onToast('Pilih minimal 1 zona sablon DTF & unggah desain terlebih dahulu.');
       return;
     }
+    const previewSnapshots = {
+      front: await buildExactStudioSnapshot('front'),
+      back: await buildExactStudioSnapshot('back'),
+      sleeve: placements.some((placement) => dtfZones.find((zone) => zone.id === placement.zoneId)?.view === 'sleeve') ? await buildExactStudioSnapshot('sleeve') : undefined,
+    };
     onAddCustomToCart({
       id: `custom-${Date.now()}`,
+      previewSnapshots,
       type: 'custom_dtf',
       productId: selectedProduct.id,
       sku: selectedProduct.sku,

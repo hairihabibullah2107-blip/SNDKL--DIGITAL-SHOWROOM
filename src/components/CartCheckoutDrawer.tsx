@@ -143,6 +143,8 @@ function colorizeGarment(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElemen
 }
 
 async function makeSpkMockup(item: CartItem, side: SpkView): Promise<string | null> {
+  const exactPreview = item.previewSnapshots?.[side];
+  if (exactPreview) return exactPreview;
   const source = side === 'front' ? item.image : side === 'back' ? (item.backImage || item.image) : (item.sleeveImage || '');
   if (!source) return null;
   try {
