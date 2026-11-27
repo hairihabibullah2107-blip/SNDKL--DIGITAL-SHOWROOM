@@ -672,7 +672,7 @@ export default function App() {
                 {siteContent.heroEyebrow}
               </p>
               <h1
-                className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold uppercase tracking-tight leading-[0.94] text-white"
+                className="font-panchang text-5xl sm:text-6xl md:text-7xl lg:text-8xl uppercase tracking-tight leading-[0.94] text-white"
                 style={{ textWrap: 'balance' }}
               >
                 {siteContent.heroTitle.split('|')[0]} <span style={{color:'var(--brand-accent)'}}>{siteContent.heroTitle.split('|')[1] || ''}</span>
