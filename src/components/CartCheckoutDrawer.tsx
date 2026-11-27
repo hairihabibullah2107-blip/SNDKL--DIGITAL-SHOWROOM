@@ -54,43 +54,103 @@ function printCustomerReceipt(order: Order) {
   popup.document.close();
 }
 
+async function imageToPngDataUrl(source?: string): Promise<string | null> {
+  if (!source) return null;
+  try {
+    const image = new Image(); image.crossOrigin = 'anonymous'; image.src = source; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = 900; canvas.height = 1100;
+    const ctx = canvas.getContext('2d'); if (!ctx) return null;
+    const scale = Math.min(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight);
+    const w = image.naturalWidth * scale, h = image.naturalHeight * scale;
+    ctx.drawImage(image, (canvas.width-w)/2, (canvas.height-h)/2, w, h);
+    return canvas.toDataURL('image/png');
+  } catch { return null; }
+}
+async function makeSpkMockup(item: CartItem, side: 'front' | 'back'): Promise<string | null> {
+  const base = await imageToPngDataUrl(side === 'front' ? item.image : (item.backImage || item.image));
+  if (!base) return null;
+  try {
+    const image = new Image(); image.src = base; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = 900; canvas.height = 1100;
+    const ctx = canvas.getContext('2d'); if (!ctx) return base;
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const relevant = (item.customPlacements || []).filter((p) => {
+      const id = p.zoneId.toLowerCase(), label = p.zoneLabel.toLowerCase();
+      const isBack = id.includes('a3') || id.includes('back') || label.includes('belakang') || label.includes('punggung');
+      return side === 'back' ? isBack : !isBack;
+    });
+    for (const placement of relevant) {
+      try {
+        const art = new Image(); art.src = placement.artworkDataUrl; await art.decode();
+        const isLogo = /logo|ornamen|pocket|saku/i.test(placement.zoneId + ' ' + placement.zoneLabel);
+        const ratio = Math.min(1, Math.max(0.1, placement.scale || 1));
+        const widthCm = /a3/i.test(placement.zoneId) ? 28 : /a4/i.test(placement.zoneId) ? 21 : /logo/i.test(placement.zoneId) ? 12 : 10;
+        const width = Math.min(540, (widthCm / 40) * 620 * ratio);
+        const height = width * art.naturalHeight / art.naturalWidth;
+        const xBase = isLogo ? 405 : 450, yBase = isLogo ? 350 : side === 'back' ? 410 : 430;
+        const x = xBase - width / 2 + (placement.xOffset || 0) * 4;
+        const y = yBase - height / 2 + (placement.yOffset || 0) * 4;
+        ctx.save(); ctx.translate(x + width/2, y + height/2); ctx.rotate((placement.rotation || 0) * Math.PI / 180);
+        ctx.drawImage(art, -width/2, -height/2, width, height); ctx.restore();
+      } catch { /* keep base mockup if artwork preview cannot be decoded */ }
+    }
+    return canvas.toDataURL('image/png');
+  } catch { return base; }
+}
+function downloadGeneratedFile(file: File) {
+  const url = URL.createObjectURL(file), link = document.createElement('a');
+  link.href = url; link.download = file.name; link.style.display = 'none';
+  document.body.appendChild(link); link.click(); link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
 async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const { jsPDF } = await import('jspdf');
-  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4', compress:true });
-  const width=doc.internal.pageSize.getWidth(), margin=12, right=width-margin;
-  const designs=order.items.flatMap(item=>item.customPlacements||[]);
-  const density=Math.min(1,26/Math.max(26,order.items.length*10+designs.length*5));
-  const font=(n:number)=>Math.max(6,n*density);
-  const money=(n:number)=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n||0);
-  doc.setFillColor(8,8,8);doc.rect(0,0,width,27,'F');
-  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(19);doc.text('SANDIKALE',margin,12);
-  doc.setTextColor(215,150,158);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text('SURAT PERINTAH KERJA · CUSTOM APPAREL & DTF',margin,20);
-  doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text('SPK PRODUKSI',margin,36);
-  doc.setFontSize(8);doc.text(order.spkNumber||order.id,right,36,{align:'right'});
-  const left=[['No. Pesanan',order.id],['Tanggal',new Date(order.createdAt).toLocaleString('id-ID')],['Customer',order.customerName],['WhatsApp',order.customerPhone]];
-  const rightFields=[['Pengambilan',order.shippingCourier==='Ambil Sendiri di Store'?'Ambil di Store':'Diantar Kurir'],['Alamat',order.shippingCourier==='Ambil Sendiri di Store'?'Konfirmasi jadwal via WhatsApp':[order.shippingAddress,order.shippingCity].filter(Boolean).join(', ')],['Pembayaran',order.paymentLabel],['Status','Menunggu persetujuan admin']];
-  let y=44;doc.setFontSize(font(7.5));
-  for(let i=0;i<4;i++){doc.setFont('helvetica','bold');doc.text(left[i][0],margin,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(left[i][1]||'-',65),margin+25,y);doc.setFont('helvetica','bold');doc.text(rightFields[i][0],111,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(rightFields[i][1]||'-',76),136,y);y+=6;}
-  y+=2;doc.setDrawColor(190,190,190);doc.line(margin,y,right,y);y+=6;doc.setFont('helvetica','bold');doc.setFontSize(font(9));doc.text('RINCIAN ITEM & SPESIFIKASI',margin,y);y+=6;
-  const itemAreaBottom=258;
-  const rowHeight=Math.max(6,Math.min(28,(itemAreaBottom-y)/Math.max(1,order.items.length)));
-  for(const [i,item] of order.items.entries()){
-    const specText='Warna: '+item.colorName+' · Ukuran: '+item.size+' · Bahan: '+(item.fabricName||'-')+' · Model: '+(item.customModel||'-');
-    const printText=(item.customPlacements||[]).map((placement)=>placement.zoneLabel+' / '+placement.artworkName).join(', ')||'File desain asli dilampirkan terpisah';
-    doc.setFillColor(242,242,242);doc.roundedRect(margin,y-3,right-margin,Math.max(4,rowHeight-1),1,1,'F');
-    doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(Math.max(5.2,Math.min(7.5,rowHeight*.34)));
-    doc.text((i+1)+'. '+item.name.slice(0,64),margin+2,y);
-    doc.setFont('helvetica','normal');doc.text(item.quantity+' pcs',right-2,y,{align:'right'});
-    if(rowHeight>7){doc.setFontSize(Math.max(5,Math.min(6.2,rowHeight*.27)));doc.text(doc.splitTextToSize(specText,right-margin-5)[0]||'-',margin+2,y+3);}
-    if(rowHeight>11){doc.setTextColor(90,90,90);doc.text(doc.splitTextToSize('DTF: '+printText,right-margin-5)[0]||'-',margin+2,y+6);doc.setTextColor(20,20,20);}
-    y+=rowHeight;
-  }
-  y=Math.min(itemAreaBottom+2,y+2);
-  y+=2;doc.line(margin,y,right,y);y+=7;doc.setFont('helvetica','bold');doc.setFontSize(font(8));doc.text('TOTAL PERKIRAAN',margin,y);doc.text(money(order.total),right,y,{align:'right'});y+=7;doc.setFont('helvetica','normal');doc.setFontSize(font(6.5));
-  doc.text(doc.splitTextToSize('SPK ini adalah ringkasan permintaan customer, belum menjadi persetujuan produksi. Admin SANDIKALE akan memeriksa spesifikasi, file desain, harga final, dan pembayaran melalui WhatsApp.',right-margin),margin,y);
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
+  const W = 210, m = 10, R = 200, items = order.items || [];
+  const first = items[0], qty = items.reduce((sum, item) => sum + item.quantity, 0);
+  const sizes = items.map((item) => item.size + ':' + item.quantity).join(', ');
+  const colors = Array.from(new Set(items.map((item) => item.colorName))).join(', ');
+  const materials = Array.from(new Set(items.map((item) => item.fabricName || '-'))).join(', ');
+  const models = Array.from(new Set(items.map((item) => item.customModel || item.name))).join(', ');
+  const date = new Date(order.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+  const money = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
+  doc.setDrawColor(20,20,20); doc.setLineWidth(1.1); doc.rect(1.5,1.5,207,294);
+  doc.setTextColor(10,10,10); doc.setFont('helvetica','bold'); doc.setFontSize(25); doc.text('SANDIKALE', W/2,17,{align:'center'});
+  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('D E S I G N   &   P R O D U C T I O N S',W/2,24,{align:'center'});
+  doc.setLineWidth(0.45); doc.rect(m,31,190,29);
+  const colW=190/3,rowH=29/3;
+  for(let i=1;i<3;i++) doc.line(m+colW*i,31,m+colW*i,60);
+  for(let i=1;i<3;i++) doc.line(m,31+rowH*i,R,31+rowH*i);
+  const cells=[
+    [['BRAND',order.customerName||'CUSTOMER'],['COLOR',colors||'-'],['SIZE',sizes||'-']],
+    [['MODEL',models],['DESIGNER','SANDIKALE'],['SABLON','DTF']],
+    [['MATERIAL',materials],['DATE',date],['QTY',qty+' PCS']]
+  ];
+  cells.forEach((row,ri)=>row.forEach((cell,ci)=>{
+    const x=m+ci*colW+2,y=31+ri*rowH+3.6;
+    doc.setFont('helvetica','bold');doc.setFontSize(6.6);doc.text(cell[0],x,y);
+    doc.setFont('helvetica','normal');doc.setFontSize(6.3);
+    doc.text(doc.splitTextToSize(String(cell[1]||'-'),colW-17).slice(0,2),x+17,y);
+  }));
+  const imgY=65,imgH=143,imgW=87;
+  const front=first?await makeSpkMockup(first,'front'):null, back=first?await makeSpkMockup(first,'back'):null;
+  doc.setDrawColor(225,225,225);doc.setLineWidth(0.2);
+  if(front) doc.addImage(front,'PNG',14,imgY,imgW,imgH,undefined,'FAST');
+  else {doc.rect(14,imgY,imgW,imgH);doc.setFontSize(8);doc.text('MOCKUP DEPAN',57.5,imgY+70,{align:'center'});}
+  if(back) doc.addImage(back,'PNG',109,imgY,imgW,imgH,undefined,'FAST');
+  else {doc.rect(109,imgY,imgW,imgH);doc.setFontSize(8);doc.text('MOCKUP BELAKANG',152.5,imgY+70,{align:'center'});}
+  doc.setDrawColor(20,20,20);doc.setLineWidth(0.35);doc.line(m,213,R,213);
+  doc.setFont('helvetica','bold');doc.setFontSize(7.4);doc.text('KETERANGAN SABLON',m,218);doc.text('CATATAN PRODUKSI',105,218);
+  doc.setFont('helvetica','normal');doc.setFontSize(6.7);
+  const printLines=items.flatMap((item,index)=>(item.customPlacements||[]).map((p,pi)=>(index+1)+'.'+(pi+1)+' '+p.zoneLabel+' - '+p.zoneId+' ('+p.artworkName+')'));
+  doc.text(doc.splitTextToSize(printLines.length?printLines.join('\n'):'1. Desain DTF sesuai file lampiran customer',88).slice(0,6),m,224);
+  const production='Press 160°C selama 15 detik, kupas dingin (Cold Peel).\nPacking plastik klip.\n\nNo. SPK '+(order.spkNumber||order.id)+'\nPenerima order: Admin SANDIKALE\nEstimasi selesai: konfirmasi admin via WhatsApp';
+  doc.text(doc.splitTextToSize(production,88).slice(0,7),105,224);
+  doc.setDrawColor(170,170,170);doc.setLineWidth(0.25);doc.line(m,271,R,271);
+  doc.setFont('helvetica','normal');doc.setFontSize(9);doc.text('_sandikale',70,282);doc.text('+62 822-6641-2844',125,282);
+  doc.setFontSize(6);doc.setTextColor(100,100,100);doc.text('SPK otomatis dari SANDIKALE Digital Showroom · Harga dan stok menunggu konfirmasi admin',W/2,289,{align:'center'});
   return new File([doc.output('blob')],safeFileName((order.spkNumber||order.id)+'-SPK.pdf'),{type:'application/pdf'});
 }
-
 export function CartCheckoutDrawer({
   open,
   onClose,
@@ -161,6 +221,13 @@ export function CartCheckoutDrawer({
       });
       if (order) {
         setCreatedOrder(order);
+        try {
+          const spkFile = await buildCustomerSpkPdf(order);
+          downloadGeneratedFile(spkFile);
+        } catch (pdfError) {
+          console.error('Automatic SPK download failed:', pdfError);
+          setErrorMsg('Pesanan berhasil dibuat, tetapi SPK belum terunduh. Gunakan tombol Unduh SPK di halaman konfirmasi.');
+        }
         setStep('payment');
       } else {
         setErrorMsg('Pesanan ditolak. Pastikan metode pembayaran dan pengiriman masih aktif.');
@@ -383,6 +450,7 @@ export function CartCheckoutDrawer({
             return (
               <div className="space-y-4">
                 <button type="button" onClick={() => printCustomerReceipt(createdOrder)} className="w-full h-10 rounded-md border border-black/15 dark:border-white/15 text-xs font-semibold uppercase tracking-wider">Cetak Nota Struk</button>
+                <button type="button" onClick={async () => { try { downloadGeneratedFile(await buildCustomerSpkPdf(createdOrder)); } catch { setErrorMsg('SPK belum dapat dibuat. Muat ulang halaman dan coba lagi.'); } }} className="w-full h-10 rounded-md bg-[#7A1F2B] text-white text-xs font-semibold uppercase tracking-wider">Unduh SPK PDF (1 Lembar A4)</button>
                 <div className="p-4 rounded-xl bg-neutral-100 dark:bg-[#181818] border border-black/10 dark:border-white/10 space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-neutral-500">Nomor Pesanan</span>
