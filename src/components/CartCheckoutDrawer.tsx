@@ -463,7 +463,7 @@ export function CartCheckoutDrawer({
               'Nomor SPK: '+(createdOrder.spkNumber||createdOrder.id)+'.',
               'Saya akan melampirkan SPK dan file desain pesanan ini.',
               needsPaymentProof?'Bukti transfer/QRIS juga saya lampirkan.':'Mohon konfirmasi detail pesanan dan pembayaran.'
-            ].join('\\n');
+            ].join('\n');
             const whatsappUrl='https://wa.me/'+cleanWa+'?text='+encodeURIComponent(waMessage);
             const shareOrderFiles=async()=>{
               if(needsPaymentProof&&!paymentProofFile){setErrorMsg('Unggah bukti transfer atau QRIS terlebih dahulu.');return;}
