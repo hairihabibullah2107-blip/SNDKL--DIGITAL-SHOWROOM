@@ -518,6 +518,13 @@ export function CartCheckoutDrawer({
                   </div>
                 </div>
 
+                {selectedPayment && (selectedPayment.accountName || selectedPayment.accountNumber || selectedPayment.instructions) && <div className="p-4 rounded-xl border border-[#7A1F2B]/25 bg-[#7A1F2B]/5 space-y-1.5 text-xs">
+                  <div className="font-bold">{selectedPayment.label}</div>
+                  {selectedPayment.accountName && <div>Atas nama: <b>{selectedPayment.accountName}</b></div>}
+                  {selectedPayment.accountNumber && <div>Nomor rekening / tujuan: <b className="select-all">{selectedPayment.accountNumber}</b></div>}
+                  {selectedPayment.instructions && <p className="whitespace-pre-line text-neutral-500">{selectedPayment.instructions}</p>}
+                </div>}
+
                 {/* Customer order handoff: SPK, design files and optional payment proof */}
                 <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/35 space-y-3">
                   <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-bold text-sm">
