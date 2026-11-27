@@ -122,24 +122,7 @@ export function ProductQuickViewModal({
                   <span className="text-[10px] uppercase tracking-[.18em]">Foto produk belum tersedia</span>
                 </div>
               )}
-              {activeColor && activeImage && (
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    backgroundColor: activeColor.hex,
-                    WebkitMaskImage: `url("${activeImage}")`,
-                    maskImage: `url("${activeImage}")`,
-                    WebkitMaskSize: 'contain',
-                    maskSize: 'contain',
-                    WebkitMaskPosition: 'center',
-                    maskPosition: 'center',
-                    WebkitMaskRepeat: 'no-repeat',
-                    maskRepeat: 'no-repeat',
-                    mixBlendMode: 'multiply',
-                  }}
-                />
-              )}
+
               {galleryImages.length > 1 && (
                 <>
                   <button
