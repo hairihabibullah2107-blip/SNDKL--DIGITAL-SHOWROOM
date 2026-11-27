@@ -10,12 +10,14 @@
 
   html {
     font-family: var(--font-sans);
-    scroll-behavior: smooth;
-    overflow-x: hidden;
+    scroll-behavior: auto;
+    overflow-x: clip;
+    overscroll-behavior-y: auto;
   }
 
   body {
-    overflow-x: hidden;
+    overflow-x: clip;
+    touch-action: pan-y pinch-zoom;
   }
 }
 
@@ -123,6 +125,12 @@ button:disabled {
 }
 html {
   scroll-padding-top: 6rem;
+  scroll-behavior: auto;
+}
+
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
 }
 body {
   min-width: 320px;

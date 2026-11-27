@@ -72,7 +72,7 @@ export default function App() {
   const [fabrics, setFabrics] = useState<FabricOption[]>([]);
   const [garmentColors, setGarmentColors] = useState<GarmentColorOption[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethodConfig[]>([]);
-  const [adminWhatsapp, setAdminWhatsapp] = useState('6281234567890');
+  const [adminWhatsapp, setAdminWhatsapp] = useState('6282266412844');
   const [dtfZones, setDtfZones] = useState<DtfZonePrice[]>([]);
   const [bulkDiscounts, setBulkDiscounts] = useState<BulkDiscountRule[]>([{minQuantity:6,discountPercent:6},{minQuantity:12,discountPercent:12}]);
   const [printingMethods, setPrintingMethods] = useState<PrintingMethodOption[]>([]);

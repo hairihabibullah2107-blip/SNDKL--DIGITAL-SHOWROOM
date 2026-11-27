@@ -129,7 +129,20 @@ export function CustomDtfStudio({
   const [placements, setPlacements] = useState<CustomDesignPlacement[]>([]);
   const [selectedZoneId, setSelectedZoneId] = useState<string>('');
   const [hasSavedDraft, setHasSavedDraft] = useState(false);
+  const [showFloatingPreview, setShowFloatingPreview] = useState(false);
   useEffect(() => { loadStudioDraft(DRAFT_STORAGE_KEY).then((draft) => setHasSavedDraft(Boolean(draft))).catch(() => setHasSavedDraft(false)); }, []);
+  useEffect(() => {
+    const updatePreviewVisibility = () => {
+      const section = document.getElementById('studio');
+      if (!section) return;
+      const bounds = section.getBoundingClientRect();
+      setShowFloatingPreview(bounds.top < 72 && bounds.bottom > 140 && window.innerWidth < 1024);
+    };
+    updatePreviewVisibility();
+    window.addEventListener('scroll', updatePreviewVisibility, { passive: true });
+    window.addEventListener('resize', updatePreviewVisibility);
+    return () => { window.removeEventListener('scroll', updatePreviewVisibility); window.removeEventListener('resize', updatePreviewVisibility); };
+  }, []);
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef<{ zoneId: string; startX: number; startY: number; origX: number; origY: number; canvasWidth: number; canvasHeight: number } | null>(null);
@@ -515,7 +528,7 @@ export function CustomDtfStudio({
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* LEFT: Live Interactive Garment Mockup Canvas */}
-          <div className="lg:col-span-6 bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 rounded-xl p-4 md:p-6 space-y-4 lg:sticky lg:top-24">
+          <div className="lg:col-span-6 bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 rounded-xl p-4 md:p-6 space-y-4 lg:sticky lg:top-20 lg:self-start">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-[#1E1E1E]">
                 {(['front', 'back', 'sleeve'] as const).map((view) => (
@@ -587,6 +600,7 @@ export function CustomDtfStudio({
 
             <div
               ref={canvasRef}
+              id="studio-preview-canvas"
               className="relative aspect-[4/4.2] w-full rounded-lg overflow-hidden bg-gradient-to-b from-neutral-200 to-neutral-300 dark:from-[#1A1A1A] dark:to-[#101010] border border-black/10 dark:border-white/10 flex items-center justify-center select-none touch-none"
             >
               {selectedProduct && currentProductImage && !mockupImageFailed ? (
@@ -1080,6 +1094,22 @@ export function CustomDtfStudio({
             </div>
           </div>
         </div>
+        {showFloatingPreview && selectedProduct && currentProductImage && (
+          <div className="fixed top-[76px] right-3 z-[90] lg:hidden w-[112px] rounded-xl border border-black/15 dark:border-white/20 bg-white/95 dark:bg-[#141414]/95 shadow-2xl p-1.5 pointer-events-none">
+            <div className="relative aspect-[4/4.2] overflow-hidden rounded-lg bg-neutral-200 dark:bg-[#101010]">
+              <img src={mockupImageSrc || currentProductImage} alt="Preview baju custom" className="absolute inset-0 w-full h-full object-contain p-1" />
+              {visiblePlacements.map((placement) => {
+                const zone = dtfZones.find((item) => item.id === placement.zoneId);
+                if (!zone) return null;
+                const width = Math.min(78, Math.max(8, (zone.maxWidthCm / 58) * 100));
+                return <div key={placement.zoneId} className="absolute flex items-center justify-center" style={{ left: `${50 + placement.xOffset}%`, top: `${50 + placement.yOffset}%`, width: `${width * placement.scale}%`, aspectRatio: `${zone.maxWidthCm} / ${zone.maxHeightCm}`, transform: 'translate(-50%, -50%)' }}>
+                  <img src={placement.artworkDataUrl} alt="" className="w-full h-full object-contain" style={{ transform: `rotate(${placement.rotation}deg)` }} />
+                </div>;
+              })}
+            </div>
+            <div className="pt-1 text-[9px] text-center font-semibold text-neutral-700 dark:text-neutral-200 truncate">PREVIEW · {activeView === 'front' ? 'DEPAN' : activeView === 'back' ? 'BELAKANG' : 'LENGAN'}</div>
+          </div>
+        )}
       </div>
     </section>
   );
