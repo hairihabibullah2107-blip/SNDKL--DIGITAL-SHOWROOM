@@ -132,20 +132,32 @@ export function CustomDtfStudio({
   const [showFloatingPreview, setShowFloatingPreview] = useState(false);
   useEffect(() => { loadStudioDraft(DRAFT_STORAGE_KEY).then((draft) => setHasSavedDraft(Boolean(draft))).catch(() => setHasSavedDraft(false)); }, []);
   useEffect(() => {
+    let frameId: number | null = null;
     const updatePreviewVisibility = () => {
-      const section = document.getElementById('studio');
-      if (!section) return;
-      const bounds = section.getBoundingClientRect();
-      setShowFloatingPreview(bounds.top < 72 && bounds.bottom > 140 && window.innerWidth < 1024);
+      if (frameId !== null) return;
+      frameId = window.requestAnimationFrame(() => {
+        frameId = null;
+        const section = document.getElementById('studio');
+        if (!section) return;
+        const bounds = section.getBoundingClientRect();
+        const visible = bounds.top < 72 && bounds.bottom > 140 && window.innerWidth < 1024;
+        setShowFloatingPreview((current) => current === visible ? current : visible);
+      });
     };
     updatePreviewVisibility();
     window.addEventListener('scroll', updatePreviewVisibility, { passive: true });
-    window.addEventListener('resize', updatePreviewVisibility);
-    return () => { window.removeEventListener('scroll', updatePreviewVisibility); window.removeEventListener('resize', updatePreviewVisibility); };
+    window.addEventListener('resize', updatePreviewVisibility, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', updatePreviewVisibility);
+      window.removeEventListener('resize', updatePreviewVisibility);
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
+    };
   }, []);
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef<{ zoneId: string; startX: number; startY: number; origX: number; origY: number; canvasWidth: number; canvasHeight: number } | null>(null);
+  const dragFrameRef = useRef<number | null>(null);
+  const pendingDragRef = useRef<{ zoneId: string; x: number; y: number } | null>(null);
 
   useEffect(() => {
     if (preselectedProduct && preselectedProduct.isCustomBase) {
@@ -420,6 +432,15 @@ export function CustomDtfStudio({
     };
   };
 
+  const commitPendingDrag = () => {
+    const pending = pendingDragRef.current;
+    pendingDragRef.current = null;
+    if (!pending) return;
+    setPlacements((prev) => prev.map((placement) => placement.zoneId === pending.zoneId
+      ? (placement.xOffset === pending.x && placement.yOffset === pending.y ? placement : { ...placement, xOffset: pending.x, yOffset: pending.y })
+      : placement));
+  };
+
   const handlePointerMove = (e: React.PointerEvent) => {
     const drag = draggingRef.current;
     if (!drag) return;
@@ -427,11 +448,23 @@ export function CustomDtfStudio({
     const dyPct = ((e.clientY - drag.startY) / drag.canvasHeight) * 100;
     const nextX = Math.max(-50, Math.min(50, Math.round(drag.origX + dxPct)));
     const nextY = Math.max(-50, Math.min(50, Math.round(drag.origY + dyPct)));
-    setPlacements((prev) => prev.map((placement) => placement.zoneId === drag.zoneId ? { ...placement, xOffset: nextX, yOffset: nextY } : placement));
+    pendingDragRef.current = { zoneId: drag.zoneId, x: nextX, y: nextY };
+    // Coalesce high-frequency pointer events to at most one React update per rendered frame.
+    if (dragFrameRef.current === null) {
+      dragFrameRef.current = window.requestAnimationFrame(() => {
+        dragFrameRef.current = null;
+        commitPendingDrag();
+      });
+    }
   };
 
   const handlePointerUp = () => {
     draggingRef.current = null;
+    if (dragFrameRef.current !== null) {
+      window.cancelAnimationFrame(dragFrameRef.current);
+      dragFrameRef.current = null;
+    }
+    commitPendingDrag();
   };
 
   const handleSaveDraft = async () => {
@@ -608,6 +641,7 @@ export function CustomDtfStudio({
               {selectedProduct && currentProductImage && !mockupImageFailed ? (
                 <>
                   <img
+                    decoding="async"
                     key={mockupImageSrc || currentProductImage}
                     src={mockupImageSrc || currentProductImage}
                     alt={`${selectedProduct.name} ${activeView === 'sleeve' ? 'tampak lengan' : activeView === 'back' ? 'tampak belakang' : 'tampak depan'}`}

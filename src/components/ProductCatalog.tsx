@@ -100,6 +100,7 @@ export function ProductCatalog({
                         src={cat.image}
                         alt={cat.name}
                         loading="lazy"
+                        decoding="async"
                         referrerPolicy="no-referrer"
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -399,7 +400,7 @@ export function ProductCatalog({
                 >
                   <div className="aspect-[4/3] bg-neutral-100 dark:bg-[#171717]">
                     {item.images[0] ? (
-                      <img src={item.images[0]} alt={item.name} loading="lazy" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="w-full h-full object-cover" />
+                      <img src={item.images[0]} alt={item.name} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="w-full h-full object-cover" />
                     ) : <div className="w-full h-full flex items-center justify-center text-xs text-neutral-500">Foto belum tersedia</div>}
                   </div>
                   <div className="p-2.5 space-y-0.5">

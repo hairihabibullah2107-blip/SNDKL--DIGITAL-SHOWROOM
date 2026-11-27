@@ -656,6 +656,9 @@ export default function App() {
         <section id="hero" className="relative min-h-[78vh] md:min-h-[84vh] flex items-end overflow-hidden bg-[#080808]">
           <img
             src={siteContent.heroImage && !heroImageFailed ? siteContent.heroImage : HERO_IMAGE}
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
             onError={() => setHeroImageFailed(true)}
             alt="Kampanye Streetwear SANDIKALE"
             referrerPolicy="no-referrer"
