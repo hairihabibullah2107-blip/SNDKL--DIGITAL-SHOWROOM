@@ -633,7 +633,7 @@ export function CustomDtfStudio({
     const previewSnapshots = {
       front: await buildExactStudioSnapshot('front'),
       back: await buildExactStudioSnapshot('back'),
-      sleeve: selectedProduct.sleeveImage ? await buildExactStudioSnapshot('sleeve') : undefined,
+      sleeve: placements.some((placement) => dtfZones.find((zone) => zone.id === placement.zoneId)?.view === 'sleeve') ? await buildExactStudioSnapshot('sleeve') : undefined,
     };
     onAddCustomToCart({
       id: `custom-${Date.now()}`,
