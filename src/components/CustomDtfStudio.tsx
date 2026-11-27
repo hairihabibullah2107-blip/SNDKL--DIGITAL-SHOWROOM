@@ -106,7 +106,7 @@ export function CustomDtfStudio({
   useEffect(() => { loadStudioDraft(DRAFT_STORAGE_KEY).then((draft) => setHasSavedDraft(Boolean(draft))).catch(() => setHasSavedDraft(false)); }, []);
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
-  const draggingRef = useRef<{ startX: number; startY: number; origX: number; origY: number; canvasWidth: number; canvasHeight: number } | null>(null);
+  const draggingRef = useRef<{ zoneId: string; startX: number; startY: number; origX: number; origY: number; canvasWidth: number; canvasHeight: number } | null>(null);
 
   useEffect(() => {
     if (preselectedProduct && preselectedProduct.isCustomBase) {
@@ -362,17 +362,19 @@ export function CustomDtfStudio({
     }
   };
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (!activePlacement || !canvasRef.current) return;
+  const handlePointerDown = (e: React.PointerEvent, placement: CustomDesignPlacement) => {
+    if (!canvasRef.current) return;
     e.preventDefault();
     e.stopPropagation();
+    setSelectedZoneId(placement.zoneId);
     e.currentTarget.setPointerCapture(e.pointerId);
     const rect = canvasRef.current.getBoundingClientRect();
     draggingRef.current = {
+      zoneId: placement.zoneId,
       startX: e.clientX,
       startY: e.clientY,
-      origX: activePlacement.xOffset,
-      origY: activePlacement.yOffset,
+      origX: placement.xOffset,
+      origY: placement.yOffset,
       canvasWidth: rect.width,
       canvasHeight: rect.height,
     };
@@ -380,12 +382,12 @@ export function CustomDtfStudio({
 
   const handlePointerMove = (e: React.PointerEvent) => {
     const drag = draggingRef.current;
-    if (!drag || !activePlacement) return;
+    if (!drag) return;
     const dxPct = ((e.clientX - drag.startX) / drag.canvasWidth) * 100;
     const dyPct = ((e.clientY - drag.startY) / drag.canvasHeight) * 100;
     const nextX = Math.max(-50, Math.min(50, Math.round(drag.origX + dxPct)));
     const nextY = Math.max(-50, Math.min(50, Math.round(drag.origY + dyPct)));
-    updateActivePlacement({ xOffset: nextX, yOffset: nextY });
+    setPlacements((prev) => prev.map((placement) => placement.zoneId === drag.zoneId ? { ...placement, xOffset: nextX, yOffset: nextY } : placement));
   };
 
   const handlePointerUp = () => {
@@ -612,7 +614,7 @@ export function CustomDtfStudio({
                   <div
                     key={pl.zoneId}
                     onClick={() => setSelectedZoneId(pl.zoneId)}
-                    onPointerDown={handlePointerDown}
+                    onPointerDown={(e) => handlePointerDown(e, pl)}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
                     onPointerCancel={handlePointerUp}
