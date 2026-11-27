@@ -176,7 +176,7 @@ export function CustomDtfStudio({
 
   const dtfTotalPerShirt = placements.reduce((sum, p) => sum + p.price, 0);
   const currentProductImage = !selectedProduct ? '' : activeView === 'sleeve'
-    ? selectedProduct.frontImage || selectedProduct.images[0]
+    ? selectedProduct.sleeveImage || selectedProduct.frontImage || selectedProduct.images[0]
     : activeView === 'back'
       ? selectedProduct.backImage || selectedProduct.frontImage || selectedProduct.images[0]
       : selectedProduct.frontImage || selectedProduct.images[0];
@@ -573,9 +573,11 @@ export function CustomDtfStudio({
                 <div className="flex items-center gap-2.5 min-w-0">
                   <img
                     src={
-                      activeView === 'back'
-                        ? selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
-                        : selectedProduct.frontImage || selectedProduct.images[0]
+                      activeView === 'sleeve'
+                        ? selectedProduct.sleeveImage || selectedProduct.frontImage || selectedProduct.images[0]
+                        : activeView === 'back'
+                          ? selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0]
+                          : selectedProduct.frontImage || selectedProduct.images[0]
                     }
                     alt={selectedProduct.name}
                     referrerPolicy="no-referrer"

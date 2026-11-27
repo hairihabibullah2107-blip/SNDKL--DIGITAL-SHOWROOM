@@ -100,10 +100,13 @@ export async function loadShowroomBootstrap() {
     // Product photos are canonical assets shared by catalog and DTF studio.
     const frontPhoto = productImages.find((photo) => photo.view_key === 'front') || productImages[0];
     const backPhoto = productImages.find((photo) => photo.view_key === 'back');
+    const sleevePhoto = productImages.find((photo) => photo.view_key === 'sleeve');
     const detailPhotos = productImages.filter((photo) => photo.view_key === 'detail');
     const frontImage = frontPhoto ? storagePublicUrl(frontPhoto.storage_path) : '';
     const backImage = backPhoto ? storagePublicUrl(backPhoto.storage_path) : '';
-    const photoUrls = [frontImage, backImage, ...detailPhotos.map((photo) => storagePublicUrl(photo.storage_path))].filter(Boolean);
+    const sleeveImage = sleevePhoto ? storagePublicUrl(sleevePhoto.storage_path) : '';
+    // Keep front/back at indices 0/1 for legacy consumers; expose sleeve as a named view and gallery image.
+    const photoUrls = [frontImage, backImage, ...detailPhotos.map((photo) => storagePublicUrl(photo.storage_path)), sleeveImage].filter(Boolean);
     const material = Array.isArray(row.showroom_materials) ? row.showroom_materials[0] : row.showroom_materials;
     const price = asNumber(row.base_price);
     const modelName = String(row.model || '').toLowerCase();
@@ -125,6 +128,7 @@ export async function loadShowroomBootstrap() {
       images: photoUrls,
       frontImage,
       backImage,
+      sleeveImage,
       colors,
       sizes,
       isCustomBase: true,
