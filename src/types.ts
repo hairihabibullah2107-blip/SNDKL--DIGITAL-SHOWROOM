@@ -47,6 +47,7 @@ export interface Product {
   images: string[];
   frontImage?: string;
   backImage?: string;
+  sleeveImage?: string;
   colors: ProductColor[];
   sizes: Record<string, number>;
   isCustomBase: boolean;
