@@ -574,7 +574,8 @@ export function CustomDtfStudio({
       const drawW = image.naturalWidth * fit, drawH = image.naturalHeight * fit;
       ctx.drawImage(image, (canvas.width - drawW) / 2, (canvas.height - drawH) / 2, drawW, drawH);
       if (hasTransparency && previewColorHex) {
-        ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = 0.84;
+        // source-atop confines the tint to the garment's alpha; transparent canvas stays transparent.
+        ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.globalAlpha = 0.84;
         ctx.fillStyle = previewColorHex; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.restore();
       }
       const imageAspect = image.naturalWidth / image.naturalHeight, containerAspect = 4 / 4.2;
