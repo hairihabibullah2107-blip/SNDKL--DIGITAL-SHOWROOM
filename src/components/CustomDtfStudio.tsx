@@ -91,7 +91,7 @@ export function CustomDtfStudio({
   const customBaseProducts = products.filter((p) => p.isCustomBase);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [fabricId, setFabricId] = useState<string>('');
-  const [colorId, setColorId] = useState<string>('');
+  const [requestedColor, setRequestedColor] = useState('');
   const [size, setSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [removingBg, setRemovingBg] = useState(false);
@@ -127,18 +127,9 @@ export function CustomDtfStudio({
   const selectedProduct = selectedProductId
     ? customBaseProducts.find((p) => p.id === selectedProductId) || null
     : null;
-  const availableColors = useMemo<GarmentColorOption[]>(() => selectedProduct
-    ? selectedProduct.colors.map((color) => {
-        const shared = garmentColors.find((item) => item.name.toLowerCase() === color.name.toLowerCase());
-        return { ...shared, id: color.name.toLowerCase(), name: color.name, hex: color.hex || shared?.hex || '#777777', publishedByAdmin: true };
-      })
-    : garmentColors, [selectedProduct, garmentColors]);
-  useEffect(() => {
-    if (colorId && !availableColors.some((color) => color.id === colorId)) setColorId('');
-  }, [availableColors, colorId]);
+  const selectedColor = requestedColor.trim() ? { name: requestedColor.trim(), hex: '#777777' } : null;
   const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
   const selectedFabric = fabricId ? fabrics.find((f) => f.id === fabricId) || null : null;
-  const selectedColor = colorId ? availableColors.find((c) => c.id === colorId) || null : null;
   const activePlacement = placements.find((p) => p.zoneId === selectedZoneId) || null;
 
   const isStudioReady = Boolean(selectedProduct && selectedFabric && selectedColor && size && placements.length > 0);
@@ -205,16 +196,14 @@ export function CustomDtfStudio({
   const selectedVariantAdjustment = selectedVariantKey
     ? Math.max(0, Number(selectedProduct?.variantPrices?.[selectedVariantKey] || 0))
     : 0;
-  const rawUnitPrice = baseGarmentPrice + (selectedFabric?.priceModifier || 0) + dtfTotalPerShirt + selectedSizeSurcharge + selectedVariantAdjustment;
+  const lowestFabricModifier = fabrics.length ? Math.min(...fabrics.map((fabric) => fabric.priceModifier)) : 0;
+  const selectedFabricAdjustment = Math.max(0, (selectedFabric?.priceModifier || 0) - lowestFabricModifier);
+  const rawUnitPrice = baseGarmentPrice + selectedFabricAdjustment + dtfTotalPerShirt + selectedSizeSurcharge + selectedVariantAdjustment;
   const activeBulkDiscount = [...bulkDiscounts].sort((a,b)=>b.minQuantity-a.minQuantity).find((rule)=>quantity>=rule.minQuantity);
   const bulkDiscountRate = Math.max(0,Math.min(100,activeBulkDiscount?.discountPercent||0))/100;
   const unitPrice = Math.round(rawUnitPrice * (1 - bulkDiscountRate));
 
-  const getAutoScaleForZone = (zoneId: string) => {
-    if (zoneId === 'front-pocket' || zoneId === 'sleeve-label') return 0.92;
-    if (zoneId === 'front-a4') return 0.9;
-    return 0.95;
-  };
+  const getAutoScaleForZone = (_zoneId: string) => 1;
 
   const handleSelectZone = (zone: DtfZonePrice) => {
     setActiveView(zone.view);
@@ -400,7 +389,7 @@ export function CustomDtfStudio({
 
   const handleSaveDraft = async () => {
     try {
-      await saveStudioDraft(DRAFT_STORAGE_KEY, { selectedProductId, fabricId, colorId, size, quantity, placements, savedAt: new Date().toISOString() });
+      await saveStudioDraft(DRAFT_STORAGE_KEY, { selectedProductId, fabricId, requestedColor, size, quantity, placements, savedAt: new Date().toISOString() });
       setHasSavedDraft(true);
       onToast('Draf desain dan file artwork tersimpan di perangkat ini.');
     } catch { onToast('Penyimpanan draf gagal. Periksa ruang penyimpanan browser.'); }
@@ -408,11 +397,11 @@ export function CustomDtfStudio({
 
   const handleLoadDraft = async () => {
     try {
-      const draft = await loadStudioDraft<{selectedProductId?:string;fabricId?:string;colorId?:string;size?:string;quantity?:number;placements?:CustomDesignPlacement[]}>(DRAFT_STORAGE_KEY);
+      const draft = await loadStudioDraft<{selectedProductId?:string;fabricId?:string;requestedColor?:string;colorId?:string;size?:string;quantity?:number;placements?:CustomDesignPlacement[]}>(DRAFT_STORAGE_KEY);
       if (!draft) { onToast('Belum ada draf tersimpan.'); return; }
       if (draft.selectedProductId) setSelectedProductId(draft.selectedProductId);
       if (draft.fabricId) setFabricId(draft.fabricId);
-      if (draft.colorId) setColorId(draft.colorId);
+      if (draft.requestedColor) setRequestedColor(draft.requestedColor);
       if (draft.size) setSize(draft.size);
       if (draft.quantity) setQuantity(draft.quantity);
       if (Array.isArray(draft.placements)) { setPlacements(draft.placements); setSelectedZoneId(draft.placements[0]?.zoneId || ''); }
@@ -446,6 +435,7 @@ export function CustomDtfStudio({
       image: selectedProduct.images[0],
       colorName: selectedColor.name,
       colorHex: selectedColor.hex,
+      backImage: selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0],
       size,
       quantity,
       unitPrice,
@@ -612,16 +602,17 @@ export function CustomDtfStudio({
                 const zMeta = dtfZones.find((z) => z.id === pl.zoneId);
                 if (!zMeta) return null;
                 const isSelected = pl.zoneId === selectedZoneId;
-                const autoScale = getAutoScaleForZone(pl.zoneId);
                 return (
                   <div
                     key={pl.zoneId}
                     onClick={() => setSelectedZoneId(pl.zoneId)}
                     style={{
-                      left: `${zMeta.box.x}%`,
-                      top: `${zMeta.box.y}%`,
-                      width: `${zMeta.box.w}%`,
-                      height: `${zMeta.box.h}%`,
+                      left: /logo|pocket|saku/i.test(zMeta.id + ' ' + zMeta.label) ? '35%' : zMeta.view === 'sleeve' ? '20%' : '50%',
+                      top: /logo|pocket|saku/i.test(zMeta.id + ' ' + zMeta.label) ? '32%' : zMeta.view === 'back' ? '38%' : '40%',
+                      width: `${Math.min(78, Math.max(14, (zMeta.maxWidthCm / 58) * 100))}%`,
+                      aspectRatio: `${zMeta.maxWidthCm} / ${zMeta.maxHeightCm}`,
+                      height: 'auto',
+                      transform: 'translateX(-50%)',
                     }}
                     className={`absolute flex items-center justify-center border ${
                       isSelected ? 'border-dashed border-[#7A1F2B] bg-[#7A1F2B]/5' : 'border-dashed border-white/35'
@@ -632,7 +623,7 @@ export function CustomDtfStudio({
                       onPointerMove={handlePointerMove}
                       onPointerUp={handlePointerUp}
                       style={{
-                        transform: `translate(${pl.xOffset}%, ${pl.yOffset}%) scale(${autoScale})`,
+                        transform: `translate(${pl.xOffset}%, ${pl.yOffset}%) scale(${pl.scale})`,
                       }}
                       className="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing"
                     >
@@ -805,7 +796,7 @@ export function CustomDtfStudio({
                         </div>
                         <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5">{fab.feel}</div>
                         <div className="text-[11px] font-mono-tabular mt-1">
-                          Pilihan bahan · Harga kaos tetap
+                          {fab.priceModifier - Math.min(...fabrics.map((entry) => entry.priceModifier)) > 0 ? `+${formatRupiah(fab.priceModifier - Math.min(...fabrics.map((entry) => entry.priceModifier)))}` : 'Harga dasar bahan'}
                         </div>
                       </button>
                     ))}
@@ -815,36 +806,9 @@ export function CustomDtfStudio({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-black/10 dark:border-white/10">
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                    Langkah 2 · Pilih warna: <span className="text-[#080808] dark:text-white">{selectedColor?.name || 'Belum dipilih'}</span>
-                  </div>
-                  {availableColors.length === 0 ? (
-                    <div className="p-2.5 rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 text-[11px] text-amber-700 dark:text-amber-300">
-                      Pilihan warna belum diisi oleh Admin.
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-5 sm:grid-cols-6 gap-3">
-                        {availableColors.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => setColorId(c.id)}
-                            title={c.name}
-                            aria-label={`Pilih warna ${c.name}`}
-                            aria-pressed={colorId === c.id}
-                            className={`relative mx-auto flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#7A1F2B] ${
-                              colorId === c.id ? 'border-[#7A1F2B] scale-110 shadow-[0_0_0_3px_rgba(122,31,43,.18)]' : 'border-black/15 dark:border-white/20 hover:scale-105'
-                            }`}
-                            style={{ backgroundColor: c.hex }}
-                          >
-                            {colorId === c.id && <Check className={`h-4 w-4 ${['#ffffff','#fff','#f5f5f5','#eeeeee'].includes(c.hex.toLowerCase()) ? 'text-black' : 'text-white'}`} />}
-                          </button>
-                        ))}
-                      </div>
-                      {selectedColor && <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Warna terpilih: <strong className="text-neutral-800 dark:text-white">{selectedColor.name}</strong></p>}
-                    </>
-                  )}
+                  <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Warna yang diinginkan</div>
+                  <input type="text" value={requestedColor} onChange={(e) => setRequestedColor(e.target.value)} maxLength={60} placeholder="Contoh: hitam, navy, maroon, sage..." className="w-full h-10 px-3 rounded-md text-xs bg-neutral-50 dark:bg-[#181818] border border-black/15 dark:border-white/15" />
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Tulis warna sesuai keinginan. Admin akan mengecek stok dan mengonfirmasi melalui WhatsApp. Warna khusus di bawah 6 pcs perlu persetujuan admin.</p>
                 </div>
 
                 <div className="space-y-2">
@@ -1073,12 +1037,12 @@ export function CustomDtfStudio({
               >
                 <ShoppingCart className="w-4 h-4" />
                 <span>
-                  {fabrics.length === 0 || availableColors.length === 0
-                    ? 'Pilihan bahan atau warna belum tersedia'
+                  {fabrics.length === 0
+                    ? 'Pilihan bahan belum tersedia'
                     : !selectedProduct
                     ? 'Pilih Model Baju Terlebih Dahulu'
                     : !selectedFabric || !selectedColor || !size
-                    ? 'Pilih Kain, Warna & Ukuran'
+                    ? 'Pilih Bahan, Isi Warna & Ukuran'
                     : placements.length === 0
                     ? 'Pilih Zona Sablon & Unggah Desain'
                     : 'Masukkan Custom DTF ke Tas'}
