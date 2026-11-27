@@ -30,8 +30,46 @@ interface CartCheckoutDrawerProps {
     paymentMethod: PaymentMethodId;
     paymentLabel: string;
   }) => Promise<Order | null>;
-  onConfirmPayment: (orderId: string) => Promise<Order | null>;
   onTrackNewOrder: (orderId: string) => void;
+}
+
+
+async function dataUrlToFile(dataUrl: string, fileName: string): Promise<File> {
+  const response = await fetch(dataUrl);
+  const blob = await response.blob();
+  return new File([blob], fileName, { type: blob.type || 'application/octet-stream' });
+}
+function safeFileName(value: string): string {
+  return value.replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'desain';
+}
+async function buildCustomerSpkPdf(order: Order): Promise<File> {
+  const { jsPDF } = await import('jspdf');
+  const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4', compress:true });
+  const width=doc.internal.pageSize.getWidth(), margin=12, right=width-margin;
+  const designs=order.items.flatMap(item=>item.customPlacements||[]);
+  const density=Math.min(1,26/Math.max(26,order.items.length*10+designs.length*5));
+  const font=(n:number)=>Math.max(6,n*density);
+  const money=(n:number)=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n||0);
+  doc.setFillColor(8,8,8);doc.rect(0,0,width,27,'F');
+  doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(19);doc.text('SANDIKALE',margin,12);
+  doc.setTextColor(215,150,158);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text('SURAT PERINTAH KERJA · CUSTOM APPAREL & DTF',margin,20);
+  doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(12);doc.text('SPK PRODUKSI',margin,36);
+  doc.setFontSize(8);doc.text(order.spkNumber||order.id,right,36,{align:'right'});
+  const left=[['No. Pesanan',order.id],['Tanggal',new Date(order.createdAt).toLocaleString('id-ID')],['Customer',order.customerName],['WhatsApp',order.customerPhone]];
+  const rightFields=[['Pengambilan',order.shippingCourier==='Ambil Sendiri di Store'?'Ambil di Store':'Diantar Kurir'],['Alamat',order.shippingCourier==='Ambil Sendiri di Store'?'Konfirmasi jadwal via WhatsApp':[order.shippingAddress,order.shippingCity].filter(Boolean).join(', ')],['Pembayaran',order.paymentLabel],['Status','Menunggu persetujuan admin']];
+  let y=44;doc.setFontSize(font(7.5));
+  for(let i=0;i<4;i++){doc.setFont('helvetica','bold');doc.text(left[i][0],margin,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(left[i][1]||'-',65),margin+25,y);doc.setFont('helvetica','bold');doc.text(rightFields[i][0],111,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(rightFields[i][1]||'-',76),136,y);y+=6;}
+  y+=2;doc.setDrawColor(190,190,190);doc.line(margin,y,right,y);y+=6;doc.setFont('helvetica','bold');doc.setFontSize(font(9));doc.text('RINCIAN ITEM & SPESIFIKASI',margin,y);y+=6;
+  for(const [i,item] of order.items.entries()){
+    doc.setFillColor(242,242,242);doc.roundedRect(margin,y-4,right-margin,7,1,1,'F');doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(font(7.5));doc.text((i+1)+'. '+item.name.slice(0,66),margin+2,y);doc.setFont('helvetica','normal');doc.text(item.quantity+' pcs',right-2,y,{align:'right'});y+=6;
+    doc.setFontSize(font(6.5));doc.text(doc.splitTextToSize('Warna: '+item.colorName+' · Ukuran: '+item.size+' · Bahan: '+(item.fabricName||'-')+' · Model: '+(item.customModel||'-'),right-margin-4),margin+2,y);y+=4;
+    const placements=item.customPlacements||[];
+    if(placements.length){for(const placement of placements){doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize('DTF: '+placement.zoneLabel+' · '+placement.artworkName,right-margin-25),margin+4,y);try{const data=placement.originalDataUrl||placement.artworkDataUrl;if(data&&y<260)doc.addImage(data,right-21,y-4,17,14,undefined,'FAST');}catch{/* retain design label */}y+=Math.max(5,Math.min(14,14*density));}}
+    else{doc.setTextColor(100,100,100);doc.text('File desain asli wajib dikirim bersama SPK.',margin+4,y);doc.setTextColor(20,20,20);y+=5;}y+=1;
+  }
+  y+=2;doc.line(margin,y,right,y);y+=7;doc.setFont('helvetica','bold');doc.setFontSize(font(8));doc.text('TOTAL PERKIRAAN',margin,y);doc.text(money(order.total),right,y,{align:'right'});y+=7;doc.setFont('helvetica','normal');doc.setFontSize(font(6.5));
+  doc.text(doc.splitTextToSize('SPK ini adalah ringkasan permintaan customer, belum menjadi persetujuan produksi. Admin SANDIKALE akan memeriksa spesifikasi, file desain, harga final, dan pembayaran melalui WhatsApp.',right-margin),margin,y);
+  return new File([doc.output('blob')],safeFileName((order.spkNumber||order.id)+'-SPK.pdf'),{type:'application/pdf'});
 }
 
 export function CartCheckoutDrawer({
@@ -45,7 +83,6 @@ export function CartCheckoutDrawer({
   onUpdateQty,
   onRemoveItem,
   onCreateOrder,
-  onConfirmPayment,
   onTrackNewOrder,
 }: CartCheckoutDrawerProps) {
   const [step, setStep] = useState<'cart' | 'checkout' | 'payment'>('cart');
@@ -115,21 +152,9 @@ export function CartCheckoutDrawer({
     }
   };
 
-  const handlePayNow = async () => {
-    if (!createdOrder) return;
-    setSubmitting(true);
-    try {
-      const paid = await onConfirmPayment(createdOrder.id);
-      if (paid) {
-        setCreatedOrder(paid);
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const resetAndClose = () => {
-    if (createdOrder?.paymentStatus === 'paid') {
+    if (createdOrder) {
       setStep('cart');
       setCreatedOrder(null);
     }
@@ -314,35 +339,28 @@ export function CartCheckoutDrawer({
           )}
 
           {step === 'payment' && createdOrder && (() => {
-            const cleanWa = (adminWhatsapp || '6281234567890').replace(/[^0-9]/g, '') || '6281234567890';
-            const itemLines = createdOrder.items
-              .map((it, idx) => {
-                const zones = it.customPlacements?.length
-                  ? ` | Sablon DTF: ${it.customPlacements.map((p) => `${p.zoneLabel} (${p.artworkName})`).join(', ')}`
-                  : '';
-                return `${idx + 1}. ${it.name} (${it.colorName}, Size ${it.size}, Qty ${it.quantity}${it.fabricName ? `, ${it.fabricName}` : ''})${zones}`;
-              })
-              .join('\n');
-            const waText = encodeURIComponent([
-              'Halo Admin SANDIKALE,',
-              '',
-              'Saya membuat pesanan website:',
-              '- No. Pesanan: ' + createdOrder.id,
-              '- Kode Tracking: ' + createdOrder.trackingNumber,
-              '- Nama: ' + createdOrder.customerName,
-              '- Pengambilan: ' + createdOrder.shippingCourier,
-              createdOrder.shippingCourier === 'Ambil Sendiri di Store'
-                ? 'Saya akan mengambil pesanan langsung di store. Mohon konfirmasi jika sudah siap.'
-                : 'Alamat: ' + createdOrder.shippingAddress + ', ' + createdOrder.shippingCity + '\nMohon konfirmasi biaya dan waktu pengiriman.',
-              '- Pembayaran: ' + createdOrder.paymentLabel + ' (manual)',
-              '- Total: ' + formatRupiah(createdOrder.total),
-              '',
-              'Detail Produk:',
-              itemLines,
-              '',
-              'File desain asli saya lampirkan bila diperlukan. Terima kasih!'
-            ].join('\n'));
-            const waUrl = `https://wa.me/${cleanWa}?text=${waText}`;
+            const cleanWa=(adminWhatsapp||'').replace(/[^0-9]/g,'');
+            const isManualPayment=/manual|konfirmasi admin/i.test(createdOrder.paymentLabel);
+            const needsPaymentProof=!isManualPayment&&/(qris|bank|transfer|va|virtual account)/i.test(createdOrder.paymentLabel+' '+createdOrder.paymentMethod);
+            const waMessage=[
+              'Halo Admin SANDIKALE, saya '+createdOrder.customerName+'.',
+              'Pesanan: '+createdOrder.id+' · SPK: '+(createdOrder.spkNumber||createdOrder.id),
+              'Pengambilan: '+(createdOrder.shippingCourier==='Ambil Sendiri di Store'?'Ambil sendiri di store':'Diantar kurir'),
+              'Pembayaran: '+createdOrder.paymentLabel+' · Total: '+formatRupiah(createdOrder.total),
+              'Saya lampirkan SPK PDF dan file desain untuk diperiksa.',
+              needsPaymentProof?'Bukti transfer/QRIS saya lampirkan pada chat ini.':'Pembayaran dan persetujuan detail saya konfirmasi melalui WhatsApp.'
+            ].join('\\n');
+            const openWhatsApp=()=>{if(cleanWa)window.open('https://wa.me/'+cleanWa+'?text='+encodeURIComponent(waMessage),'_blank','noopener,noreferrer');};
+            const shareOrderFiles=async()=>{
+              try{
+                const spk=await buildCustomerSpkPdf(createdOrder),designFiles:File[]=[];
+                const placements=createdOrder.items.flatMap(item=>(item.customPlacements||[]).map(placement=>({placement})));
+                for(const [index,entry] of placements.entries()){const source=entry.placement.originalDataUrl||entry.placement.artworkDataUrl;if(source)designFiles.push(await dataUrlToFile(source,safeFileName(entry.placement.artworkName||('desain-'+(index+1)+'.png'))));}
+                const files=[spk,...designFiles];
+                if(navigator.share&&navigator.canShare?.({files}))await navigator.share({title:'SPK SANDIKALE '+(createdOrder.spkNumber||createdOrder.id),text:waMessage,files});
+                else{for(const file of files){const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=file.name;a.click();window.setTimeout(()=>URL.revokeObjectURL(url),1500);}openWhatsApp();}
+              }catch(error){if(error instanceof Error&&error.name==='AbortError')return;setErrorMsg('File belum dapat dibagikan otomatis. Unduh SPK dan file desain, lalu lampirkan di WhatsApp.');openWhatsApp();}
+            };
 
             return (
               <div className="space-y-4">
@@ -369,20 +387,19 @@ export function CartCheckoutDrawer({
                 <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/35 space-y-3">
                   <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-bold text-sm">
                     <MessageCircle className="w-5 h-5 shrink-0" />
-                    <span>Kirim File Desain ke WhatsApp Admin</span>
+                    <span>Kirim SPK & Desain ke Admin</span>
                   </div>
                   <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                    Pesanan tersimpan. Admin akan memeriksa detail dan mengonfirmasi pembayaran manual melalui WhatsApp. Pengambilan sendiri tidak menggunakan kurir.
+                    SPK PDF dan file desain wajib dikirim. {needsPaymentProof ? 'Lampirkan juga bukti transfer/QRIS.' : 'Pembayaran dan persetujuan dilakukan melalui WhatsApp admin.'}
                   </p>
-                  <a
-                    href={waUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => void shareOrderFiles()}
                     className="w-full h-11 px-4 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    <span>Kirim File Desain via WhatsApp Admin</span>
-                  </a>
+                    <span>Bagikan SPK + Desain via WhatsApp</span>
+                  </button>
                 </div>
 
                 {createdOrder.paymentStatus === 'paid' ? (
