@@ -72,13 +72,20 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   let y=44;doc.setFontSize(font(7.5));
   for(let i=0;i<4;i++){doc.setFont('helvetica','bold');doc.text(left[i][0],margin,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(left[i][1]||'-',65),margin+25,y);doc.setFont('helvetica','bold');doc.text(rightFields[i][0],111,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(rightFields[i][1]||'-',76),136,y);y+=6;}
   y+=2;doc.setDrawColor(190,190,190);doc.line(margin,y,right,y);y+=6;doc.setFont('helvetica','bold');doc.setFontSize(font(9));doc.text('RINCIAN ITEM & SPESIFIKASI',margin,y);y+=6;
+  const itemAreaBottom=258;
+  const rowHeight=Math.max(6,Math.min(28,(itemAreaBottom-y)/Math.max(1,order.items.length)));
   for(const [i,item] of order.items.entries()){
-    doc.setFillColor(242,242,242);doc.roundedRect(margin,y-4,right-margin,7,1,1,'F');doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(font(7.5));doc.text((i+1)+'. '+item.name.slice(0,66),margin+2,y);doc.setFont('helvetica','normal');doc.text(item.quantity+' pcs',right-2,y,{align:'right'});y+=6;
-    doc.setFontSize(font(6.5));doc.text(doc.splitTextToSize('Warna: '+item.colorName+' · Ukuran: '+item.size+' · Bahan: '+(item.fabricName||'-')+' · Model: '+(item.customModel||'-'),right-margin-4),margin+2,y);y+=4;
-    const placements=item.customPlacements||[];
-    if(placements.length){for(const placement of placements){doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize('DTF: '+placement.zoneLabel+' · '+placement.artworkName,right-margin-25),margin+4,y);try{const data=placement.originalDataUrl||placement.artworkDataUrl;if(data&&y<260)doc.addImage(data,right-21,y-4,17,14,undefined,'FAST');}catch{/* retain design label */}y+=Math.max(5,Math.min(14,14*density));}}
-    else{doc.setTextColor(100,100,100);doc.text('File desain asli wajib dikirim bersama SPK.',margin+4,y);doc.setTextColor(20,20,20);y+=5;}y+=1;
+    const specText='Warna: '+item.colorName+' · Ukuran: '+item.size+' · Bahan: '+(item.fabricName||'-')+' · Model: '+(item.customModel||'-');
+    const printText=(item.customPlacements||[]).map((placement)=>placement.zoneLabel+' / '+placement.artworkName).join(', ')||'File desain asli dilampirkan terpisah';
+    doc.setFillColor(242,242,242);doc.roundedRect(margin,y-3,right-margin,Math.max(4,rowHeight-1),1,1,'F');
+    doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(Math.max(5.2,Math.min(7.5,rowHeight*.34)));
+    doc.text((i+1)+'. '+item.name.slice(0,64),margin+2,y);
+    doc.setFont('helvetica','normal');doc.text(item.quantity+' pcs',right-2,y,{align:'right'});
+    if(rowHeight>7){doc.setFontSize(Math.max(5,Math.min(6.2,rowHeight*.27)));doc.text(doc.splitTextToSize(specText,right-margin-5)[0]||'-',margin+2,y+3);}
+    if(rowHeight>11){doc.setTextColor(90,90,90);doc.text(doc.splitTextToSize('DTF: '+printText,right-margin-5)[0]||'-',margin+2,y+6);doc.setTextColor(20,20,20);}
+    y+=rowHeight;
   }
+  y=Math.min(itemAreaBottom+2,y+2);
   y+=2;doc.line(margin,y,right,y);y+=7;doc.setFont('helvetica','bold');doc.setFontSize(font(8));doc.text('TOTAL PERKIRAAN',margin,y);doc.text(money(order.total),right,y,{align:'right'});y+=7;doc.setFont('helvetica','normal');doc.setFontSize(font(6.5));
   doc.text(doc.splitTextToSize('SPK ini adalah ringkasan permintaan customer, belum menjadi persetujuan produksi. Admin SANDIKALE akan memeriksa spesifikasi, file desain, harga final, dan pembayaran melalui WhatsApp.',right-margin),margin,y);
   return new File([doc.output('blob')],safeFileName((order.spkNumber||order.id)+'-SPK.pdf'),{type:'application/pdf'});
