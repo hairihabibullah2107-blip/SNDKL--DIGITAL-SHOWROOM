@@ -250,198 +250,33 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
   };
 
   const generateSpk = async (order: OrderRow) => {
-    if (!profile) return;
-    setBusy(true);
-    try {
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
-      doc.setFillColor(8, 8, 8); doc.rect(0, 0, 210, 34, 'F');
-      doc.setTextColor(255, 255, 255); doc.setFontSize(21); doc.text('SANDIKALE', 14, 15);
-      doc.setFontSize(10); doc.setTextColor(122, 31, 43); doc.text('SURAT PERINTAH KERJA · CUSTOM APPAREL & DTF', 14, 25);
-      doc.setTextColor(20, 20, 20); doc.setFontSize(13); doc.text('INFORMASI PESANAN', 14, 48);
-      doc.setFontSize(10);
-      const customer = order.showroom_customers;
-      const paidTotal = await getVerifiedPaymentTotal(order.id);
-      const rows = [
-        ['Nomor SPK', order.spk_number], ['Nomor Pesanan', order.order_number],
-        ['Tanggal', new Date(order.created_at).toLocaleString('id-ID')],
-        ['Pelanggan', customer?.name || '-'], ['WhatsApp', customer?.whatsapp || '-'],
-        ['Metode pengiriman', order.shipping_method === 'pickup' ? 'Ambil sendiri di store' : order.shipping_method === 'courier' ? 'Diantar kurir' : '-'], ['Alamat pengiriman', order.shipping_method === 'courier' ? [order.shipping_address, order.shipping_city].filter(Boolean).join(', ') : 'Ambil di store'], ['Status', order.status],
-      ];
-      let y = 58;
-      for (const [label, value] of rows) { doc.setFont('helvetica', 'bold'); doc.text(label, 14, y); doc.setFont('helvetica', 'normal'); doc.text(String(value).slice(0, 95), 62, y); y += 7; }
-      y += 6; doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.text('RINCIAN PRODUK', 14, y); y += 8;
-      doc.setFontSize(9); doc.text('Produk', 14, y); doc.text('Qty', 130, y); doc.text('Subtotal', 150, y); doc.line(14, y + 2, 196, y + 2); y += 9;
-      const orderItems = order.showroom_order_items || [];
-      const productIds = orderItems.map((item) => item.product_id).filter((id): id is string => Boolean(id));
-      const { data: catalogImages, error: catalogImageError } = productIds.length
-        ? await supabase.from('showroom_product_images').select('product_id,storage_path,is_primary,sort_order,view_key').in('product_id', productIds).order('is_primary', { ascending: false }).order('sort_order')
-        : { data: [], error: null };
-      if (catalogImageError) throw catalogImageError;
-      for (const item of orderItems) {
-        if (y > 245) { doc.addPage(); y = 20; }
-        doc.setFont('helvetica', 'normal'); doc.text(String(item.product_name_snapshot).slice(0, 60), 14, y);
-        doc.text(String(item.quantity), 130, y); doc.text(money(Number(item.subtotal)), 150, y);
-        const spec = item.specification || {};
-        const sizeText = (item.showroom_order_variants || []).map((variant) => `${variant.size}×${variant.quantity}`).join(', ');
-        const printRows = Array.isArray(spec.dtf_prints) ? spec.dtf_prints as Array<{ position?: string; size_label?: string }> : [];
-        const printText = printRows.map((print) => `${print.position || ''} ${print.size_label ? '(' + print.size_label + ')' : ''}`).join(', ') || String(spec.placement || 'Tanpa cetak');
-        const detail = `Warna: ${String(spec.color || item.showroom_order_variants?.[0]?.color || '-')} · Ukuran: ${sizeText || '-'} · DTF: ${printText}`;
-        doc.setFontSize(8); doc.text(detail.slice(0, 115), 18, y + 4); doc.setFontSize(9); y += 13;
-        const designAssets = (item.showroom_order_designs || []).flatMap((design) => [
-          design.front_preview_path ? { path: design.front_preview_path, bucket: 'showroom-design-previews', label: 'Preview depan' } : null,
-          design.back_preview_path ? { path: design.back_preview_path, bucket: 'showroom-design-previews', label: 'Preview belakang' } : null,
-          design.original_storage_path ? { path: design.original_storage_path, bucket: 'showroom-customer-designs', label: 'Desain asli' } : null,
-        ]).filter((asset): asset is { path: string; bucket: string; label: string } => Boolean(asset));
-        const catalogAssets = (catalogImages || []).filter((photo) => photo.product_id === item.product_id)
-          .sort((a, b) => (a.view_key === 'front' ? -1 : b.view_key === 'front' ? 1 : a.sort_order - b.sort_order))
-          .slice(0, 2)
-          .map((photo) => ({ path: photo.storage_path, bucket: 'showroom-product-images', label: photo.view_key === 'back' ? 'Foto produk belakang' : 'Foto produk depan' }));
-        const imageAssets = [...designAssets, ...catalogAssets].slice(0, 5);
-        if (imageAssets.length) {
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.text('GAMBAR ACUAN PRODUK & DESAIN', 18, y + 2); y += 5;
-          for (const asset of imageAssets) {
-            if (y > 245) { doc.addPage(); y = 20; }
-            const imageResult = await supabase.storage.from(asset.bucket).download(asset.path);
-            if (imageResult.error || !imageResult.data) {
-              doc.setFont('helvetica', 'italic'); doc.setTextColor(150, 60, 60); doc.text(asset.label + ' gagal dimuat: ' + asset.path.split('/').pop(), 18, y + 4); doc.setTextColor(20, 20, 20); y += 7;
-              continue;
-            }
-            try {
-              const imageData = await imageBlobToJpegDataUrl(imageResult.data);
-              doc.addImage(imageData, 'JPEG', 18, y, 42, 34, undefined, 'FAST');
-              doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.text(asset.label + ' · ' + (asset.path.split('/').pop() || 'File acuan'), 64, y + 6);
-              y += 37;
-            } catch {
-              doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text(asset.label + ' tidak dapat dipratinjau sebagai gambar: ' + asset.path.split('/').pop(), 18, y + 4); y += 7;
-            }
-          }
-        } else {
-          doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.text('Belum ada gambar acuan katalog atau desain untuk item ini.', 18, y + 2); y += 7;
-        }
-      }
-      y += 8; doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-      doc.text(`Subtotal: ${money(Number(order.subtotal))}`, 14, y); y += 7;
-      doc.text(`Pembayaran diterima: ${money(paidTotal)}`, 14, y); y += 7;
-      doc.text(`Sisa: ${money(Math.max(0, Number(order.total_amount) - paidTotal))}`, 14, y); y += 12;
-      doc.setFont('helvetica', 'normal'); doc.text('Catatan desain:', 14, y); y += 6; doc.text(doc.splitTextToSize(order.design_notes || '-', 180), 14, y); y += 14;
-      doc.text('Catatan produksi:', 14, y); y += 6; doc.text(doc.splitTextToSize(order.production_notes || order.notes || '-', 180), 14, y); y += 14;
-      doc.text('Instruksi finishing:', 14, y); y += 6; doc.text(doc.splitTextToSize(order.finishing_instructions || '-', 180), 14, y); y += 18;
-      doc.line(14, y, 90, y); doc.line(120, y, 196, y); y += 5;
-      doc.setFontSize(9); doc.text('Pelanggan', 38, y); doc.text('SANDIKALE', 148, y);
-      const blob = doc.output('blob');
-      const bytes = await blob.arrayBuffer();
-      const digest = await crypto.subtle.digest('SHA-256', bytes);
-      const hash = Array.from(new Uint8Array(digest)).map((v) => v.toString(16).padStart(2, '0')).join('');
-      const countResult = await supabase.from('showroom_spk_documents').select('id', { count: 'exact', head: true }).eq('order_id', order.id).eq('document_type', 'admin_confirmed');
-      if (countResult.error) throw countResult.error;
-      const revision = (countResult.count || 0) + 1;
-      const storagePath = `orders/${order.order_number}/${order.spk_number}-admin-r${revision}.pdf`;
-      const { error: uploadError } = await supabase.storage.from('showroom-spk-documents').upload(storagePath, blob, { contentType: 'application/pdf', upsert: false });
-      if (uploadError) throw uploadError;
-      const previousResult = await supabase.from('showroom_spk_documents').select('id').eq('order_id', order.id).eq('document_type', 'admin_confirmed').eq('document_status', 'active');
-      if (previousResult.error) throw previousResult.error;
-      const previous = previousResult.data || [];
-      if (previous.length) {
-        const supersedeResult = await supabase.from('showroom_spk_documents').update({ document_status: 'superseded' }).in('id', previous.map((row) => row.id));
-        if (supersedeResult.error) throw supersedeResult.error;
-      }
-      const snapshot = { order, customer, items: order.showroom_order_items || [], generated_by: profile.full_name };
-      const { error: insertError } = await supabase.from('showroom_spk_documents').insert({
-        order_id: order.id, spk_number: order.spk_number, document_type: 'admin_confirmed',
-        revision_number: revision, storage_path: storagePath, document_status: 'active',
-        created_by: profile.id, order_version: order.version || 1, snapshot, content_sha256: hash,
-        supersedes_document_id: previous?.[0]?.id || null,
-      });
-      if (insertError) throw insertError;
-      doc.save(`${order.spk_number}.pdf`);
-      onToast(`SPK ${order.spk_number} dibuat dan diarsipkan.`);
-    } catch (e) { onToast(e instanceof Error ? e.message : 'Gagal membuat SPK.'); }
-    finally { setBusy(false); }
+    if(!profile)return;setBusy(true);
+    try{
+      const {jsPDF}=await import('jspdf'),doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
+      const customer=order.showroom_customers,paid=await getVerifiedPaymentTotal(order.id),w=doc.internal.pageSize.getWidth(),m=10,r=w-m,items=order.showroom_order_items||[];
+      doc.setFillColor(8,8,8);doc.rect(0,0,w,23,'F');doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('SANDIKALE',m,11);doc.setTextColor(215,150,158);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text('SURAT PERINTAH KERJA · CUSTOM APPAREL & DTF',m,18);
+      doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('SPK PRODUKSI',m,31);doc.setFontSize(7);doc.text(order.spk_number,r,31,{align:'right'});
+      const fields:Array<[string,string]>=[['Pesanan',order.order_number],['Customer',customer?.name||'-'],['WhatsApp',customer?.whatsapp||'-'],['Tanggal',new Date(order.created_at).toLocaleString('id-ID')],['Pengambilan',order.shipping_method==='pickup'?'Ambil di store':'Diantar kurir'],['Alamat',order.shipping_method==='courier'?[order.shipping_address,order.shipping_city].filter(Boolean).join(', '):'Konfirmasi jadwal via WhatsApp']];
+      let y=38;doc.setFontSize(7);for(let i=0;i<fields.length;i+=2){doc.setFont('helvetica','bold');doc.text(fields[i][0],m,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(fields[i][1]||'-',66),m+20,y);if(fields[i+1]){doc.setFont('helvetica','bold');doc.text(fields[i+1][0],110,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(fields[i+1][1]||'-',78),130,y);}y+=6;}
+      y+=2;doc.setDrawColor(190,190,190);doc.line(m,y,r,y);y+=5;doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text('RINCIAN ITEM & SPESIFIKASI',m,y);y+=5;
+      const room=272-y,rowHeight=Math.max(7,Math.min(14,room/Math.max(1,items.length))),fs=items.length>8?5.5:6.5;
+      for(const [i,item] of items.entries()){if(y>270)break;const spec=item.specification||{},sizes=(item.showroom_order_variants||[]).map(v=>v.size+'×'+v.quantity).join(', ')||'-',prints=Array.isArray(spec.dtf_prints)?(spec.dtf_prints as Array<{position?:string;size_label?:string}>).map(p=>(p.position||'DTF')+(p.size_label?' '+p.size_label:'')).join(', '):String(spec.placement||'Tanpa cetak');doc.setFont('helvetica','bold');doc.setFontSize(fs);doc.text((i+1)+'. '+String(item.product_name_snapshot).slice(0,65),m,y);doc.setFont('helvetica','normal');doc.text(String(item.quantity)+' pcs · '+money(Number(item.subtotal)),r,y,{align:'right'});doc.setFontSize(Math.max(5,fs-.5));doc.text(doc.splitTextToSize('Warna: '+String(spec.color||item.showroom_order_variants?.[0]?.color||'-')+' · Ukuran: '+sizes+' · DTF: '+prints,r-m-2).slice(0,2),m+2,y+3);doc.setTextColor(105,105,105);doc.text((item.showroom_order_designs||[]).length+' file desain tercatat',m+2,y+6);doc.setTextColor(20,20,20);y+=rowHeight;}
+      y=Math.max(y+2,235);y=Math.min(y,273);doc.line(m,y,r,y);y+=6;doc.setFont('helvetica','bold');doc.setFontSize(7);doc.text('TOTAL: '+money(Number(order.total_amount)),m,y);doc.text('DIBAYAR: '+money(paid),r,y,{align:'right'});y+=5;doc.text('SISA: '+money(Math.max(0,Number(order.total_amount)-paid)),m,y);y+=6;doc.setFont('helvetica','normal');doc.setFontSize(6);const notes='Desain: '+(order.design_notes||'-')+' | Produksi: '+(order.production_notes||order.notes||'-')+' | Finishing: '+(order.finishing_instructions||'-');doc.text(doc.splitTextToSize(notes,r-m).slice(0,2),m,y);
+      y=286;doc.line(m,y,85,y);doc.line(125,y,r,y);doc.setFontSize(6);doc.text('Pelanggan',m+25,290);doc.text('SANDIKALE',145,290);
+      const blob=doc.output('blob'),bytes=await blob.arrayBuffer(),digest=await crypto.subtle.digest('SHA-256',bytes),hash=Array.from(new Uint8Array(digest)).map(v=>v.toString(16).padStart(2,'0')).join('');
+      const count=await supabase.from('showroom_spk_documents').select('id',{count:'exact',head:true}).eq('order_id',order.id).eq('document_type','admin_confirmed');if(count.error)throw count.error;
+      const revision=(count.count||0)+1,storagePath='orders/'+order.order_number+'/'+order.spk_number+'-admin-r'+revision+'.pdf',upload=await supabase.storage.from('showroom-spk-documents').upload(storagePath,blob,{contentType:'application/pdf',upsert:false});if(upload.error)throw upload.error;
+      const previousResult=await supabase.from('showroom_spk_documents').select('id').eq('order_id',order.id).eq('document_type','admin_confirmed').eq('document_status','active');if(previousResult.error)throw previousResult.error;const previous=previousResult.data||[];
+      if(previous.length){const supersede=await supabase.from('showroom_spk_documents').update({document_status:'superseded'}).in('id',previous.map(row=>row.id));if(supersede.error)throw supersede.error;}
+      const archived=await supabase.from('showroom_spk_documents').insert({order_id:order.id,spk_number:order.spk_number,document_type:'admin_confirmed',revision_number:revision,storage_path:storagePath,document_status:'active',created_by:profile.id,order_version:order.version||1,snapshot:{order,customer,items,generated_by:profile.full_name},content_sha256:hash,supersedes_document_id:previous[0]?.id||null});if(archived.error)throw archived.error;
+      doc.save(order.spk_number+'.pdf');onToast('SPK '+order.spk_number+' dibuat satu lembar dan diarsipkan.');
+    }catch(e){onToast(e instanceof Error?e.message:'Gagal membuat SPK.');}finally{setBusy(false);}
   };
 
-  const generateInvoice = async (order: OrderRow) => {
-    if (!profile) return;
-    setBusy(true);
-    try {
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
-      const invoiceNumber = 'INV-' + order.order_number;
-      const paidTotal = await getVerifiedPaymentTotal(order.id);
-      doc.setFillColor(20, 20, 20); doc.rect(0, 0, 210, 38, 'F');
-      doc.setTextColor(255, 255, 255); doc.setFontSize(22); doc.text('SANDIKALE', 14, 16);
-      doc.setFontSize(9); doc.setTextColor(190, 115, 125); doc.text('CUSTOM APPAREL & DTF STUDIO', 14, 25);
-      doc.setFontSize(17); doc.setTextColor(20, 20, 20); doc.text('INVOICE', 14, 54);
-      doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.text(invoiceNumber, 14, 62);
-      doc.setFont('helvetica', 'normal'); doc.text('Tanggal: ' + new Date().toLocaleDateString('id-ID'), 14, 70);
-      doc.text('Nomor pesanan: ' + order.order_number, 14, 77);
-      doc.text('Nomor SPK: ' + order.spk_number, 14, 84);
-      const customer = order.showroom_customers;
-      doc.setFont('helvetica', 'bold'); doc.text('TAGIHAN KEPADA', 120, 54);
-      doc.setFont('helvetica', 'normal'); doc.text(doc.splitTextToSize(customer?.name || 'Pelanggan SANDIKALE', 75), 120, 62);
-      doc.text(doc.splitTextToSize(customer?.whatsapp || '-', 75), 120, 72);
-      doc.text(doc.splitTextToSize(customer?.address || '-', 75), 120, 80);
-      let y = 101;
-      doc.setFillColor(245, 245, 245); doc.rect(14, y - 6, 182, 10, 'F');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-      doc.text('DESKRIPSI', 17, y); doc.text('QTY', 132, y); doc.text('JUMLAH', 158, y); y += 10;
-      doc.setFont('helvetica', 'normal');
-      for (const item of order.showroom_order_items || []) {
-        const spec = item.specification || {};
-        const color = String(spec.color || item.showroom_order_variants?.[0]?.color || '-');
-        const sizes = (item.showroom_order_variants || []).map((variant) => variant.size + ' x ' + variant.quantity).join(', ');
-        const lines = doc.splitTextToSize(item.product_name_snapshot + '\nWarna: ' + color + ' · Ukuran: ' + (sizes || '-'), 105);
-        const rowHeight = Math.max(12, lines.length * 5 + 3);
-        if (y + rowHeight > 270) { doc.addPage(); y = 20; }
-        doc.text(lines, 17, y); doc.text(String(item.quantity), 132, y);
-        doc.text(money(Number(item.subtotal)), 158, y);
-        y += rowHeight + 3;
-      }
-      y += 5;
-      const totals: Array<[string, number]> = [
-        ['Subtotal', Number(order.subtotal)],
-        ['Diskon', -Number(order.discount || 0)],
-        ['Biaya tambahan', Number(order.additional_cost || 0)],
-        ['Pengiriman', Number(order.delivery_cost || 0)],
-        ['TOTAL TAGIHAN', Number(order.total_amount)],
-        ['Pembayaran diterima', paidTotal],
-        ['SISA TAGIHAN', Math.max(0, Number(order.total_amount) - paidTotal)],
-      ];
-      for (const [label, amount] of totals) {
-        if (y > 270) { doc.addPage(); y = 20; }
-        doc.setFont('helvetica', label === 'TOTAL TAGIHAN' || label === 'SISA TAGIHAN' ? 'bold' : 'normal');
-        doc.text(label, 112, y); doc.text(money(amount), 158, y); y += 7;
-      }
-      y += 8; doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-      doc.text(doc.splitTextToSize('Pengiriman: ' + (order.shipping_method === 'pickup' ? 'Ambil sendiri di store' : order.shipping_method === 'courier' ? 'Diantar kurir · ' + [order.shipping_address, order.shipping_city].filter(Boolean).join(', ') : 'Dikonfirmasi admin') + '. Biaya antar dan jadwal pengerjaan dikonfirmasi bersama admin SANDIKALE melalui WhatsApp.', 180), 14, y);
-      const blob = doc.output('blob');
-      const countResult = await supabase.from('showroom_spk_documents').select('id', { count: 'exact', head: true }).eq('order_id', order.id).eq('document_type', 'invoice');
-      if (countResult.error) throw countResult.error;
-      const revision = (countResult.count || 0) + 1;
-      const storagePath = 'orders/' + order.order_number + '/' + invoiceNumber + '-r' + revision + '.pdf';
-      const upload = await supabase.storage.from('showroom-spk-documents').upload(storagePath, blob, { contentType: 'application/pdf', upsert: false });
-      if (upload.error) throw upload.error;
-      const previousResult = await supabase.from('showroom_spk_documents').select('id').eq('order_id', order.id).eq('document_type', 'invoice').eq('document_status', 'active');
-      if (previousResult.error) throw previousResult.error;
-      if (previousResult.data?.length) {
-        const supersede = await supabase.from('showroom_spk_documents').update({ document_status: 'superseded' }).in('id', previousResult.data.map((row) => row.id));
-        if (supersede.error) throw supersede.error;
-      }
-      const bytes = await blob.arrayBuffer();
-      const digest = await crypto.subtle.digest('SHA-256', bytes);
-      const hash = Array.from(new Uint8Array(digest)).map((v) => v.toString(16).padStart(2, '0')).join('');
-      const archived = await supabase.from('showroom_spk_documents').insert({
-        order_id: order.id, spk_number: order.spk_number, document_type: 'invoice',
-        revision_number: revision, storage_path: storagePath, document_status: 'active',
-        created_by: profile.id, order_version: order.version || 1,
-        snapshot: { order, customer, items: order.showroom_order_items || [], invoice_number: invoiceNumber, generated_by: profile.full_name },
-        content_sha256: hash, supersedes_document_id: previousResult.data?.[0]?.id || null,
-      });
-      if (archived.error) throw archived.error;
-      doc.save(invoiceNumber + '.pdf');
-      onToast('Invoice ' + invoiceNumber + ' berhasil dibuat dan diarsipkan.');
-    } catch (e) { onToast(e instanceof Error ? e.message : 'Gagal membuat invoice.'); }
-    finally { setBusy(false); }
+  const openReceiptDesk = (order: OrderRow) => {
+    const url = new URL('receipt.html', window.location.href);
+    url.searchParams.set('order', order.order_number);
+    window.open(url.toString(), '_blank', 'noopener,noreferrer');
   };
 
   const markPaid = async (order: OrderRow) => {
@@ -543,7 +378,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
         {(['owner','admin'].includes(profile.role) && (tab === 'catalog' || tab === 'production' || tab === 'website')) && <AdminContentManager key={tab} initialWorkspace={tab} allowedWorkspaces={['catalog','production','website']} onToast={onToast} />}
         {tab === 'website' && <section className="space-y-3 mt-6"><h2 className="text-xl font-bold">Moderasi ulasan ({reviews.length})</h2>{reviews.map((r) => <article key={r.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 space-y-2"><div className="flex justify-between gap-3"><strong>{r.author_name} · {'★'.repeat(r.rating)}</strong><span className="text-xs text-white/50">{r.is_approved ? 'Terbit' : 'Menunggu'}</span></div><p className="text-sm text-white/75">{r.comment}</p><div className="flex gap-2"><button onClick={() => void moderateReview(r, true)} className="bg-[#7A1F2B] rounded px-3 py-2 text-xs">Terbitkan</button><button onClick={() => void moderateReview(r, false)} className="border border-white/15 rounded px-3 py-2 text-xs">Tolak</button><button onClick={() => void deleteReview(r)} className="border border-red-500/30 text-red-300 rounded px-3 py-2 text-xs">Hapus</button></div></article>)}</section>}
         {tab === 'orders' && <section className="space-y-4"><div className="flex flex-wrap justify-between gap-3"><h2 className="text-xl font-bold">Pesanan masuk ({orders.length})</h2><div className="flex gap-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nomor / nama / WhatsApp" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm" /><button onClick={exportOrdersCsv} className="rounded-lg border border-white/15 px-3 py-2 text-xs whitespace-nowrap">Export CSV</button></div></div>
-          {visibleOrders.map((order) => <article key={order.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 md:p-5 space-y-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="font-bold">{order.order_number}</div><div className="text-xs text-white/50">{order.spk_number} · {new Date(order.created_at).toLocaleString('id-ID')}</div></div><div className="text-right"><div className="font-bold">{money(Number(order.total_amount))}</div><div className="text-xs text-white/50">DP {money(Number(order.deposit_amount))} · {order.payment_status}</div></div></div><div className="text-sm">{order.showroom_customers?.name || 'Pelanggan'} · {order.showroom_customers?.whatsapp || '—'}</div><div className="text-xs text-white/60">Pengiriman: {order.shipping_method==='pickup'?'Ambil sendiri di store':order.shipping_method==='courier'?'Diantar kurir':'Belum tercatat'}{order.shipping_method==='courier'&&[order.shipping_address,order.shipping_city].filter(Boolean).length?' · '+[order.shipping_address,order.shipping_city].filter(Boolean).join(', '):''}</div><div className="text-xs text-white/60">{(order.showroom_order_items || []).map((item) => `${item.product_name_snapshot} × ${item.quantity}`).join(' · ')}</div><div className="flex flex-wrap items-center gap-3"><span className="text-xs text-white/50">Status: {order.status}</span><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => void generateInvoice(order)} className="border border-[#7A1F2B]/60 text-[#D58B95] rounded-lg px-3 py-2 text-xs">Buat Invoice PDF</button><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => void generateSpk(order)} className="border border-white/15 rounded-lg px-3 py-2 text-xs">Buat SPK PDF</button>{order.payment_status !== 'paid' && <button disabled={!['owner','admin'].includes(profile.role)} onClick={() => void markPaid(order)} className="bg-emerald-700 rounded-lg px-3 py-2 text-xs">Konfirmasi pembayaran</button>}<select disabled={busy || !['owner','admin','staff'].includes(profile.role)} defaultValue="" onChange={(e) => { if (e.target.value) void updateStage(order, e.target.value); }} className="bg-black border border-white/15 rounded-lg px-3 py-2 text-sm"><option value="">Ubah status produksi…</option>{Object.keys(STATUS).map((s) => <option key={s} value={s}>{s}</option>)}</select><a className="text-xs text-[#A33A48]" href={`https://wa.me/${order.showroom_customers?.whatsapp || ''}`} target="_blank" rel="noreferrer">Hubungi pelanggan via WhatsApp</a></div></article>)}
+          {visibleOrders.map((order) => <article key={order.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 md:p-5 space-y-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="font-bold">{order.order_number}</div><div className="text-xs text-white/50">{order.spk_number} · {new Date(order.created_at).toLocaleString('id-ID')}</div></div><div className="text-right"><div className="font-bold">{money(Number(order.total_amount))}</div><div className="text-xs text-white/50">DP {money(Number(order.deposit_amount))} · {order.payment_status}</div></div></div><div className="text-sm">{order.showroom_customers?.name || 'Pelanggan'} · {order.showroom_customers?.whatsapp || '—'}</div><div className="text-xs text-white/60">Pengiriman: {order.shipping_method==='pickup'?'Ambil sendiri di store':order.shipping_method==='courier'?'Diantar kurir':'Belum tercatat'}{order.shipping_method==='courier'&&[order.shipping_address,order.shipping_city].filter(Boolean).length?' · '+[order.shipping_address,order.shipping_city].filter(Boolean).join(', '):''}</div><div className="text-xs text-white/60">{(order.showroom_order_items || []).map((item) => `${item.product_name_snapshot} × ${item.quantity}`).join(' · ')}</div><div className="flex flex-wrap items-center gap-3"><span className="text-xs text-white/50">Status: {order.status}</span><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => openReceiptDesk(order)} className="border border-[#7A1F2B]/60 text-[#D58B95] rounded-lg px-3 py-2 text-xs">Cetak Nota Struk</button><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => void generateSpk(order)} className="border border-white/15 rounded-lg px-3 py-2 text-xs">Buat SPK PDF</button>{order.payment_status !== 'paid' && <button disabled={!['owner','admin'].includes(profile.role)} onClick={() => void markPaid(order)} className="bg-emerald-700 rounded-lg px-3 py-2 text-xs">Konfirmasi pembayaran</button>}<select disabled={busy || !['owner','admin','staff'].includes(profile.role)} defaultValue="" onChange={(e) => { if (e.target.value) void updateStage(order, e.target.value); }} className="bg-black border border-white/15 rounded-lg px-3 py-2 text-sm"><option value="">Ubah status produksi…</option>{Object.keys(STATUS).map((s) => <option key={s} value={s}>{s}</option>)}</select><a className="text-xs text-[#A33A48]" href={`https://wa.me/${order.showroom_customers?.whatsapp || ''}`} target="_blank" rel="noreferrer">Hubungi pelanggan via WhatsApp</a></div></article>)}
           {!visibleOrders.length && <p className="text-sm text-white/50">Belum ada pesanan yang cocok.</p>}</section>}
 
       </div>
