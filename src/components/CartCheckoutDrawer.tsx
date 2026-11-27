@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, CreditCard, Info, MessageCircle, ShieldCheck, ShoppingBag, ShoppingCart, Trash2, Truck, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, CreditCard, MessageCircle, ShieldCheck, ShoppingBag, ShoppingCart, Trash2, Truck, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type {
   CartItem,
