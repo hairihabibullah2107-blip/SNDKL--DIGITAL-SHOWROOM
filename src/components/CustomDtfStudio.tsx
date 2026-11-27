@@ -39,6 +39,32 @@ interface CustomDtfStudioProps {
 
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 
+const GARMENT_COLOR_PREVIEWS: Record<string, string> = {
+  hitam: '#171717', black: '#171717',
+  putih: '#F4F1EA', white: '#F4F1EA', ivory: '#F4F1EA',
+  merah: '#C62828', red: '#C62828',
+  maroon: '#6B1F35', burgundy: '#6B1F35',
+  navy: '#172B4D', 'biru navy': '#172B4D',
+  biru: '#2563A6', blue: '#2563A6',
+  'biru muda': '#83B7D9', 'light blue': '#83B7D9',
+  hijau: '#34734B', green: '#34734B',
+  sage: '#9BAF9A', 'sage green': '#9BAF9A',
+  olive: '#687442', 'hijau army': '#596447', army: '#596447',
+  kuning: '#E5C542', yellow: '#E5C542',
+  orange: '#D97736', oranye: '#D97736',
+  pink: '#D98AA5', 'merah muda': '#D98AA5',
+  ungu: '#76539B', purple: '#76539B',
+  abu: '#858585', 'abu-abu': '#858585', grey: '#858585', gray: '#858585',
+  cream: '#D9CBB3', krem: '#D9CBB3',
+  cokelat: '#80543A', brown: '#80543A',
+};
+
+function resolveGarmentColorPreview(value: string): string | null {
+  const normalized = value.trim().toLowerCase().replace(/\\s+/g, ' ');
+  if (/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(normalized)) return normalized;
+  return GARMENT_COLOR_PREVIEWS[normalized] || null;
+}
+
 const SAMPLE_STAMPS = [
   {
     name: 'SANDIKALE MONO.svg',
@@ -127,7 +153,8 @@ export function CustomDtfStudio({
   const selectedProduct = selectedProductId
     ? customBaseProducts.find((p) => p.id === selectedProductId) || null
     : null;
-  const selectedColor = requestedColor.trim() ? { name: requestedColor.trim(), hex: '#777777' } : null;
+  const previewColorHex = resolveGarmentColorPreview(requestedColor);
+  const selectedColor = requestedColor.trim() ? { name: requestedColor.trim(), hex: previewColorHex || '#777777' } : null;
   const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
   const selectedFabric = fabricId ? fabrics.find((f) => f.id === fabricId) || null : null;
   const activePlacement = placements.find((p) => p.zoneId === selectedZoneId) || null;
@@ -572,7 +599,7 @@ export function CustomDtfStudio({
                     onError={() => setMockupImageFailed(true)}
                     className="absolute inset-0 w-full h-full object-contain p-3 pointer-events-none" style={{ filter: "drop-shadow(0 18px 20px rgba(0,0,0,.28)) drop-shadow(0 4px 7px rgba(0,0,0,.18))" }}
                   />
-                  {selectedColor && mockupHasTransparency && (
+                  {selectedColor && previewColorHex && mockupHasTransparency && (
                     <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{
                       backgroundColor: selectedColor.hex,
                       opacity: 0.84,
@@ -586,8 +613,8 @@ export function CustomDtfStudio({
                   )}
                   {selectedColor && (
                     <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/75 text-white text-[11px] font-medium flex items-center gap-1.5 backdrop-blur-sm">
-                      <span className="w-3 h-3 rounded-full border border-white/40" style={{ backgroundColor: selectedColor.hex }} />
-                      <span>Warna pesanan: {selectedColor.name}</span>
+                      {previewColorHex && <span className="w-3 h-3 rounded-full border border-white/40" style={{ backgroundColor: previewColorHex }} />}
+                      <span>Warna pesanan: {selectedColor.name}{!previewColorHex ? ' · pratinjau warna belum tersedia' : ''}</span>
                     </div>
                   )}
                 </>
