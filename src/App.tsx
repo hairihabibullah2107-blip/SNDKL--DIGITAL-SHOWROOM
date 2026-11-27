@@ -426,6 +426,7 @@ export default function App() {
           city: payload.shippingCity,
         },
         items,
+        payment_label: payload.paymentLabel,
         deposit_amount: 0,
       });
       const now = new Date().toISOString();
@@ -678,7 +679,7 @@ export default function App() {
               >
                 {siteContent.heroTitle.split('|')[0]} <span style={{color:'var(--brand-accent)'}}>{siteContent.heroTitle.split('|')[1] || ''}</span>
               </h1>
-              <p className="text-sm md:text-base text-neutral-300 max-w-xl leading-relaxed">
+              <p className="hidden sm:block text-sm md:text-base text-neutral-300 max-w-xl leading-relaxed">
                 <span className="hero-subtitle-marquee">{siteContent.heroSubtitle}</span>
               </p>
             </div>
