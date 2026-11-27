@@ -418,7 +418,7 @@ export default function App() {
           phone: payload.customerPhone,
           address: payload.shippingCourier === 'Diantar Kurir' ? [payload.shippingAddress, payload.shippingCity].filter(Boolean).join(', ') : '',
           city: payload.shippingCourier === 'Diantar Kurir' ? payload.shippingCity : '',
-          notes: `Metode pembayaran: ${payload.paymentLabel}; waktu pengerjaan dan biaya antar dikonfirmasi melalui WhatsApp.`,
+          notes: `Metode pembayaran: ${payload.paymentLabel}; Pengambilan: ${payload.shippingCourier}. ${payload.shippingCourier === 'Ambil Sendiri di Store' ? 'Tidak menggunakan kurir dan tidak ada biaya pengiriman.' : 'Alamat dan biaya pengiriman dikonfirmasi admin melalui WhatsApp.'}`,
         },
         shipping: {
           method: payload.shippingCourier === 'Ambil Sendiri di Store' ? 'pickup' : 'courier',
@@ -522,10 +522,10 @@ export default function App() {
         paymentLabel: 'Pembayaran manual',
         paymentReference: '',
         paymentStatus: data.payment_status === 'paid' ? 'paid' : 'pending',
-        stage: statusMap[data.status] || 'Menunggu Pembayaran',
+        stage: data.shipping_method === 'pickup' && ['ready', 'shipped'].includes(data.status) ? 'Siap Diambil' : statusMap[data.status] || 'Menunggu Pembayaran',
         trackingNumber: trackingCode,
         timeline: (data.history || []).map((event: any) => ({
-          stage: statusMap[event.new_status] || 'Menunggu Pembayaran',
+          stage: data.shipping_method === 'pickup' && ['ready', 'shipped'].includes(event.new_status) ? 'Siap Diambil' : statusMap[event.new_status] || 'Menunggu Pembayaran',
           timestamp: event.created_at,
           note: event.notes || '',
           completed: true,
