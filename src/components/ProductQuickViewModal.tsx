@@ -259,13 +259,13 @@ export function ProductQuickViewModal({
 
                 <button
                   type="button"
-                  disabled={!activeColor || !selectedSize || selectedStock <= 0 || product.colors.length === 0}
+                  disabled={!requestedColor.trim() || !selectedSize || selectedStock <= 0}
                   onClick={() => {
-                    if (!activeColor || !selectedSize) return;
+                    if (!requestedColor.trim() || !selectedSize) return;
                     onAddToCart({
                       product,
-                      colorName: activeColor.name,
-                      colorHex: activeColor.hex,
+                      colorName: requestedColor.trim(),
+                      colorHex: '#777777',
                       size: selectedSize,
                       quantity,
                     });
@@ -275,11 +275,7 @@ export function ProductQuickViewModal({
                 >
                   <ShoppingBag className="w-4 h-4" />
                   <span>
-                    {product.colors.length === 0
-                      ? 'Warna Belum Diisi Admin'
-                      : !activeColor || !selectedSize
-                      ? 'Pilih Warna & Ukuran'
-                      : 'Tambah ke Tas'}
+                    {!requestedColor.trim() || !selectedSize ? 'Isi Warna & Ukuran' : 'Tambah ke Tas'}
                   </span>
                 </button>
 
