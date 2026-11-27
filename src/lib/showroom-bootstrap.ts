@@ -171,7 +171,7 @@ export async function loadShowroomBootstrap() {
 
   const printingMethods: PrintingMethodOption[] = (printingMethodResult.data || []).map((row) => ({ id: row.id, name: row.name, description: row.description || '', pricingType: row.pricing_type, basePrice: asNumber(row.base_price) }));
 
-  const dtfZones: DtfZonePrice[] = dtfPrices.map((row) => ({
+  const dtfZones: DtfZonePrice[] = dtfPrices.map((row: any) => ({
     id: row.size_code,
     label: row.label,
     dimensionsCm: `${row.width_cm} × ${row.height_cm} cm`,
