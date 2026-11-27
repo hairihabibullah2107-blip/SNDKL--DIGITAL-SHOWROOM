@@ -457,7 +457,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
       }
       const remainingToRecord = Math.max(0, Number(order.total_amount || 0) - verifiedTotal - pendingTotal);
       if (remainingToRecord > 0) {
-        const methodMatch = String(order.notes || '').match(/Metode pembayaran:\\s*([^;]+)/i);
+        const methodMatch = String(order.notes || '').match(/Metode pembayaran:\s*([^;]+)/i);
         const paymentInsert = await supabase.from('showroom_payments').insert({
           order_id: order.id,
           amount: remainingToRecord,
