@@ -298,12 +298,22 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     await load(); onToast(approved ? 'Ulasan diterbitkan.' : 'Ulasan ditolak dan dihapus.');
   };
 
+  const loadSandikaleLogoPng = async (): Promise<string | null> => {
+    try {
+      const image = new Image(); image.src = sandikaleLogo; await image.decode();
+      const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 384;
+      const context = canvas.getContext('2d'); if (!context) return null;
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/png');
+    } catch { return null; }
+  };
+
   const generateSpk = async (order: OrderRow) => {
     if(!profile)return;setBusy(true);
     try{
       const {jsPDF}=await import('jspdf'),doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
       const customer=order.showroom_customers,paid=await getVerifiedPaymentTotal(order.id),w=doc.internal.pageSize.getWidth(),m=10,r=w-m,items=order.showroom_order_items||[];
-      doc.setFillColor(8,8,8);doc.rect(0,0,w,23,'F');doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('SANDIKALE',m,11);doc.setTextColor(215,150,158);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text('SURAT PERINTAH KERJA · CUSTOM APPAREL & DTF',m,18);
+      doc.setFillColor(8,8,8);doc.rect(0,0,w,23,'F');doc.setTextColor(255,255,255);const logoPng=await loadSandikaleLogoPng();if(logoPng)doc.addImage(logoPng,'PNG',m,3,6,9);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('SANDIKALE',m+9,11);doc.setTextColor(215,150,158);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text('SURAT PERINTAH KERJA · CUSTOM APPAREL & DTF',m,18);
       doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('SPK PRODUKSI',m,31);doc.setFontSize(7);doc.text(order.spk_number,r,31,{align:'right'});
       const fields:Array<[string,string]>=[['Pesanan',order.order_number],['Customer',customer?.name||'-'],['WhatsApp',customer?.whatsapp||'-'],['Tanggal',new Date(order.created_at).toLocaleString('id-ID')],['Pengambilan',order.shipping_method==='pickup'?'Ambil di store':'Diantar kurir'],['Alamat',order.shipping_method==='courier'?[order.shipping_address,order.shipping_city].filter(Boolean).join(', '):'Konfirmasi jadwal via WhatsApp']];
       let y=38;doc.setFontSize(7);for(let i=0;i<fields.length;i+=2){doc.setFont('helvetica','bold');doc.text(fields[i][0],m,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(fields[i][1]||'-',66),m+20,y);if(fields[i+1]){doc.setFont('helvetica','bold');doc.text(fields[i+1][0],110,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(fields[i+1][1]||'-',78),130,y);}y+=6;}
