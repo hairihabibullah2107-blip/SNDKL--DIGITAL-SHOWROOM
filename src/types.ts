@@ -174,6 +174,7 @@ export interface OrderDesign {
 
 export interface Order {
   id: string;
+  spkNumber?: string;
   customerId?: string;
   customerName: string;
   customerEmail: string;

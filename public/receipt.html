@@ -28,7 +28,9 @@ async function verify(){
  if(!session){$('sessionLabel').textContent='Belum masuk';return}
  const {data:staff,error}=await supabase.from('showroom_staff_profiles').select('full_name,role,is_active').eq('auth_user_id',session.user.id).maybeSingle();
  if(error||!staff||!staff.is_active||!['owner','admin'].includes(staff.role)){await supabase.auth.signOut();$('sessionLabel').textContent='Akses owner/admin diperlukan';$('loginError').textContent='Akun ini tidak memiliki izin cetak struk.';return}
- showSession(session.user,staff.role)
+ showSession(session.user,staff.role);
+ const orderParam=new URLSearchParams(window.location.search).get('order');
+ if(orderParam){$('orderSearch').value=orderParam;$('searchForm').requestSubmit()}
 }
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginError').textContent='';const {error}=await supabase.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){$('loginError').textContent=error.message;return}await verify()});
 $('searchForm').addEventListener('submit',async e=>{

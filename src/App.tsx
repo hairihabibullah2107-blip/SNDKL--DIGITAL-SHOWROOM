@@ -432,6 +432,7 @@ export default function App() {
       const now = new Date().toISOString();
       const order = {
         id: data.order_number,
+        spkNumber: data.spk_number,
         customerName: payload.customerName,
         customerEmail: payload.customerEmail,
         customerPhone: payload.customerPhone,
@@ -464,15 +465,6 @@ export default function App() {
     }
   };
 
-  const handleConfirmPayment = async (orderId: string): Promise<Order | null> => {
-    const order = recentOrders.find((entry) => entry.id === orderId);
-    if (!order) return null;
-    const simulated = { ...order, paymentStatus: 'paid' as const, updatedAt: new Date().toISOString() };
-    setRecentOrders((prev) => prev.map((entry) => entry.id === orderId ? simulated : entry));
-    showToast('Simulasi pembayaran tercatat di tampilan ini. Konfirmasi pembayaran sebenarnya tetap melalui admin SANDIKALE.');
-    return simulated;
-  };
-
   const handleTrackOrder = async (trackingCode: string) => {
     try {
       const data = await invokeShowroom<Record<string, any>>({ action: 'track_order', tracking_code: trackingCode });
@@ -494,6 +486,7 @@ export default function App() {
       };
       const order = {
         id: data.order_number,
+        spkNumber: data.spk_number || data.order_number,
         customerName: data.showroom_customers?.name || '',
         customerEmail: data.showroom_customers?.email || '',
         customerPhone: data.showroom_customers?.whatsapp || '',
@@ -909,7 +902,6 @@ export default function App() {
         }
         onRemoveItem={(id) => setCart((prev) => prev.filter((i) => i.id !== id))}
         onCreateOrder={handleCreateOrder}
-        onConfirmPayment={handleConfirmPayment}
         onTrackNewOrder={(oid) => {
           handleTrackOrder(oid);
           scrollToSection('lacak');
