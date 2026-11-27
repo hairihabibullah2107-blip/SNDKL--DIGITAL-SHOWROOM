@@ -83,14 +83,14 @@ function printCustomerReceipt(order: Order) {
 type SpkView = 'front' | 'back' | 'sleeve';
 const SPK_GARMENT_WIDTH_CM: Record<string, number> = { S: 48, M: 50, L: 52, XL: 54, XXL: 56 };
 
-function getPlacementView(placement: CartItem['customPlacements'][number]): SpkView {
+function getPlacementView(placement: NonNullable<CartItem['customPlacements']>[number]): SpkView {
   const key = (String(placement.zoneId || '') + ' ' + String(placement.zoneLabel || '')).toLowerCase();
   if (/sleeve|lengan|cuff|manset/.test(key)) return 'sleeve';
   if (/back|belakang|punggung|a3/.test(key)) return 'back';
   return 'front';
 }
 
-function placementWidthCm(placement: CartItem['customPlacements'][number]): number {
+function placementWidthCm(placement: NonNullable<CartItem['customPlacements']>[number]): number {
   const key = (String(placement.zoneId || '') + ' ' + String(placement.zoneLabel || '')).toLowerCase();
   const dimensions = key.match(/(\\d+(?:[.,]\\d+)?)\\s*[x×]\\s*(\\d+(?:[.,]\\d+)?)/);
   if (dimensions) return Number(dimensions[1].replace(',', '.'));
