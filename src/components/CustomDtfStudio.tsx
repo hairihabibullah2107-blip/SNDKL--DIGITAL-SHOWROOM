@@ -798,25 +798,27 @@ export function CustomDtfStudio({
                       Pilihan warna belum diisi oleh Admin.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-5 sm:grid-cols-6 gap-3">
-                      {availableColors.map((c) => (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => setColorId(c.id)}
-                          title={c.name}
-                          aria-label={`Pilih warna ${c.name}`}
-                          aria-pressed={colorId === c.id}
-                          className={`relative mx-auto flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#7A1F2B] ${
-                            colorId === c.id ? 'border-[#7A1F2B] scale-110 shadow-[0_0_0_3px_rgba(122,31,43,.18)]' : 'border-black/15 dark:border-white/20 hover:scale-105'
-                          }`}
-                          style={{ backgroundColor: c.hex }}
-                        >
-                          {colorId === c.id && <Check className={`h-4 w-4 ${['#ffffff','#fff','#f5f5f5','#eeeeee'].includes(c.hex.toLowerCase()) ? 'text-black' : 'text-white'}`} />}
-                        </button>
-                      ))}
-                    </div>
-                    {selectedColor && <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Warna terpilih: <strong className="text-neutral-800 dark:text-white">{selectedColor.name}</strong></p>}
+                    <>
+                      <div className="grid grid-cols-5 sm:grid-cols-6 gap-3">
+                        {availableColors.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => setColorId(c.id)}
+                            title={c.name}
+                            aria-label={`Pilih warna ${c.name}`}
+                            aria-pressed={colorId === c.id}
+                            className={`relative mx-auto flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#7A1F2B] ${
+                              colorId === c.id ? 'border-[#7A1F2B] scale-110 shadow-[0_0_0_3px_rgba(122,31,43,.18)]' : 'border-black/15 dark:border-white/20 hover:scale-105'
+                            }`}
+                            style={{ backgroundColor: c.hex }}
+                          >
+                            {colorId === c.id && <Check className={`h-4 w-4 ${['#ffffff','#fff','#f5f5f5','#eeeeee'].includes(c.hex.toLowerCase()) ? 'text-black' : 'text-white'}`} />}
+                          </button>
+                        ))}
+                      </div>
+                      {selectedColor && <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Warna terpilih: <strong className="text-neutral-800 dark:text-white">{selectedColor.name}</strong></p>}
+                    </>
                   )}
                 </div>
 
