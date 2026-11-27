@@ -438,19 +438,56 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
 
   const markPaid = async (order: OrderRow) => {
     if (!profile || !['owner','admin'].includes(profile.role) || !window.confirm(`Konfirmasi bahwa pembayaran pesanan ${order.order_number} sudah diterima?`)) return;
-    const { error: updateError } = await supabase.from('showroom_orders').update({ payment_status: 'paid', status: 'waiting_design_review', updated_at: new Date().toISOString(), updated_by: profile.id }).eq('id', order.id);
-    if (updateError) { onToast(updateError.message); return; }
-    const [paymentResult, historyResult] = await Promise.all([
-      supabase.from('showroom_payments').update({ payment_status: 'verified', verified_by: profile.id, paid_at: new Date().toISOString() }).eq('order_id', order.id).eq('payment_status', 'waiting_verification'),
-      supabase.from('showroom_order_status_history').insert({ order_id: order.id, previous_status: order.status, new_status: 'waiting_design_review', changed_by: profile.id, notes: 'Pembayaran dikonfirmasi admin.' }),
-    ]);
-    await load();
-    const warnings = [paymentResult.error?.message, historyResult.error?.message].filter(Boolean);
-    if (warnings.length) {
-      onToast('Status pembayaran sudah dikonfirmasi, tetapi ada catatan yang gagal diperbarui: ' + warnings.join(' · '));
-      return;
+    setBusy(true);
+    try {
+      const paymentQuery = await supabase.from('showroom_payments')
+        .select('id,amount,payment_status')
+        .eq('order_id', order.id);
+      if (paymentQuery.error) throw paymentQuery.error;
+      const paymentRows = paymentQuery.data || [];
+      const pendingRows = paymentRows.filter((row) => ['pending', 'waiting_verification'].includes(row.payment_status));
+      const pendingTotal = pendingRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+      const verifiedTotal = paymentRows.filter((row) => row.payment_status === 'verified')
+        .reduce((sum, row) => sum + Number(row.amount || 0), 0);
+      if (pendingRows.length) {
+        const verifyResult = await supabase.from('showroom_payments')
+          .update({ payment_status: 'verified', verified_by: profile.id, paid_at: new Date().toISOString() })
+          .in('id', pendingRows.map((row) => row.id));
+        if (verifyResult.error) throw verifyResult.error;
+      }
+      const remainingToRecord = Math.max(0, Number(order.total_amount || 0) - verifiedTotal - pendingTotal);
+      if (remainingToRecord > 0) {
+        const methodMatch = String(order.notes || '').match(/Metode pembayaran:\s*([^;]+)/i);
+        const paymentInsert = await supabase.from('showroom_payments').insert({
+          order_id: order.id,
+          amount: remainingToRecord,
+          payment_method: methodMatch?.[1]?.trim() || 'manual',
+          payment_status: 'verified',
+          verified_by: profile.id,
+          paid_at: new Date().toISOString(),
+          notes: paymentRows.length ? 'Pelunasan dikonfirmasi admin.' : 'Pembayaran penuh dikonfirmasi admin.',
+        });
+        if (paymentInsert.error) throw paymentInsert.error;
+      }
+      const { error: updateError } = await supabase.from('showroom_orders').update({
+        payment_status: 'paid', status: 'waiting_design_review', updated_at: new Date().toISOString(), updated_by: profile.id,
+      }).eq('id', order.id);
+      if (updateError) throw updateError;
+      const { error: historyError } = await supabase.from('showroom_order_status_history').insert({
+        order_id: order.id, previous_status: order.status, new_status: 'waiting_design_review',
+        changed_by: profile.id, notes: 'Pembayaran dikonfirmasi admin.',
+      });
+      await load();
+      if (historyError) {
+        onToast('Pembayaran sudah tercatat, tetapi riwayat status gagal disimpan: ' + historyError.message);
+        return;
+      }
+      onToast('Pembayaran pesanan dikonfirmasi dan dicatat pada riwayat pembayaran.');
+    } catch (e) {
+      onToast(e instanceof Error ? e.message : 'Pembayaran gagal dikonfirmasi.');
+    } finally {
+      setBusy(false);
     }
-    onToast('Pembayaran pesanan dikonfirmasi.');
   };
 
   const deleteReview = async (review: ReviewRow) => {
