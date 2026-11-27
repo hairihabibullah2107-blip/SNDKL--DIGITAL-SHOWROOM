@@ -133,6 +133,7 @@ export interface CartItem {
   name: string;
   image: string;
   backImage?: string;
+  sleeveImage?: string;
   colorName: string;
   colorHex: string;
   size: string;
