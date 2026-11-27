@@ -10,6 +10,7 @@ import type {
   UserProfile,
 } from '../types';
 import { formatRupiah } from '../utils/format';
+import { removeImageBackground } from '../utils/removeBackground';
 
 interface CartCheckoutDrawerProps {
   open: boolean;
@@ -79,48 +80,126 @@ function printCustomerReceipt(order: Order) {
   popup.document.close();
 }
 
-async function imageToPngDataUrl(source?: string): Promise<string | null> {
+type SpkView = 'front' | 'back' | 'sleeve';
+const SPK_GARMENT_WIDTH_CM: Record<string, number> = { S: 48, M: 50, L: 52, XL: 54, XXL: 56 };
+
+function getPlacementView(placement: CartItem['customPlacements'][number]): SpkView {
+  const key = (String(placement.zoneId || '') + ' ' + String(placement.zoneLabel || '')).toLowerCase();
+  if (/sleeve|lengan|cuff|manset/.test(key)) return 'sleeve';
+  if (/back|belakang|punggung|a3/.test(key)) return 'back';
+  return 'front';
+}
+
+function placementWidthCm(placement: CartItem['customPlacements'][number]): number {
+  const key = (String(placement.zoneId || '') + ' ' + String(placement.zoneLabel || '')).toLowerCase();
+  const dimensions = key.match(/(\\d+(?:[.,]\\d+)?)\\s*[x×]\\s*(\\d+(?:[.,]\\d+)?)/);
+  if (dimensions) return Number(dimensions[1].replace(',', '.'));
+  if (/a3/.test(key)) return 28;
+  if (/a4/.test(key)) return 21;
+  if (/logo/.test(key)) return 12;
+  return 10;
+}
+
+async function loadIsolatedMockup(source: string): Promise<HTMLImageElement> {
+  const load = async (src: string) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.src = src;
+    await image.decode();
+    return image;
+  };
+  let image = await load(source);
+  const probe = document.createElement('canvas');
+  probe.width = Math.min(96, image.naturalWidth || 96);
+  probe.height = Math.min(96, image.naturalHeight || 96);
+  const probeCtx = probe.getContext('2d', { willReadFrequently: true });
+  if (!probeCtx) throw new Error('Canvas preview unavailable');
+  probeCtx.drawImage(image, 0, 0, probe.width, probe.height);
+  const pixels = probeCtx.getImageData(0, 0, probe.width, probe.height).data;
+  let transparent = 0;
+  for (let i = 3; i < pixels.length; i += 4) if (pixels[i] < 245) transparent++;
+  if (transparent <= pixels.length / 4 * 0.015) {
+    const isolated = await removeImageBackground(source, { tolerance: 28, feather: 20 });
+    image = await load(isolated);
+  }
+  return image;
+}
+
+function colorizeGarment(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, hex: string) {
+  const normalized = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex) ? hex : '#777777';
+  const expanded = normalized.length === 4 ? '#' + [...normalized.slice(1)].map((v) => v + v).join('') : normalized;
+  const red = parseInt(expanded.slice(1, 3), 16), green = parseInt(expanded.slice(3, 5), 16), blue = parseInt(expanded.slice(5, 7), 16);
+  const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = frame.data;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 8) continue;
+    const luminance = (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
+    const shade = 0.16 + 0.84 * luminance;
+    data[i] = Math.round(red * shade);
+    data[i + 1] = Math.round(green * shade);
+    data[i + 2] = Math.round(blue * shade);
+  }
+  ctx.putImageData(frame, 0, 0);
+}
+
+async function makeSpkMockup(item: CartItem, side: SpkView): Promise<string | null> {
+  const source = side === 'front' ? item.image : side === 'back' ? (item.backImage || item.image) : (item.sleeveImage || '');
   if (!source) return null;
   try {
-    const image = new Image(); image.crossOrigin = 'anonymous'; image.src = source; await image.decode();
-    const canvas = document.createElement('canvas'); canvas.width = 900; canvas.height = 1100;
-    const ctx = canvas.getContext('2d'); if (!ctx) return null;
-    const scale = Math.min(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight);
-    const w = image.naturalWidth * scale, h = image.naturalHeight * scale;
-    ctx.drawImage(image, (canvas.width-w)/2, (canvas.height-h)/2, w, h);
-    return canvas.toDataURL('image/png');
-  } catch { return null; }
-}
-async function makeSpkMockup(item: CartItem, side: 'front' | 'back'): Promise<string | null> {
-  const base = await imageToPngDataUrl(side === 'front' ? item.image : (item.backImage || item.image));
-  if (!base) return null;
-  try {
-    const image = new Image(); image.src = base; await image.decode();
-    const canvas = document.createElement('canvas'); canvas.width = 900; canvas.height = 1100;
-    const ctx = canvas.getContext('2d'); if (!ctx) return base;
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const relevant = (item.customPlacements || []).filter((p) => {
-      const id = p.zoneId.toLowerCase(), label = p.zoneLabel.toLowerCase();
-      const isBack = id.includes('a3') || id.includes('back') || label.includes('belakang') || label.includes('punggung');
-      return side === 'back' ? isBack : !isBack;
-    });
-    for (const placement of relevant) {
+    const image = await loadIsolatedMockup(source);
+    const canvas = document.createElement('canvas');
+    canvas.width = 1000; canvas.height = 1050;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    // Match the 4:4.2 studio canvas, including the 12px inset used by object-contain p-3.
+    const insetX = 30, insetY = 30, availableW = canvas.width - insetX * 2, availableH = canvas.height - insetY * 2;
+    const fit = Math.min(availableW / image.naturalWidth, availableH / image.naturalHeight);
+    const drawW = image.naturalWidth * fit, drawH = image.naturalHeight * fit;
+    const drawX = (canvas.width - drawW) / 2, drawY = (canvas.height - drawH) / 2;
+    ctx.drawImage(image, drawX, drawY, drawW, drawH);
+
+    // Apply the selected garment color only inside the isolated garment alpha, preserving fabric shading.
+    colorizeGarment(ctx, canvas, item.colorHex || '#777777');
+
+    const boundsProbe = document.createElement('canvas');
+    boundsProbe.width = 128; boundsProbe.height = 128;
+    const bctx = boundsProbe.getContext('2d', { willReadFrequently: true });
+    if (!bctx) return canvas.toDataURL('image/png');
+    bctx.drawImage(canvas, 0, 0, 128, 128);
+    const data = bctx.getImageData(0, 0, 128, 128).data;
+    let minX = 128, minY = 128, maxX = -1, maxY = -1;
+    for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) {
+      if (data[(y * 128 + x) * 4 + 3] > 28) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
+    }
+    if (maxX < minX || maxY < minY) return canvas.toDataURL('image/png');
+    const containerAspect = 4 / 4.2, imageAspect = image.naturalWidth / image.naturalHeight;
+    const fitWidthPct = Math.min(1, imageAspect / containerAspect) * 100;
+    const fitHeightPct = Math.min(1, containerAspect / imageAspect) * 100;
+    const leftOffset = (100 - fitWidthPct) / 2, topOffset = (100 - fitHeightPct) / 2;
+    const left = leftOffset + (minX / 128) * fitWidthPct, right = leftOffset + ((maxX + 1) / 128) * fitWidthPct;
+    const top = topOffset + (minY / 128) * fitHeightPct, bottom = topOffset + ((maxY + 1) / 128) * fitHeightPct;
+    const garmentBounds = { centerX: (left + right) / 2, centerY: (top + bottom) / 2, widthPct: right - left };
+    const referenceWidth = SPK_GARMENT_WIDTH_CM[item.size] || 50;
+
+    for (const placement of item.customPlacements || []) {
+      if (getPlacementView(placement) !== side) continue;
       try {
         const art = new Image(); art.src = placement.artworkDataUrl; await art.decode();
-        const isLogo = /logo|ornamen|pocket|saku/i.test(placement.zoneId + ' ' + placement.zoneLabel);
-        const ratio = Math.min(1, Math.max(0.1, placement.scale || 1));
-        const widthCm = /a3/i.test(placement.zoneId) ? 28 : /a4/i.test(placement.zoneId) ? 21 : /logo/i.test(placement.zoneId) ? 12 : 10;
-        const width = Math.min(540, (widthCm / 40) * 620 * ratio);
+        const baseWidth = Math.min(garmentBounds.widthPct * 0.96, Math.max(2, garmentBounds.widthPct * (placementWidthCm(placement) / referenceWidth)));
+        const width = (baseWidth * (placement.scale || 1) / 100) * canvas.width;
         const height = width * art.naturalHeight / art.naturalWidth;
-        const xBase = isLogo ? 405 : 450, yBase = isLogo ? 350 : side === 'back' ? 410 : 430;
-        const x = xBase - width / 2 + (placement.xOffset || 0) * 4;
-        const y = yBase - height / 2 + (placement.yOffset || 0) * 4;
-        ctx.save(); ctx.translate(x + width/2, y + height/2); ctx.rotate((placement.rotation || 0) * Math.PI / 180);
-        ctx.drawImage(art, -width/2, -height/2, width, height); ctx.restore();
-      } catch { /* keep base mockup if artwork preview cannot be decoded */ }
+        const centerX = ((garmentBounds.centerX + (placement.xOffset || 0)) / 100) * canvas.width;
+        const centerY = ((garmentBounds.centerY + (placement.yOffset || 0)) / 100) * canvas.height;
+        ctx.save(); ctx.translate(centerX, centerY); ctx.rotate((placement.rotation || 0) * Math.PI / 180);
+        ctx.drawImage(art, -width / 2, -height / 2, width, height); ctx.restore();
+      } catch (error) { console.warn('SPK artwork layer could not be rendered:', placement.artworkName, error); }
     }
     return canvas.toDataURL('image/png');
-  } catch { return base; }
+  } catch (error) {
+    console.error('SPK mockup generation failed:', side, error);
+    return null;
+  }
 }
 function downloadGeneratedFile(file: File) {
   const url = URL.createObjectURL(file), link = document.createElement('a');
