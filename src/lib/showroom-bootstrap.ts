@@ -62,7 +62,12 @@ export async function loadShowroomBootstrap() {
   const masterColors = colorResult.data ?? [];
   const productColorLinks = productColorResult.data ?? [];
   const images = imageResult.data ?? [];
-  const dtfPrices = resolvedDtfResult.data ?? [];
+  const dtfPrices = (resolvedDtfResult.data?.length ? resolvedDtfResult.data : [
+    { size_code: 'ornamen', label: 'Lengan', width_cm: 10, height_cm: 5, price: 2000, placement_view: 'sleeve', box_x: 25, box_y: 22, box_w: 50, box_h: 50 },
+    { size_code: 'LOGO', label: 'Logo', width_cm: 12, height_cm: 10, price: 5000, placement_view: 'front', box_x: 25, box_y: 22, box_w: 50, box_h: 50 },
+    { size_code: 'A4', label: 'A4', width_cm: 21, height_cm: 30, price: 20000, placement_view: 'front', box_x: 25, box_y: 22, box_w: 50, box_h: 50 },
+    { size_code: 'A3', label: 'A3', width_cm: 28, height_cm: 42, price: 25000, placement_view: 'back', box_x: 25, box_y: 22, box_w: 50, box_h: 50 },
+  ]) as any[];
   const reviews = (reviewResult.data ?? []).map((row) => ({ id: row.id, productId: row.product_id, authorName: row.author_name, rating: row.rating, comment: row.comment, verifiedPurchase: row.verified_purchase, createdAt: row.created_at }));
 
   const categories: Category[] = categoriesRaw.map((row) => ({
@@ -171,16 +176,20 @@ export async function loadShowroomBootstrap() {
 
   const printingMethods: PrintingMethodOption[] = (printingMethodResult.data || []).map((row) => ({ id: row.id, name: row.name, description: row.description || '', pricingType: row.pricing_type, basePrice: asNumber(row.base_price) }));
 
-  const dtfZones: DtfZonePrice[] = dtfPrices.map((row: any) => ({
-    id: row.size_code,
-    label: row.label,
-    dimensionsCm: `${row.width_cm} × ${row.height_cm} cm`,
-    maxWidthCm: asNumber(row.width_cm),
-    maxHeightCm: asNumber(row.height_cm),
-    price: asNumber(row.price),
-    view: row.placement_view,
-    box: { x: asNumber(row.box_x, 25), y: asNumber(row.box_y, 22), w: asNumber(row.box_w, 50), h: asNumber(row.box_h, 50) },
-  }));
+  const dtfZones: DtfZonePrice[] = dtfPrices.map((row: any) => {
+    const rawView = String(row.placement_view || '').toLowerCase();
+    const view: DtfZonePrice['view'] = rawView === 'back' || rawView === 'sleeve' ? rawView : 'front';
+    return {
+      id: String(row.size_code || row.id || row.label),
+      label: String(row.label || row.size_code || 'DTF'),
+      dimensionsCm: `${asNumber(row.width_cm)} × ${asNumber(row.height_cm)} cm`,
+      maxWidthCm: asNumber(row.width_cm),
+      maxHeightCm: asNumber(row.height_cm),
+      price: asNumber(row.price),
+      view,
+      box: { x: asNumber(row.box_x, 25), y: asNumber(row.box_y, 22), w: asNumber(row.box_w, 50), h: asNumber(row.box_h, 50) },
+    };
+  }).filter((zone) => zone.id && zone.maxWidthCm > 0 && zone.maxHeightCm > 0);
 
   const settings = Object.fromEntries((settingsResult.data || []).map((row) => [row.key, row.value || {}])) as Record<string, Record<string, unknown>>;
   const paymentSetting = settings.payment || {};
