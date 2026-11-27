@@ -53,12 +53,17 @@ function normalizeWhatsAppNumber(value: string): string {
 }
 async function svgIconToPngDataUrl(svg: string): Promise<string | null> {
   try {
+    // The uploaded Instagram asset has a wide viewBox although its glyph itself is square.
+    const normalizedSvg = svg.replace(/viewBox="0 0 735 409"/, 'viewBox="150 0 435 409"');
     const image = new Image();
-    image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(normalizedSvg);
     await image.decode();
-    const canvas = document.createElement('canvas'); canvas.width = 96; canvas.height = 96;
+    const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 128;
     const context = canvas.getContext('2d'); if (!context) return null;
-    context.drawImage(image, 0, 0, 96, 96);
+    context.clearRect(0, 0, 128, 128);
+    const scale = Math.min(112 / image.naturalWidth, 112 / image.naturalHeight);
+    const width = image.naturalWidth * scale, height = image.naturalHeight * scale;
+    context.drawImage(image, (128 - width) / 2, (128 - height) / 2, width, height);
     return canvas.toDataURL('image/png');
   } catch { return null; }
 }
@@ -250,12 +255,17 @@ export function CartCheckoutDrawer({
       });
       if (order) {
         setCreatedOrder(order);
-        try {
-          const spkFile = await buildCustomerSpkPdf(order);
-          downloadGeneratedFile(spkFile);
-        } catch (pdfError) {
-          console.error('Automatic SPK download failed:', pdfError);
-          setErrorMsg('Pesanan berhasil dibuat, tetapi SPK belum terunduh. Gunakan tombol Unduh SPK di halaman konfirmasi.');
+        // Mobile browsers often block delayed automatic downloads after async checkout.
+        // Keep the generated SPK available through the explicit user-gesture button below.
+        const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        if (!isMobileDevice) {
+          try {
+            const spkFile = await buildCustomerSpkPdf(order);
+            downloadGeneratedFile(spkFile);
+          } catch (pdfError) {
+            console.error('Automatic SPK download failed:', pdfError);
+            setErrorMsg('Pesanan berhasil dibuat. Gunakan tombol Buka / Unduh SPK PDF di halaman konfirmasi.');
+          }
         }
         setStep('payment');
       } else {
@@ -498,7 +508,20 @@ export function CartCheckoutDrawer({
             return (
               <div className="space-y-4">
                 <button type="button" onClick={() => printCustomerReceipt(createdOrder)} className="w-full h-10 rounded-md border border-black/15 dark:border-white/15 text-xs font-semibold uppercase tracking-wider">Cetak Nota Struk</button>
-                <button type="button" onClick={async () => { try { downloadGeneratedFile(await buildCustomerSpkPdf(createdOrder)); } catch { setErrorMsg('SPK belum dapat dibuat. Muat ulang halaman dan coba lagi.'); } }} className="w-full h-10 rounded-md bg-[#7A1F2B] text-white text-xs font-semibold uppercase tracking-wider">Unduh SPK PDF (1 Lembar A4)</button>
+                <button type="button" onClick={async () => {
+                  const previewWindow = window.open('about:blank', '_blank');
+                  if (previewWindow) { previewWindow.document.write('<!doctype html><title>Menyiapkan SPK</title><body style="font:16px Arial;padding:24px">Menyiapkan SPK SANDIKALE…</body>'); previewWindow.document.close(); }
+                  try {
+                    const spkFile = await buildCustomerSpkPdf(createdOrder);
+                    const fileUrl = URL.createObjectURL(spkFile);
+                    if (previewWindow) { previewWindow.location.href = fileUrl; window.setTimeout(() => URL.revokeObjectURL(fileUrl), 120000); }
+                    else { downloadGeneratedFile(spkFile); }
+                  } catch (error) {
+                    previewWindow?.close();
+                    console.error('SPK PDF generation failed:', error);
+                    setErrorMsg('SPK belum dapat dibuat. Periksa koneksi lalu coba lagi.');
+                  }
+                }} className="w-full min-h-11 rounded-md bg-[#7A1F2B] text-white text-xs font-semibold uppercase tracking-wider px-3 py-2">Buka / Unduh SPK PDF (A4)</button>
                 <div className="p-4 rounded-xl bg-neutral-100 dark:bg-[#181818] border border-black/10 dark:border-white/10 space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-neutral-500">Nomor Pesanan</span>
