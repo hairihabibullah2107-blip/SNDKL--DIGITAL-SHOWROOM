@@ -11,6 +11,7 @@ import type {
 } from '../types';
 import { formatRupiah } from '../utils/format';
 import { removeImageBackground } from '../utils/removeBackground';
+import sandikaleLogo from '../assets/sandikale-logo.svg';
 
 interface CartCheckoutDrawerProps {
   open: boolean;
@@ -209,6 +210,33 @@ function downloadGeneratedFile(file: File) {
   document.body.appendChild(link); link.click(); link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
+async function loadSandikaleLogoPng(): Promise<string | null> {
+  try {
+    const image = new Image(); image.src = sandikaleLogo; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 384;
+    const context = canvas.getContext('2d'); if (!context) return null;
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/png');
+  } catch { return null; }
+}
+
+async function makePanchangTitlePng(text: string, color = '#0a0a0a'): Promise<string | null> {
+  try {
+    await document.fonts.load('800 96px Panchang');
+    const canvas = document.createElement('canvas');
+    canvas.width = 1800; canvas.height = 240;
+    const context = canvas.getContext('2d');
+    if (!context) return null;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = color;
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.font = '800 112px Panchang, sans-serif';
+    context.fillText(text, canvas.width / 2, canvas.height / 2, canvas.width - 40);
+    return canvas.toDataURL('image/png');
+  } catch { return null; }
+}
+
 async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const { jsPDF } = await import('jspdf');
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
@@ -221,7 +249,7 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const date = new Date(order.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
   const money = (n: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(n || 0);
   doc.setDrawColor(20,20,20); doc.setLineWidth(1.1); doc.rect(1.5,1.5,207,294);
-  doc.setTextColor(10,10,10); doc.setFont('helvetica','bold'); doc.setFontSize(25); doc.text('SNDKL PROJECT', W/2,17,{align:'center'});
+  doc.setTextColor(10,10,10); const logoPng = await loadSandikaleLogoPng(); if (logoPng) doc.addImage(logoPng,'PNG',12,5,8,12); const panchangTitle = await makePanchangTitlePng('SNDKL PROJECT'); if (panchangTitle) doc.addImage(panchangTitle,'PNG',31,4,146,19); else { doc.setFont('helvetica','bold'); doc.setFontSize(25); doc.text('SNDKL PROJECT', W/2,17,{align:'center'}); }
   doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.text('D E S I G N   &   P R O D U C T I O N S',W/2,24,{align:'center'});
   doc.setLineWidth(0.45); doc.rect(m,31,190,29);
   const colW=190/3,rowH=29/3;

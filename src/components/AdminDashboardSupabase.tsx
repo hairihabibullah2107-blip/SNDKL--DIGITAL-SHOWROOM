@@ -298,12 +298,35 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     await load(); onToast(approved ? 'Ulasan diterbitkan.' : 'Ulasan ditolak dan dihapus.');
   };
 
+async function loadSandikaleLogoPng(): Promise<string | null> {
+  try {
+    const image = new Image(); image.src = sandikaleLogo; await image.decode();
+    const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 384;
+    const context = canvas.getContext('2d'); if (!context) return null;
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/png');
+  } catch { return null; }
+}
+
+async function makePanchangTitlePng(text: string, color = '#0a0a0a'): Promise<string | null> {
+  try {
+    await document.fonts.load('800 96px Panchang');
+    const canvas = document.createElement('canvas'); canvas.width = 1800; canvas.height = 240;
+    const context = canvas.getContext('2d'); if (!context) return null;
+    context.clearRect(0, 0, canvas.width, canvas.height); context.fillStyle = color;
+    context.textAlign = 'center'; context.textBaseline = 'middle';
+    context.font = '800 112px Panchang, sans-serif';
+    context.fillText(text, canvas.width / 2, canvas.height / 2, canvas.width - 40);
+    return canvas.toDataURL('image/png');
+  } catch { return null; }
+}
+
   const generateSpk = async (order: OrderRow) => {
     if(!profile)return;setBusy(true);
     try{
       const {jsPDF}=await import('jspdf'),doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
       const customer=order.showroom_customers,paid=await getVerifiedPaymentTotal(order.id),w=doc.internal.pageSize.getWidth(),m=10,r=w-m,items=order.showroom_order_items||[];
-      doc.setFillColor(8,8,8);doc.rect(0,0,w,23,'F');doc.setTextColor(255,255,255);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('SANDIKALE',m,11);doc.setTextColor(215,150,158);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text('SURAT PERINTAH KERJA · CUSTOM APPAREL & DTF',m,18);
+      doc.setFillColor(8,8,8);doc.rect(0,0,w,23,'F');doc.setTextColor(255,255,255);const logoPng=await loadSandikaleLogoPng();if(logoPng)doc.addImage(logoPng,'PNG',m,3,6,9);const panchangAdminTitle=await makePanchangTitlePng('SANDIKALE','#ffffff');if(panchangAdminTitle)doc.addImage(panchangAdminTitle,'PNG',m+9,3,58,9);else{doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('SANDIKALE',m+9,11);}doc.setTextColor(215,150,158);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text('SURAT PERINTAH KERJA · CUSTOM APPAREL & DTF',m,18);
       doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('SPK PRODUKSI',m,31);doc.setFontSize(7);doc.text(order.spk_number,r,31,{align:'right'});
       const fields:Array<[string,string]>=[['Pesanan',order.order_number],['Customer',customer?.name||'-'],['WhatsApp',customer?.whatsapp||'-'],['Tanggal',new Date(order.created_at).toLocaleString('id-ID')],['Pengambilan',order.shipping_method==='pickup'?'Ambil di store':'Diantar kurir'],['Alamat',order.shipping_method==='courier'?[order.shipping_address,order.shipping_city].filter(Boolean).join(', '):'Konfirmasi jadwal via WhatsApp']];
       let y=38;doc.setFontSize(7);for(let i=0;i<fields.length;i+=2){doc.setFont('helvetica','bold');doc.text(fields[i][0],m,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(fields[i][1]||'-',66),m+20,y);if(fields[i+1]){doc.setFont('helvetica','bold');doc.text(fields[i+1][0],110,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(fields[i+1][1]||'-',78),130,y);}y+=6;}
@@ -383,6 +406,48 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     }
   };
 
+  const deleteOrderHistory = async (order: OrderRow) => {
+    if (!profile || !['owner', 'admin'].includes(profile.role)) return;
+    const confirmed = window.confirm('HAPUS RIWAYAT PESANAN ' + order.order_number + '? Data pesanan, pembayaran, riwayat status, dokumen SPK, dan rincian item akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.');
+    if (!confirmed) return;
+    setBusy(true);
+    try {
+      const documents = await supabase.from('showroom_spk_documents').select('id,storage_path').eq('order_id', order.id);
+      if (documents.error) throw documents.error;
+      const documentPaths = (documents.data || []).map((row) => row.storage_path).filter(Boolean);
+      if (documentPaths.length) {
+        const storageResult = await supabase.storage.from('showroom-spk-documents').remove(documentPaths);
+        if (storageResult.error) throw storageResult.error;
+      }
+      const deleteDocuments = await supabase.from('showroom_spk_documents').delete().eq('order_id', order.id);
+      if (deleteDocuments.error) throw deleteDocuments.error;
+      const deletePayments = await supabase.from('showroom_payments').delete().eq('order_id', order.id);
+      if (deletePayments.error) throw deletePayments.error;
+      const deleteHistory = await supabase.from('showroom_order_status_history').delete().eq('order_id', order.id);
+      if (deleteHistory.error) throw deleteHistory.error;
+      const orderItems = await supabase.from('showroom_order_items').select('id').eq('order_id', order.id);
+      if (orderItems.error) throw orderItems.error;
+      const itemIds = (orderItems.data || []).map((row) => row.id);
+      if (itemIds.length) {
+        const deleteDesigns = await supabase.from('showroom_order_designs').delete().in('order_item_id', itemIds);
+        if (deleteDesigns.error) throw deleteDesigns.error;
+        const deleteVariants = await supabase.from('showroom_order_variants').delete().in('order_item_id', itemIds);
+        if (deleteVariants.error) throw deleteVariants.error;
+        const deleteItems = await supabase.from('showroom_order_items').delete().in('id', itemIds);
+        if (deleteItems.error) throw deleteItems.error;
+      }
+      const deleteOrder = await supabase.from('showroom_orders').delete().eq('id', order.id);
+      if (deleteOrder.error) throw deleteOrder.error;
+      setOrders((current) => current.filter((row) => row.id !== order.id));
+      onToast('Riwayat pesanan ' + order.order_number + ' berhasil dihapus.');
+    } catch (e) {
+      onToast('Riwayat belum terhapus seluruhnya: ' + (e instanceof Error ? e.message : 'Kesalahan database.'));
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const deleteReview = async (review: ReviewRow) => {
     if (!window.confirm('Hapus ulasan dari ' + review.author_name + '?')) return;
     const { error: deleteError } = await supabase.from('showroom_product_reviews').delete().eq('id', review.id);
@@ -444,7 +509,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
           {!paymentMethods.length&&<p className="text-sm text-white/45">Belum ada metode. Tambahkan metode pembayaran pertama di atas.</p>}
         </section>}
         {tab === 'orders' && <section className="space-y-4"><div className="flex flex-wrap justify-between gap-3"><h2 className="text-xl font-bold">Pesanan masuk ({orders.length})</h2><div className="flex gap-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nomor / nama / WhatsApp" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm" /><button onClick={exportOrdersCsv} className="rounded-lg border border-white/15 px-3 py-2 text-xs whitespace-nowrap">Export CSV</button></div></div>
-          {visibleOrders.map((order) => <article key={order.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 md:p-5 space-y-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="font-bold">{order.order_number}</div><div className="text-xs text-white/50">{order.spk_number} · {new Date(order.created_at).toLocaleString('id-ID')}</div></div><div className="text-right"><div className="font-bold">{money(Number(order.total_amount))}</div><div className="text-xs text-white/50">DP {money(Number(order.deposit_amount))} · {order.payment_status}</div></div></div><div className="text-sm">{order.showroom_customers?.name || 'Pelanggan'} · {order.showroom_customers?.whatsapp || '—'}</div><div className="text-xs text-white/60">Pengiriman: {order.shipping_method==='pickup'?'Ambil sendiri di store':order.shipping_method==='courier'?'Diantar kurir':'Belum tercatat'}{order.shipping_method==='courier'&&[order.shipping_address,order.shipping_city].filter(Boolean).length?' · '+[order.shipping_address,order.shipping_city].filter(Boolean).join(', '):''}</div><div className="text-xs text-white/60">{(order.showroom_order_items || []).map((item) => `${item.product_name_snapshot} × ${item.quantity}`).join(' · ')}</div><div className="flex flex-wrap items-center gap-3"><span className="text-xs text-white/50">Status: {order.status}</span><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => openReceiptDesk(order)} className="border border-[#7A1F2B]/60 text-[#D58B95] rounded-lg px-3 py-2 text-xs">Cetak Nota Struk</button><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => void generateSpk(order)} className="border border-white/15 rounded-lg px-3 py-2 text-xs">Buat SPK PDF</button>{order.payment_status !== 'paid' && <button disabled={!['owner','admin'].includes(profile.role)} onClick={() => void markPaid(order)} className="bg-emerald-700 rounded-lg px-3 py-2 text-xs">Konfirmasi pembayaran</button>}<select disabled={busy || !['owner','admin','staff'].includes(profile.role)} defaultValue="" onChange={(e) => { if (e.target.value) void updateStage(order, e.target.value); }} className="bg-black border border-white/15 rounded-lg px-3 py-2 text-sm"><option value="">Ubah status produksi…</option>{Object.keys(STATUS).map((s) => <option key={s} value={s}>{s}</option>)}</select><a className="text-xs text-[#A33A48]" href={`https://wa.me/${order.showroom_customers?.whatsapp || ''}`} target="_blank" rel="noreferrer">Hubungi pelanggan via WhatsApp</a></div></article>)}
+          {visibleOrders.map((order) => <article key={order.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 md:p-5 space-y-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="font-bold">{order.order_number}</div><div className="text-xs text-white/50">{order.spk_number} · {new Date(order.created_at).toLocaleString('id-ID')}</div></div><div className="text-right"><div className="font-bold">{money(Number(order.total_amount))}</div><div className="text-xs text-white/50">DP {money(Number(order.deposit_amount))} · {order.payment_status}</div></div></div><div className="text-sm">{order.showroom_customers?.name || 'Pelanggan'} · {order.showroom_customers?.whatsapp || '—'}</div><div className="text-xs text-white/60">Pengiriman: {order.shipping_method==='pickup'?'Ambil sendiri di store':order.shipping_method==='courier'?'Diantar kurir':'Belum tercatat'}{order.shipping_method==='courier'&&[order.shipping_address,order.shipping_city].filter(Boolean).length?' · '+[order.shipping_address,order.shipping_city].filter(Boolean).join(', '):''}</div><div className="text-xs text-white/60">{(order.showroom_order_items || []).map((item) => `${item.product_name_snapshot} × ${item.quantity}`).join(' · ')}</div><div className="flex flex-wrap items-center gap-3"><span className="text-xs text-white/50">Status: {order.status}</span><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => openReceiptDesk(order)} className="border border-[#7A1F2B]/60 text-[#D58B95] rounded-lg px-3 py-2 text-xs">Cetak Nota Struk</button><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => void generateSpk(order)} className="border border-white/15 rounded-lg px-3 py-2 text-xs">Buat SPK PDF</button><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => void deleteOrderHistory(order)} className="border border-red-500/40 text-red-300 hover:bg-red-500/10 rounded-lg px-3 py-2 text-xs">Hapus riwayat</button>{order.payment_status !== 'paid' && <button disabled={!['owner','admin'].includes(profile.role)} onClick={() => void markPaid(order)} className="bg-emerald-700 rounded-lg px-3 py-2 text-xs">Konfirmasi pembayaran</button>}<select disabled={busy || !['owner','admin','staff'].includes(profile.role)} defaultValue="" onChange={(e) => { if (e.target.value) void updateStage(order, e.target.value); }} className="bg-black border border-white/15 rounded-lg px-3 py-2 text-sm"><option value="">Ubah status produksi…</option>{Object.keys(STATUS).map((s) => <option key={s} value={s}>{s}</option>)}</select><a className="text-xs text-[#A33A48]" href={`https://wa.me/${order.showroom_customers?.whatsapp || ''}`} target="_blank" rel="noreferrer">Hubungi pelanggan via WhatsApp</a></div></article>)}
           {!visibleOrders.length && <p className="text-sm text-white/50">Belum ada pesanan yang cocok.</p>}</section>}
 
       </div>

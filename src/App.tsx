@@ -1,6 +1,7 @@
 import { ArrowRight, Bell, Bug, CheckCircle2, HelpCircle, Instagram, Layers, Lock, Shield, Sparkles, Truck, X } from 'lucide-react';
 import heroImage from './assets/images/hero_sandikale_streetwear_1795511846725.jpg';
 import brandDetailImage from './assets/images/prod_cream_graphic_tee_1795511847871.jpg';
+import sandikaleLogo from './assets/sandikale-logo.svg';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AdminDashboardSupabase } from './components/AdminDashboardSupabase';
 import { CartCheckoutDrawer } from './components/CartCheckoutDrawer';
@@ -672,7 +673,7 @@ export default function App() {
                 {siteContent.heroEyebrow}
               </p>
               <h1
-                className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold uppercase tracking-tight leading-[0.94] text-white"
+                className="font-panchang text-5xl sm:text-6xl md:text-7xl lg:text-8xl uppercase tracking-tight leading-[0.94] text-white"
                 style={{ textWrap: 'balance' }}
               >
                 {siteContent.heroTitle.split('|')[0]} <span style={{color:'var(--brand-accent)'}}>{siteContent.heroTitle.split('|')[1] || ''}</span>
@@ -823,7 +824,7 @@ export default function App() {
       <footer className="bg-white dark:bg-[#080808] border-t border-black/10 dark:border-white/10 py-10">
         <div className="max-w-[1360px] mx-auto px-4 md:px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="space-y-1">
-            <div className="font-display text-2xl font-extrabold uppercase tracking-wider">{siteContent.brandName}</div><p className="text-[11px] text-neutral-500 dark:text-neutral-400">{siteContent.brandTagline}</p>
+            <div className="flex items-center gap-3"><img src={sandikaleLogo} alt="Logo SANDIKALE" className="h-14 w-auto object-contain" /><div><div className="font-display text-2xl font-extrabold uppercase tracking-wider">{siteContent.brandName}</div><p className="text-[11px] text-neutral-500 dark:text-neutral-400">{siteContent.brandTagline}</p></div></div>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 flex flex-wrap items-center gap-1.5">
               <span>
                 {siteContent.storeAddress} · {siteContent.brandName} {siteContent.brandTagline} · Hak cipta © {new Date().getFullYear()}
