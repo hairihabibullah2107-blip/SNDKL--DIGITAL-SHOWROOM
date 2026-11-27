@@ -190,6 +190,7 @@ export async function loadShowroomBootstrap() {
     group: String(row.group || 'Manual'), enabled: row.enabled !== false,
     accountName: String(row.accountName || ''), accountNumber: String(row.accountNumber || ''),
     instructions: String(row.instructions || ''),
+    qrImageUrl: String(row.qrImageUrl || ''),
   })) : [{ id: 'qris', label: 'Pembayaran manual — konfirmasi admin', group: 'Manual', enabled: true }];
 
   const whatsapp = settings.whatsapp || {};
