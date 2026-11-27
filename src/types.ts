@@ -144,6 +144,8 @@ export interface CartItem {
   estimatedDays?: number;
   customModel?: string;
   customPlacements?: CustomDesignPlacement[];
+  /** Exact front/back/sleeve preview captures from Custom DTF Studio. */
+  previewSnapshots?: { front?: string; back?: string; sleeve?: string };
 }
 
 export interface OrderTimelineEvent {
