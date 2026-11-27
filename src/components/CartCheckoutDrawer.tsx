@@ -10,6 +10,7 @@ import type {
   UserProfile,
 } from '../types';
 import { formatRupiah } from '../utils/format';
+import { removeImageBackground } from '../utils/removeBackground';
 
 interface CartCheckoutDrawerProps {
   open: boolean;
@@ -79,48 +80,126 @@ function printCustomerReceipt(order: Order) {
   popup.document.close();
 }
 
-async function imageToPngDataUrl(source?: string): Promise<string | null> {
+type SpkView = 'front' | 'back' | 'sleeve';
+const SPK_GARMENT_WIDTH_CM: Record<string, number> = { S: 48, M: 50, L: 52, XL: 54, XXL: 56 };
+
+function getPlacementView(placement: NonNullable<CartItem['customPlacements']>[number]): SpkView {
+  const key = (String(placement.zoneId || '') + ' ' + String(placement.zoneLabel || '')).toLowerCase();
+  if (/sleeve|lengan|cuff|manset/.test(key)) return 'sleeve';
+  if (/back|belakang|punggung|a3/.test(key)) return 'back';
+  return 'front';
+}
+
+function placementWidthCm(placement: NonNullable<CartItem['customPlacements']>[number]): number {
+  const key = (String(placement.zoneId || '') + ' ' + String(placement.zoneLabel || '')).toLowerCase();
+  const dimensions = key.match(/(\\d+(?:[.,]\\d+)?)\\s*[x×]\\s*(\\d+(?:[.,]\\d+)?)/);
+  if (dimensions) return Number(dimensions[1].replace(',', '.'));
+  if (/a3/.test(key)) return 28;
+  if (/a4/.test(key)) return 21;
+  if (/logo/.test(key)) return 12;
+  return 10;
+}
+
+async function loadIsolatedMockup(source: string): Promise<HTMLImageElement> {
+  const load = async (src: string) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.src = src;
+    await image.decode();
+    return image;
+  };
+  let image = await load(source);
+  const probe = document.createElement('canvas');
+  probe.width = Math.min(96, image.naturalWidth || 96);
+  probe.height = Math.min(96, image.naturalHeight || 96);
+  const probeCtx = probe.getContext('2d', { willReadFrequently: true });
+  if (!probeCtx) throw new Error('Canvas preview unavailable');
+  probeCtx.drawImage(image, 0, 0, probe.width, probe.height);
+  const pixels = probeCtx.getImageData(0, 0, probe.width, probe.height).data;
+  let transparent = 0;
+  for (let i = 3; i < pixels.length; i += 4) if (pixels[i] < 245) transparent++;
+  if (transparent <= pixels.length / 4 * 0.015) {
+    const isolated = await removeImageBackground(source, { tolerance: 28, feather: 20 });
+    image = await load(isolated);
+  }
+  return image;
+}
+
+function colorizeGarment(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, hex: string) {
+  const normalized = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex) ? hex : '#777777';
+  const expanded = normalized.length === 4 ? '#' + [...normalized.slice(1)].map((v) => v + v).join('') : normalized;
+  const red = parseInt(expanded.slice(1, 3), 16), green = parseInt(expanded.slice(3, 5), 16), blue = parseInt(expanded.slice(5, 7), 16);
+  const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const data = frame.data;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 8) continue;
+    const luminance = (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255;
+    const shade = 0.16 + 0.84 * luminance;
+    data[i] = Math.round(red * shade);
+    data[i + 1] = Math.round(green * shade);
+    data[i + 2] = Math.round(blue * shade);
+  }
+  ctx.putImageData(frame, 0, 0);
+}
+
+async function makeSpkMockup(item: CartItem, side: SpkView): Promise<string | null> {
+  const source = side === 'front' ? item.image : side === 'back' ? (item.backImage || item.image) : (item.sleeveImage || '');
   if (!source) return null;
   try {
-    const image = new Image(); image.crossOrigin = 'anonymous'; image.src = source; await image.decode();
-    const canvas = document.createElement('canvas'); canvas.width = 900; canvas.height = 1100;
-    const ctx = canvas.getContext('2d'); if (!ctx) return null;
-    const scale = Math.min(canvas.width / image.naturalWidth, canvas.height / image.naturalHeight);
-    const w = image.naturalWidth * scale, h = image.naturalHeight * scale;
-    ctx.drawImage(image, (canvas.width-w)/2, (canvas.height-h)/2, w, h);
-    return canvas.toDataURL('image/png');
-  } catch { return null; }
-}
-async function makeSpkMockup(item: CartItem, side: 'front' | 'back'): Promise<string | null> {
-  const base = await imageToPngDataUrl(side === 'front' ? item.image : (item.backImage || item.image));
-  if (!base) return null;
-  try {
-    const image = new Image(); image.src = base; await image.decode();
-    const canvas = document.createElement('canvas'); canvas.width = 900; canvas.height = 1100;
-    const ctx = canvas.getContext('2d'); if (!ctx) return base;
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const relevant = (item.customPlacements || []).filter((p) => {
-      const id = p.zoneId.toLowerCase(), label = p.zoneLabel.toLowerCase();
-      const isBack = id.includes('a3') || id.includes('back') || label.includes('belakang') || label.includes('punggung');
-      return side === 'back' ? isBack : !isBack;
-    });
-    for (const placement of relevant) {
+    const image = await loadIsolatedMockup(source);
+    const canvas = document.createElement('canvas');
+    canvas.width = 1000; canvas.height = 1050;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    // Match the 4:4.2 studio canvas, including the 12px inset used by object-contain p-3.
+    const insetX = 30, insetY = 30, availableW = canvas.width - insetX * 2, availableH = canvas.height - insetY * 2;
+    const fit = Math.min(availableW / image.naturalWidth, availableH / image.naturalHeight);
+    const drawW = image.naturalWidth * fit, drawH = image.naturalHeight * fit;
+    const drawX = (canvas.width - drawW) / 2, drawY = (canvas.height - drawH) / 2;
+    ctx.drawImage(image, drawX, drawY, drawW, drawH);
+
+    // Apply the selected garment color only inside the isolated garment alpha, preserving fabric shading.
+    colorizeGarment(ctx, canvas, item.colorHex || '#777777');
+
+    const boundsProbe = document.createElement('canvas');
+    boundsProbe.width = 128; boundsProbe.height = 128;
+    const bctx = boundsProbe.getContext('2d', { willReadFrequently: true });
+    if (!bctx) return canvas.toDataURL('image/png');
+    bctx.drawImage(canvas, 0, 0, 128, 128);
+    const data = bctx.getImageData(0, 0, 128, 128).data;
+    let minX = 128, minY = 128, maxX = -1, maxY = -1;
+    for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) {
+      if (data[(y * 128 + x) * 4 + 3] > 28) { minX = Math.min(minX, x); minY = Math.min(minY, y); maxX = Math.max(maxX, x); maxY = Math.max(maxY, y); }
+    }
+    if (maxX < minX || maxY < minY) return canvas.toDataURL('image/png');
+    const containerAspect = 4 / 4.2, imageAspect = image.naturalWidth / image.naturalHeight;
+    const fitWidthPct = Math.min(1, imageAspect / containerAspect) * 100;
+    const fitHeightPct = Math.min(1, containerAspect / imageAspect) * 100;
+    const leftOffset = (100 - fitWidthPct) / 2, topOffset = (100 - fitHeightPct) / 2;
+    const left = leftOffset + (minX / 128) * fitWidthPct, right = leftOffset + ((maxX + 1) / 128) * fitWidthPct;
+    const top = topOffset + (minY / 128) * fitHeightPct, bottom = topOffset + ((maxY + 1) / 128) * fitHeightPct;
+    const garmentBounds = { centerX: (left + right) / 2, centerY: (top + bottom) / 2, widthPct: right - left };
+    const referenceWidth = SPK_GARMENT_WIDTH_CM[item.size] || 50;
+
+    for (const placement of item.customPlacements || []) {
+      if (getPlacementView(placement) !== side) continue;
       try {
         const art = new Image(); art.src = placement.artworkDataUrl; await art.decode();
-        const isLogo = /logo|ornamen|pocket|saku/i.test(placement.zoneId + ' ' + placement.zoneLabel);
-        const ratio = Math.min(1, Math.max(0.1, placement.scale || 1));
-        const widthCm = /a3/i.test(placement.zoneId) ? 28 : /a4/i.test(placement.zoneId) ? 21 : /logo/i.test(placement.zoneId) ? 12 : 10;
-        const width = Math.min(540, (widthCm / 40) * 620 * ratio);
+        const baseWidth = Math.min(garmentBounds.widthPct * 0.96, Math.max(2, garmentBounds.widthPct * (placementWidthCm(placement) / referenceWidth)));
+        const width = (baseWidth * (placement.scale || 1) / 100) * canvas.width;
         const height = width * art.naturalHeight / art.naturalWidth;
-        const xBase = isLogo ? 405 : 450, yBase = isLogo ? 350 : side === 'back' ? 410 : 430;
-        const x = xBase - width / 2 + (placement.xOffset || 0) * 4;
-        const y = yBase - height / 2 + (placement.yOffset || 0) * 4;
-        ctx.save(); ctx.translate(x + width/2, y + height/2); ctx.rotate((placement.rotation || 0) * Math.PI / 180);
-        ctx.drawImage(art, -width/2, -height/2, width, height); ctx.restore();
-      } catch { /* keep base mockup if artwork preview cannot be decoded */ }
+        const centerX = ((garmentBounds.centerX + (placement.xOffset || 0)) / 100) * canvas.width;
+        const centerY = ((garmentBounds.centerY + (placement.yOffset || 0)) / 100) * canvas.height;
+        ctx.save(); ctx.translate(centerX, centerY); ctx.rotate((placement.rotation || 0) * Math.PI / 180);
+        ctx.drawImage(art, -width / 2, -height / 2, width, height); ctx.restore();
+      } catch (error) { console.warn('SPK artwork layer could not be rendered:', placement.artworkName, error); }
     }
     return canvas.toDataURL('image/png');
-  } catch { return base; }
+  } catch (error) {
+    console.error('SPK mockup generation failed:', side, error);
+    return null;
+  }
 }
 function downloadGeneratedFile(file: File) {
   const url = URL.createObjectURL(file), link = document.createElement('a');
@@ -157,32 +236,42 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
     doc.setFont('helvetica','normal');doc.setFontSize(6.3);
     doc.text(doc.splitTextToSize(String(cell[1]||'-'),colW-17).slice(0,2),x+17,y);
   }));
-  const imgY=65,imgH=143,imgW=87;
-  const front=first?await makeSpkMockup(first,'front'):null, back=first?await makeSpkMockup(first,'back'):null;
+  const imgY=65,imgH=125,imgW=87;
+  const front=first?await makeSpkMockup(first,'front'):null;
+  const back=first?await makeSpkMockup(first,'back'):null;
+  const sleeve=first?await makeSpkMockup(first,'sleeve'):null;
   doc.setDrawColor(225,225,225);doc.setLineWidth(0.2);
-  const mockupRatio=900/1100,renderedW=Math.min(imgW,imgH*mockupRatio),renderedH=renderedW/mockupRatio;
-  const mockupX=(x:number)=>x+(imgW-renderedW)/2;
-  const mockupY=imgY+(imgH-renderedH)/2;
-  doc.rect(14,imgY,imgW,imgH);doc.rect(109,imgY,imgW,imgH);
-  if(front) doc.addImage(front,'PNG',mockupX(14),mockupY,renderedW,renderedH,undefined,'FAST');
-  else {doc.setFontSize(8);doc.text('MOCKUP DEPAN',57.5,imgY+70,{align:'center'});}
-  if(back) doc.addImage(back,'PNG',mockupX(109),mockupY,renderedW,renderedH,undefined,'FAST');
-  else {doc.setFontSize(8);doc.text('MOCKUP BELAKANG',152.5,imgY+70,{align:'center'});}
-  doc.setDrawColor(20,20,20);doc.setLineWidth(0.35);doc.line(m,213,R,213);
-  doc.setFont('helvetica','bold');doc.setFontSize(7.4);doc.text('KETERANGAN SABLON',m,218);doc.text('CATATAN PRODUKSI',105,218);
-  doc.setFont('helvetica','normal');doc.setFontSize(6.7);
-  const printLines=items.flatMap((item,index)=>(item.customPlacements||[]).map((p,pi)=>(index+1)+'.'+(pi+1)+' '+p.zoneLabel+' - '+p.zoneId+' ('+p.artworkName+')'));
-  doc.text(doc.splitTextToSize(printLines.length?printLines.join('\n'):'1. Desain DTF sesuai file lampiran customer',88).slice(0,6),m,224);
-  const production='Press 160°C selama 15 detik, kupas dingin (Cold Peel).\nPacking plastik klip.\n\nNo. SPK '+(order.spkNumber||order.id)+'\nPenerima order: Admin SANDIKALE\nEstimasi selesai: konfirmasi admin via WhatsApp';
-  doc.text(doc.splitTextToSize(production,88).slice(0,7),105,224);
-  doc.setDrawColor(170,170,170);doc.setLineWidth(0.25);doc.line(m,271,R,271);
-  doc.setFont('helvetica','normal');doc.setFontSize(9);
+  const renderView=(data:string|null,x:number,y:number,w:number,h:number,label:string)=>{
+    doc.rect(x,y,w,h);
+    doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(65,65,65);
+    doc.text(label,x+w/2,y+4,{align:'center'});
+    if(data){
+      const ratio=1000/1050,fitW=Math.min(w-4,(h-8)*ratio),fitH=fitW/ratio;
+      doc.addImage(data,'PNG',x+(w-fitW)/2,y+6+(h-8-fitH)/2,fitW,fitH,undefined,'FAST');
+    } else {
+      doc.setFont('helvetica','normal');doc.setFontSize(6);
+      doc.text(label==='DETAIL LENGAN'?'Foto lengan belum tersedia':'Mockup tidak tersedia',x+w/2,y+h/2,{align:'center'});
+    }
+  };
+  renderView(front,14,imgY,imgW,imgH,'TAMPAK DEPAN');
+  renderView(back,109,imgY,imgW,imgH,'TAMPAK BELAKANG');
+  renderView(sleeve,14,194,49,57,'DETAIL LENGAN');
+
+  doc.setDrawColor(20,20,20);doc.setLineWidth(0.35);doc.line(m,257,R,257);
+  doc.setFont('helvetica','bold');doc.setFontSize(7.2);
+  doc.text('KETERANGAN SABLON',m,262);doc.text('CATATAN PRODUKSI',105,262);
+  doc.setFont('helvetica','normal');doc.setFontSize(6.2);
+  const printLines=items.flatMap((item,index)=>(item.customPlacements||[]).map((placement,pi)=>(index+1)+'.'+(pi+1)+' '+placement.zoneLabel+' ('+placementWidthCm(placement)+' cm) - '+placement.artworkName));
+  doc.text(doc.splitTextToSize(printLines.length?printLines.join('\\n'):'1. Desain DTF sesuai file lampiran customer',88).slice(0,5),m,267);
+  const production='Press 160°C selama 15 detik, kupas dingin (Cold Peel).\\nPacking plastik klip.\\nNo. SPK '+(order.spkNumber||order.id)+'\\nPenerima: Admin SANDIKALE\\nEstimasi: konfirmasi admin via WhatsApp';
+  doc.text(doc.splitTextToSize(production,88).slice(0,5),105,267);
+  doc.setDrawColor(170,170,170);doc.setLineWidth(0.25);doc.line(m,282,R,282);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);
   const instagramIcon=await svgIconToPngDataUrl(instagramIconSvg),whatsappIcon=await svgIconToPngDataUrl(whatsappIconSvg);
-  if(instagramIcon)doc.addImage(instagramIcon,'PNG',65,277.5,5,5);doc.text('@_sandikale',72,282);
-  if(whatsappIcon)doc.addImage(whatsappIcon,'PNG',119,277.5,5,5);doc.text('+62 822-6641-2844',126,282);
-  doc.link(65,277.5,34,6,{url:'https://instagram.com/_sandikale'});
-  doc.link(119,277.5,76,6,{url:'https://wa.me/6282266412844'});
-  doc.setFontSize(6);doc.setTextColor(100,100,100);doc.text('SPK otomatis dari SNDKL PROJECT · Harga dan stok menunggu konfirmasi admin',W/2,289,{align:'center'});
+  if(instagramIcon)doc.addImage(instagramIcon,'PNG',65,284,4.5,4.5);doc.text('@_sandikale',71,287.5);
+  if(whatsappIcon)doc.addImage(whatsappIcon,'PNG',119,284,4.5,4.5);doc.text('+62 822-6641-2844',125,287.5);
+  doc.link(65,284,34,5,{url:'https://instagram.com/_sandikale'});
+  doc.link(119,284,76,5,{url:'https://wa.me/6282266412844'});
   return new File([doc.output('blob')],safeFileName((order.spkNumber||order.id)+'-SPK.pdf'),{type:'application/pdf'});
 }
 export function CartCheckoutDrawer({
