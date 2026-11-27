@@ -37,7 +37,7 @@ export function dataUrlToBase64(value: string): string {
 export async function artworkForUpload(dataUrl: string, fileName: string): Promise<{ design_base64: string; design_name: string }> {
   const sourceName = fileName || 'artwork';
   const mime = /^data:([^;,]+)/i.exec(dataUrl)?.[1]?.toLowerCase() || '';
-  if (mime === 'application/pdf' || sourceName.toLowerCase().endsWith('.pdf')) {
+  if (mime === 'application/pdf' || (!mime && sourceName.toLowerCase().endsWith('.pdf'))) {
     return { design_base64: dataUrlToBase64(dataUrl), design_name: sourceName.toLowerCase().endsWith('.pdf') ? sourceName : sourceName + '.pdf' };
   }
   if (mime.startsWith('image/')) {
