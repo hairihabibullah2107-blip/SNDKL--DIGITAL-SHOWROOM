@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import sandikaleLogo from '../assets/sandikale-logo.svg';
 import { supabase } from '../lib/supabase';
 import { AdminContentManager } from './AdminContentManager';
 
