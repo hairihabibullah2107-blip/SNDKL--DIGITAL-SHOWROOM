@@ -704,7 +704,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setTutorialOpen(true)}
-                className="h-12 px-5 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/25 text-xs font-semibold uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer"
+                className="hidden sm:flex h-12 px-5 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/25 text-xs font-semibold uppercase tracking-widest items-center gap-2 transition-colors cursor-pointer"
               >
                 <HelpCircle className="w-4 h-4 text-[#7A1F2B]" />
                 <span>Panduan Pengguna</span>
