@@ -96,6 +96,7 @@ export function CartCheckoutDrawer({
   const [submitting, setSubmitting] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<Order | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (paymentMethod && !paymentMethods.some((p) => p.id === paymentMethod)) {
@@ -342,24 +343,22 @@ export function CartCheckoutDrawer({
             const cleanWa=(adminWhatsapp||'').replace(/[^0-9]/g,'');
             const isManualPayment=/manual|konfirmasi admin/i.test(createdOrder.paymentLabel);
             const needsPaymentProof=!isManualPayment&&/(qris|bank|transfer|va|virtual account)/i.test(createdOrder.paymentLabel+' '+createdOrder.paymentMethod);
-            const waMessage=[
-              'Halo Admin SANDIKALE, saya '+createdOrder.customerName+'.',
-              'Pesanan: '+createdOrder.id+' · SPK: '+(createdOrder.spkNumber||createdOrder.id),
-              'Pengambilan: '+(createdOrder.shippingCourier==='Ambil Sendiri di Store'?'Ambil sendiri di store':'Diantar kurir'),
-              'Pembayaran: '+createdOrder.paymentLabel+' · Total: '+formatRupiah(createdOrder.total),
-              'Saya lampirkan SPK PDF dan file desain untuk diperiksa.',
-              needsPaymentProof?'Bukti transfer/QRIS saya lampirkan pada chat ini.':'Pembayaran dan persetujuan detail saya konfirmasi melalui WhatsApp.'
+            const waMessage = [
+              'Halo Admin SANDIKALE, konfirmasi pesanan '+createdOrder.id+'.',
+              'SPK dan file desain saya lampirkan.'+(needsPaymentProof?' Bukti transfer/QRIS juga terlampir.':''),
+              isManualPayment?'Mohon konfirmasi detail dan pembayaran melalui WhatsApp.':'Mohon periksa kelengkapan pesanan saya.'
             ].join('\\n');
             const openWhatsApp=()=>{if(cleanWa)window.open('https://wa.me/'+cleanWa+'?text='+encodeURIComponent(waMessage),'_blank','noopener,noreferrer');};
             const shareOrderFiles=async()=>{
+              if(needsPaymentProof&&!paymentProofFile){setErrorMsg('Unggah bukti transfer atau QRIS terlebih dahulu.');return;}
               try{
                 const spk=await buildCustomerSpkPdf(createdOrder),designFiles:File[]=[];
                 const placements=createdOrder.items.flatMap(item=>(item.customPlacements||[]).map(placement=>({placement})));
                 for(const [index,entry] of placements.entries()){const source=entry.placement.originalDataUrl||entry.placement.artworkDataUrl;if(source)designFiles.push(await dataUrlToFile(source,safeFileName(entry.placement.artworkName||('desain-'+(index+1)+'.png'))));}
-                const files=[spk,...designFiles];
-                if(navigator.share&&navigator.canShare?.({files}))await navigator.share({title:'SPK SANDIKALE '+(createdOrder.spkNumber||createdOrder.id),text:waMessage,files});
+                const files=[spk,...designFiles,...(paymentProofFile?[paymentProofFile]:[])];
+                if(navigator.share&&navigator.canShare?.({files}))await navigator.share({title:'Pesanan SANDIKALE '+createdOrder.id,text:waMessage,files});
                 else{for(const file of files){const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download=file.name;a.click();window.setTimeout(()=>URL.revokeObjectURL(url),1500);}openWhatsApp();}
-              }catch(error){if(error instanceof Error&&error.name==='AbortError')return;setErrorMsg('File belum dapat dibagikan otomatis. Unduh SPK dan file desain, lalu lampirkan di WhatsApp.');openWhatsApp();}
+              }catch(error){if(error instanceof Error&&error.name==='AbortError')return;setErrorMsg('File belum dapat dibagikan otomatis. Unduh lampiran, lalu kirim bersama pesan WhatsApp.');openWhatsApp();}
             };
 
             return (
@@ -383,15 +382,16 @@ export function CartCheckoutDrawer({
                   </div>
                 </div>
 
-                {/* Mandatory Public Simulation Notice + WhatsApp Design File Submission CTA */}
+                {/* Customer order handoff: SPK, design files and optional payment proof */}
                 <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/35 space-y-3">
                   <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 font-bold text-sm">
                     <MessageCircle className="w-5 h-5 shrink-0" />
                     <span>Kirim SPK & Desain ke Admin</span>
                   </div>
                   <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
-                    SPK PDF dan file desain wajib dikirim. {needsPaymentProof ? 'Lampirkan juga bukti transfer/QRIS.' : 'Pembayaran dan persetujuan dilakukan melalui WhatsApp admin.'}
+                    Wajib kirim SPK dan file desain. {needsPaymentProof ? 'Bukti transfer/QRIS juga wajib dilampirkan.' : 'Pembayaran disepakati langsung dengan admin melalui WhatsApp.'}
                   </p>
+                  {needsPaymentProof && <label className="block space-y-1 text-xs text-neutral-600 dark:text-neutral-300">Bukti pembayaran <input type="file" accept="image/*,application/pdf" onChange={(event) => setPaymentProofFile(event.target.files?.[0] || null)} className="block w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-neutral-200 file:px-3 file:py-2 dark:file:bg-neutral-700" />{paymentProofFile && <span className="block text-emerald-600">{paymentProofFile.name}</span>}</label>}
                   <button
                     type="button"
                     onClick={() => void shareOrderFiles()}
@@ -477,7 +477,7 @@ export function CartCheckoutDrawer({
                   disabled={submitting || !canSubmitCheckout}
                   className="flex-1 h-11 rounded-md bg-[#7A1F2B] hover:bg-[#e04400] text-white text-xs font-bold uppercase tracking-widest transition-colors cursor-pointer disabled:opacity-45"
                 >
-                  {submitting ? 'Memproses...' : 'Buat Invoice Pembayaran'}
+                  {submitting ? 'Memproses...' : 'Buat Pesanan'}
                 </button>
               </div>
             )}
