@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SANDIKALE · Cetak Struk</title>
+<style>
+:root{color-scheme:dark;font-family:Arial,sans-serif;background:#090909;color:#f5f5f5}*{box-sizing:border-box}body{margin:0;padding:24px}.shell{max-width:760px;margin:auto}.top{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid #333;padding-bottom:18px;margin-bottom:22px}.brand{font-weight:900;letter-spacing:.18em}.muted{color:#aaa;font-size:12px}.panel{background:#151515;border:1px solid #333;border-radius:14px;padding:18px;margin:14px 0}.row{display:flex;gap:10px;flex-wrap:wrap}input,button,select{font:inherit;border-radius:8px;padding:12px;border:1px solid #444;background:#080808;color:#fff}input{flex:1;min-width:220px}button{cursor:pointer;background:#7a1f2b;border-color:#7a1f2b;font-weight:700}button.secondary{background:#222;border-color:#555}button:disabled{opacity:.5;cursor:not-allowed}.hidden{display:none!important}.error{color:#ff8e8e}.success{color:#8ce0aa}.receipt{background:#fff;color:#111;width:80mm;max-width:100%;margin:24px auto;padding:5mm;font-family:Arial,sans-serif;font-size:11px}.receipt.w58{width:58mm;padding:3mm;font-size:10px}.center{text-align:center}.bold{font-weight:700}.line{border-top:1px dashed #333;margin:8px 0}.flex{display:flex;justify-content:space-between;gap:8px}.item{margin:7px 0}.small{font-size:9px;color:#333}.stamp{border:1px solid #9a2434;color:#9a2434;text-align:center;font-weight:800;padding:6px;margin:8px 0;letter-spacing:.06em}.foot{margin-top:12px;text-align:center;font-size:9px}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+@media print{ @page{size:80mm auto;margin:3mm}body{padding:0;background:#fff;color:#111}.shell>.top,.controls,.panel,.toolbar,.no-print{display:none!important}.receipt{width:74mm;max-width:none;margin:0;padding:0}.receipt.w58{width:52mm}.receipt *{color:#111!important;box-shadow:none!important} }
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="top"><div><div class="brand">SANDIKALE</div><div class="muted">CONTROL ROOM · PRINT DESK</div></div><div class="muted" id="sessionLabel">Memeriksa sesi…</div></header>
+<section class="panel controls" id="loginPanel"><h2>Masuk Admin</h2><p class="muted">Gunakan akun staf showroom. Jika sesi admin sudah aktif di domain yang sama, halaman ini akan menggunakannya otomatis.</p><form id="loginForm" class="row"><input id="email" type="email" placeholder="Email admin" required><input id="password" type="password" placeholder="Password" required><button>Masuk</button></form><p id="loginError" class="error"></p></section>
+<section class="panel controls hidden" id="searchPanel"><h2>Cari Pesanan</h2><form id="searchForm" class="row"><input id="orderSearch" placeholder="Nomor pesanan, contoh ORD-20261127-ABC123" required><button>Cari</button></form><p class="muted">Struk mengambil pembayaran yang berstatus terverifikasi. Status belum lunas tidak akan dicetak sebagai bukti lunas.</p><p id="searchError" class="error"></p></section>
+<section class="hidden" id="resultPanel"><div class="toolbar controls"><label class="muted">Ukuran kertas <select id="paper"><option value="80">Thermal 80 mm</option><option value="58">Thermal 58 mm</option></select></label><button id="printBtn">Cetak Struk</button><button class="secondary" id="searchAgain">Cari Pesanan Lain</button></div><article class="receipt" id="receipt"></article></section>
+</div>
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.118.0';
+const supabase=createClient('https://bpfurmqbtredhipendpz.supabase.co','sb_publishable_48Rc2wmf29Jfss6O0XMZnw_FLZMOGpC');
+const $=id=>document.getElementById(id);
+const money=n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(Number(n||0));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let currentOrder=null;
+function showSession(user,role){$('sessionLabel').textContent=user.email+' · '+role;$('loginPanel').classList.add('hidden');$('searchPanel').classList.remove('hidden')}
+async function verify(){
+ const {data:{session}}=await supabase.auth.getSession();
+ if(!session){$('sessionLabel').textContent='Belum masuk';return}
+ const {data:staff,error}=await supabase.from('showroom_staff_profiles').select('full_name,role,is_active').eq('auth_user_id',session.user.id).maybeSingle();
+ if(error||!staff||!staff.is_active||!['owner','admin'].includes(staff.role)){await supabase.auth.signOut();$('sessionLabel').textContent='Akses owner/admin diperlukan';$('loginError').textContent='Akun ini tidak memiliki izin cetak struk.';return}
+ showSession(session.user,staff.role)
+}
+$('loginForm').addEventListener('submit',async e=>{e.preventDefault();$('loginError').textContent='';const {error}=await supabase.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(error){$('loginError').textContent=error.message;return}await verify()});
+$('searchForm').addEventListener('submit',async e=>{
+ e.preventDefault();$('searchError').textContent='';$('resultPanel').classList.add('hidden');
+ try{
+  const term=$('orderSearch').value.trim();
+  const {data:order,error}=await supabase.from('showroom_orders').select('id,order_number,spk_number,status,payment_status,subtotal,discount,additional_cost,delivery_cost,total_amount,deposit_amount,created_at,shipping_method,shipping_address,shipping_city,showroom_customers(name,whatsapp),showroom_order_items(id,product_name_snapshot,quantity,subtotal,specification,showroom_order_variants(size,color,quantity))').eq('order_number',term).maybeSingle();
+  if(error)throw error;if(!order)throw new Error('Pesanan tidak ditemukan atau tidak dapat diakses.');
+  const {data:payments,error:payError}=await supabase.from('showroom_payments').select('amount,payment_method,payment_status,paid_at,payment_reference').eq('order_id',order.id);
+  if(payError)throw payError;
+  currentOrder={...order,payments:payments||[]};renderReceipt(currentOrder);$('resultPanel').classList.remove('hidden');
+ }catch(err){$('searchError').textContent=err.message||'Gagal memuat pesanan.'}
+});
+function renderReceipt(o){
+ const verified=o.payments.filter(p=>p.payment_status==='verified');
+ const paid=verified.reduce((s,p)=>s+Number(p.amount||0),0);
+ const balance=Math.max(0,Number(o.total_amount||0)-paid);
+ const isPaid=balance<=0&&Number(o.total_amount)>0;
+ const date=new Date(o.created_at).toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'});
+ const items=o.showroom_order_items||[];
+ const paymentLines=verified.length?verified.map(p=>'<div class="flex small"><span>'+esc(p.payment_method||'Pembayaran')+'</span><span>'+money(p.amount)+'</span></div>').join(''):'<div class="small">Belum ada pembayaran terverifikasi</div>';
+ $('receipt').innerHTML='<div class="center bold" style="font-size:18px;letter-spacing:2px">SANDIKALE</div><div class="center small">CUSTOM APPAREL · DTF STUDIO</div><div class="center small">Dusun Penangke, Desa Sesaot, Narmada, Lombok Barat</div><div class="line"></div><div class="center bold">STRUK PESANAN</div><div class="center small">'+esc(o.order_number)+'</div><div class="center small">SPK: '+esc(o.spk_number||'-')+'</div><div class="line"></div><div class="small">Tanggal: '+esc(date)+'</div><div class="small">Pelanggan: '+esc(o.showroom_customers?.name||'-')+'</div><div class="small">WhatsApp: '+esc(o.showroom_customers?.whatsapp||'-')+'</div><div class="line"></div>'+items.map(it=>{const spec=it.specification||{};const variants=it.showroom_order_variants||[];const sizes=variants.map(v=>esc(v.size)+'×'+esc(v.quantity)).join(', ');return '<div class="item"><div class="bold">'+esc(it.product_name_snapshot)+'</div><div class="small">Warna: '+esc(spec.color||variants[0]?.color||'-')+' · Ukuran: '+(sizes||'-')+'</div><div class="flex"><span>'+esc(it.quantity)+' pcs</span><span>'+money(it.subtotal)+'</span></div></div>'}).join('')+'<div class="line"></div><div class="flex"><span>Subtotal</span><span>'+money(o.subtotal)+'</span></div><div class="flex"><span>Diskon</span><span>-'+money(o.discount)+'</span></div><div class="flex"><span>Biaya tambahan</span><span>'+money(o.additional_cost)+'</span></div><div class="flex"><span>Pengiriman</span><span>'+money(o.delivery_cost)+'</span></div><div class="line"></div><div class="flex bold"><span>TOTAL</span><span>'+money(o.total_amount)+'</span></div><div class="line"></div><div class="bold">PEMBAYARAN TERVERIFIKASI</div>'+paymentLines+'<div class="flex"><span>Total dibayar</span><span>'+money(paid)+'</span></div><div class="flex bold"><span>SISA TAGIHAN</span><span>'+money(balance)+'</span></div><div class="stamp">'+(isPaid?'LUNAS · PEMBAYARAN TERVERIFIKASI':'BELUM LUNAS · BUKAN BUKTI LUNAS')+'</div><div class="small">Status produksi: '+esc(o.status)+'</div><div class="small">Pengambilan: '+(o.shipping_method==='pickup'?'Ambil di store':o.shipping_method==='courier'?'Kurir · '+esc([o.shipping_address,o.shipping_city].filter(Boolean).join(', ')):'Konfirmasi admin')+'</div><div class="line"></div><div class="foot">Terima kasih telah mempercayakan pesanan Anda kepada SANDIKALE.<br>Struk ini dicetak dari sistem Digital Showroom.</div>';
+}
+$('paper').addEventListener('change',()=>{$('receipt').classList.toggle('w58',$('paper').value==='58')});
+$('printBtn').addEventListener('click',()=>{if(currentOrder)window.print()});
+$('searchAgain').addEventListener('click',()=>{$('resultPanel').classList.add('hidden');$('orderSearch').value='';$('orderSearch').focus()});
+supabase.auth.onAuthStateChange(()=>{void verify()});void verify();
+</script>
+</body></html>
