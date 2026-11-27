@@ -78,7 +78,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
   const [productImage, setProductImage] = useState<File | null>(null);
   const [priceDraft, setPriceDraft] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
-  const [paymentMethods, setPaymentMethods] = useState<Array<{id:string;label:string;group:string;enabled:boolean;accountName?:string;accountNumber?:string;instructions?:string}>>([]);
+  const [paymentMethods, setPaymentMethods] = useState<Array<{id:string;label:string;group:string;enabled:boolean;accountName?:string;accountNumber?:string;instructions?:string;qrImageUrl?:string}>>([]);
   const [newPaymentLabel, setNewPaymentLabel] = useState('');
   const [newPaymentGroup, setNewPaymentGroup] = useState('Transfer Bank');
   const [newPaymentAccountName, setNewPaymentAccountName] = useState('');
