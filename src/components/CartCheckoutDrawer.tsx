@@ -448,12 +448,12 @@ export function CartCheckoutDrawer({
                         <span className="text-[10px] text-neutral-400">{opt.group}</span>
                       </label>
                     ))}
-                    {selectedPayment && (selectedPayment.accountName || selectedPayment.accountNumber || selectedPayment.instructions) && (
+                    {selectedPayment && (selectedPayment.accountName || selectedPayment.accountNumber || selectedPayment.instructions || selectedPayment.qrImageUrl) && (
                       <div className="rounded-lg border border-[#7A1F2B]/25 bg-[#7A1F2B]/5 p-3 text-xs space-y-1.5">
                         <div className="font-semibold">{selectedPayment.label}</div>
                         {selectedPayment.accountName && <div>Atas nama: <b>{selectedPayment.accountName}</b></div>}
                         {selectedPayment.accountNumber && <div>Nomor rekening / tujuan: <b className="select-all">{selectedPayment.accountNumber}</b></div>}
-                        {selectedPayment.instructions && <p className="text-neutral-500 whitespace-pre-line">{selectedPayment.instructions}</p>}
+                        {selectedPayment.instructions && <p className="text-neutral-500 whitespace-pre-line">{selectedPayment.instructions}</p>}{selectedPayment.qrImageUrl && <div className="pt-2"><p className="font-semibold mb-2">Scan QRIS untuk membayar</p><img src={selectedPayment.qrImageUrl} alt={'Kode QRIS '+selectedPayment.label} loading="lazy" decoding="async" className="w-56 max-w-full rounded-lg bg-white p-2 object-contain"/></div>}
                       </div>
                     )}
                   </div>
