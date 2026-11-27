@@ -4,6 +4,7 @@ export type OrderStage =
   | 'Proses Cetak DTF'
   | 'Heat Press & QC'
   | 'Dikirim'
+  | 'Siap Diambil'
   | 'Selesai';
 
 export type GarmentSilhouette = 'boxy-tee' | 'regular-tee' | 'hoodie' | 'longsleeve';

@@ -418,7 +418,7 @@ export default function App() {
           phone: payload.customerPhone,
           address: payload.shippingCourier === 'Diantar Kurir' ? [payload.shippingAddress, payload.shippingCity].filter(Boolean).join(', ') : '',
           city: payload.shippingCourier === 'Diantar Kurir' ? payload.shippingCity : '',
-          notes: `Metode pembayaran: ${payload.paymentLabel}; waktu pengerjaan dan biaya antar dikonfirmasi melalui WhatsApp.`,
+          notes: `Metode pembayaran: ${payload.paymentLabel}; Pengambilan: ${payload.shippingCourier}. ${payload.shippingCourier === 'Ambil Sendiri di Store' ? 'Tidak menggunakan kurir dan tidak ada biaya pengiriman.' : 'Alamat dan biaya pengiriman dikonfirmasi admin melalui WhatsApp.'}`,
         },
         shipping: {
           method: payload.shippingCourier === 'Ambil Sendiri di Store' ? 'pickup' : 'courier',
@@ -426,6 +426,7 @@ export default function App() {
           city: payload.shippingCity,
         },
         items,
+        payment_label: payload.paymentLabel,
         deposit_amount: 0,
       });
       const now = new Date().toISOString();
@@ -522,10 +523,10 @@ export default function App() {
         paymentLabel: 'Pembayaran manual',
         paymentReference: '',
         paymentStatus: data.payment_status === 'paid' ? 'paid' : 'pending',
-        stage: statusMap[data.status] || 'Menunggu Pembayaran',
+        stage: data.shipping_method === 'pickup' && ['ready', 'shipped'].includes(data.status) ? 'Siap Diambil' : statusMap[data.status] || 'Menunggu Pembayaran',
         trackingNumber: trackingCode,
         timeline: (data.history || []).map((event: any) => ({
-          stage: statusMap[event.new_status] || 'Menunggu Pembayaran',
+          stage: data.shipping_method === 'pickup' && ['ready', 'shipped'].includes(event.new_status) ? 'Siap Diambil' : statusMap[event.new_status] || 'Menunggu Pembayaran',
           timestamp: event.created_at,
           note: event.notes || '',
           completed: true,
@@ -678,7 +679,7 @@ export default function App() {
               >
                 {siteContent.heroTitle.split('|')[0]} <span style={{color:'var(--brand-accent)'}}>{siteContent.heroTitle.split('|')[1] || ''}</span>
               </h1>
-              <p className="text-sm md:text-base text-neutral-300 max-w-xl leading-relaxed">
+              <p className="hidden sm:block text-sm md:text-base text-neutral-300 max-w-xl leading-relaxed">
                 <span className="hero-subtitle-marquee">{siteContent.heroSubtitle}</span>
               </p>
             </div>
@@ -703,7 +704,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setTutorialOpen(true)}
-                className="h-12 px-5 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/25 text-xs font-semibold uppercase tracking-widest flex items-center gap-2 transition-colors cursor-pointer"
+                className="hidden sm:flex h-12 px-5 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur-md text-white border border-white/25 text-xs font-semibold uppercase tracking-widest items-center gap-2 transition-colors cursor-pointer"
               >
                 <HelpCircle className="w-4 h-4 text-[#7A1F2B]" />
                 <span>Panduan Pengguna</span>
