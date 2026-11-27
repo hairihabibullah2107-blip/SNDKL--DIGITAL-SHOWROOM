@@ -63,7 +63,7 @@ Deno.serve(async(req:Request)=>{
   const discountRules=Array.isArray(pricingRow?.value?.bulk_discounts)?pricingRow.value.bulk_discounts.filter((rule:any)=>Number(rule.min_quantity)>0&&Number(rule.discount_percent)>=0&&Number(rule.discount_percent)<=100):[];
   const validPositions=["Depan - Tengah","Depan - Dada kiri","Depan - Dada kanan","Belakang - Tengah","Lengan kiri","Lengan kanan"];
   for(const it of items){
-   const{data:p,error}=await db.from("showroom_products").select("id,name,base_price,long_sleeve_price,size_surcharges,model,material_id,showroom_materials(name,surcharge),is_published,available_colors").eq("id",it.product_id).eq("is_published",true).maybeSingle();
+   const{data:p,error}=await db.from("showroom_products").select("id,name,base_price,long_sleeve_price,size_surcharges,model,material_id,stock_mode,showroom_materials(name,surcharge),is_published,available_colors").eq("id",it.product_id).eq("is_published",true).maybeSingle();
    if(error||!p)return json({error:"Produk tidak tersedia atau sudah tidak diterbitkan."},400);
    let selectedMaterial=p.showroom_materials;
    if(it.material_id){const{data:m,error:me}=await db.from("showroom_materials").select("id,name,surcharge").eq("id",it.material_id).eq("is_active",true).maybeSingle();if(me||!m)return json({error:"Pilihan bahan tidak tersedia."},400);selectedMaterial=m;}
@@ -77,13 +77,13 @@ Deno.serve(async(req:Request)=>{
    const available=[...legacyColors,...canonicalColors].map((name:any)=>String(name).trim().toLowerCase());
    const{data:configuredVariants,error:variantError}=await db.from("showroom_product_variants").select("id,color,size,price_adjustment,stock_quantity,is_available").eq("product_id",p.id);
    if(variantError)throw variantError;
-   const productHasVariants=(configuredVariants||[]).length>0;
+   if(p.stock_mode==="unavailable")return json({error:"Produk sedang tidak menerima pesanan. Silakan pilih produk lain."},409);
    if(!available.includes(color.toLowerCase())&&!(configuredVariants||[]).some((v:any)=>String(v.color).trim().toLowerCase()===color.toLowerCase()&&v.is_available))return json({error:"Warna produk tidak tersedia. Admin perlu menghubungkan warna ini ke produk terlebih dahulu."},400);
    for(const sizeRow of sizeRows){
     const selectedSize=String(sizeRow.size||"").trim(),selectedQty=Math.max(0,Math.floor(Number(sizeRow.quantity)||0));
     const variant=(configuredVariants||[]).find((v:any)=>String(v.color).toLowerCase()===color.toLowerCase()&&String(v.size).toLowerCase()===selectedSize.toLowerCase()&&v.is_available);
-    if(productHasVariants&&!variant)return json({error:"Varian "+color+" / "+selectedSize+" tidak tersedia."},409);
-    if(variant&&variant.stock_quantity!==null&&variant.stock_quantity!==undefined&&selectedQty>Number(variant.stock_quantity))return json({error:"Stok "+color+" / "+selectedSize+" hanya tersisa "+variant.stock_quantity+" pcs."},409);
+    if(p.stock_mode==="tracked"&&!variant)return json({error:"Stok untuk varian "+color+" / "+selectedSize+" belum tersedia. Admin perlu menambahkan varian atau mengubah pengelolaan stok menjadi Made to order."},409);
+    if(p.stock_mode==="tracked"&&variant&&variant.stock_quantity!==null&&variant.stock_quantity!==undefined&&selectedQty>Number(variant.stock_quantity))return json({error:"Stok "+color+" / "+selectedSize+" hanya tersisa "+variant.stock_quantity+" pcs."},409);
    }
    const prints=Array.isArray(it.prints)?it.prints:[];if(prints.length>6)return json({error:"Setiap pesanan maksimal memiliki 6 posisi sablon."},400);
    const seen=new Set();let dtfUnit=0;const uploadedPrints=[];

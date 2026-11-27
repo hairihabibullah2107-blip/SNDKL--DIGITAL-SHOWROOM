@@ -39,6 +39,7 @@ const STATUS: Record<string, { status: string; production: string }> = {
   'Revisi Diminta': { status: 'revision_requested', production: 'design_confirmation' },
   'Proses Cetak DTF': { status: 'in_production', production: 'printing' },
   'Heat Press & QC': { status: 'quality_control', production: 'quality_control' },
+  'Dikirim': { status: 'shipped', production: 'shipped' },
   'Siap Diserahkan': { status: 'ready', production: 'ready_for_pickup' },
   'Selesai': { status: 'completed', production: 'completed' },
 };
@@ -174,11 +175,16 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
         updated_by: profile.id,
       }).eq('id', order.id);
       if (updateError) throw updateError;
-      await supabase.from('showroom_order_status_history').insert({
+      const { error: historyError } = await supabase.from('showroom_order_status_history').insert({
         order_id: order.id, previous_status: order.status, new_status: next.status, changed_by: profile.id,
         notes: `Status diperbarui dari dashboard oleh ${profile.full_name}.`,
       });
-      await load(); onToast(`Status pesanan ${order.order_number} diperbarui.`);
+      await load();
+      if (historyError) {
+        onToast(`Status pesanan ${order.order_number} sudah berubah, tetapi riwayat status gagal disimpan: ${historyError.message}`);
+        return;
+      }
+      onToast(`Status pesanan ${order.order_number} diperbarui.`);
     } catch (e) { onToast(e instanceof Error ? e.message : 'Gagal memperbarui status.'); }
     finally { setBusy(false); }
   };
@@ -434,9 +440,17 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     if (!profile || !['owner','admin'].includes(profile.role) || !window.confirm(`Konfirmasi bahwa pembayaran pesanan ${order.order_number} sudah diterima?`)) return;
     const { error: updateError } = await supabase.from('showroom_orders').update({ payment_status: 'paid', status: 'waiting_design_review', updated_at: new Date().toISOString(), updated_by: profile.id }).eq('id', order.id);
     if (updateError) { onToast(updateError.message); return; }
-    await supabase.from('showroom_payments').update({ payment_status: 'verified', verified_by: profile.id, paid_at: new Date().toISOString() }).eq('order_id', order.id).eq('payment_status', 'waiting_verification');
-    await supabase.from('showroom_order_status_history').insert({ order_id: order.id, previous_status: order.status, new_status: 'waiting_design_review', changed_by: profile.id, notes: 'Pembayaran dikonfirmasi admin.' });
-    await load(); onToast('Pembayaran pesanan dikonfirmasi.');
+    const [paymentResult, historyResult] = await Promise.all([
+      supabase.from('showroom_payments').update({ payment_status: 'verified', verified_by: profile.id, paid_at: new Date().toISOString() }).eq('order_id', order.id).eq('payment_status', 'waiting_verification'),
+      supabase.from('showroom_order_status_history').insert({ order_id: order.id, previous_status: order.status, new_status: 'waiting_design_review', changed_by: profile.id, notes: 'Pembayaran dikonfirmasi admin.' }),
+    ]);
+    await load();
+    const warnings = [paymentResult.error?.message, historyResult.error?.message].filter(Boolean);
+    if (warnings.length) {
+      onToast('Status pembayaran sudah dikonfirmasi, tetapi ada catatan yang gagal diperbarui: ' + warnings.join(' · '));
+      return;
+    }
+    onToast('Pembayaran pesanan dikonfirmasi.');
   };
 
   const deleteReview = async (review: ReviewRow) => {

@@ -264,17 +264,37 @@ export function CustomDtfStudio({
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
+    if (!['image/png', 'image/jpeg', 'image/svg+xml', 'image/webp'].includes(file.type)) {
+      onToast('Format desain harus PNG, JPG, SVG, atau WEBP.');
+      input.value = '';
+      return;
+    }
     if (file.size > 5 * 1024 * 1024) {
       onToast('Ukuran file maksimal 5MB agar pratinjau tetap ringan.');
+      input.value = '';
       return;
     }
     const reader = new FileReader();
+    reader.onerror = () => {
+      onToast('File desain gagal dibaca. Coba simpan ulang gambar lalu unggah kembali.');
+      input.value = '';
+    };
     reader.onload = async () => {
       const originalUrl = String(reader.result || '');
-      if (!originalUrl) return;
+      if (!originalUrl) {
+        onToast('File desain kosong atau tidak dapat dibaca.');
+        input.value = '';
+        return;
+      }
       const targetZone = dtfZones.find((z) => z.id === selectedZoneId) || dtfZones[0];
+      if (!targetZone) {
+        onToast('Pilihan ukuran DTF belum tersedia. Admin perlu mengaktifkan ukuran cetak terlebih dahulu.');
+        input.value = '';
+        return;
+      }
       const existing = placements.find((p) => p.zoneId === targetZone.id);
       const shouldRemove = existing ? existing.removeWhiteBg : true;
       const tol = existing?.bgTolerance ?? 38;
@@ -317,6 +337,7 @@ export function CustomDtfStudio({
           ? `Desain "${file.name}" diunggah & background dihapus otomatis.`
           : `Desain "${file.name}" siap dipratinjau pada zona ${targetZone.label}.`
       );
+      input.value = '';
     };
     reader.readAsDataURL(file);
   };
