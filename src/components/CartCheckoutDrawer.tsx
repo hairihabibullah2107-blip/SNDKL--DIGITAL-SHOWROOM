@@ -267,14 +267,14 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
     doc.text(doc.splitTextToSize(String(cell[1]||'-'),colW-17).slice(0,2),x+17,y);
   }));
   const imgY=67,imgH=118,imgW=87;
-  const hasJerseyReference=Boolean(first?.jerseyReferenceImage);
+  const firstHasJerseyReference=Boolean(first?.jerseyReferenceImage);
   // For Jersey, the customer-uploaded reference is the actual design source.
   // Never substitute the catalog garment mockup in the SPK design panel.
-  const jerseyReferencePng=hasJerseyReference
+  const jerseyReferencePng=firstHasJerseyReference
     ? await normalizeReferenceImageToPng(first!.jerseyReferenceImage!)
     : null;
-  const front=first && !hasJerseyReference ? await makeSpkMockup(first,'front') : null;
-  const back=first && !hasJerseyReference ? await makeSpkMockup(first,'back') : null;
+  const front=first && !firstHasJerseyReference ? await makeSpkMockup(first,'front') : null;
+  const back=first && !firstHasJerseyReference ? await makeSpkMockup(first,'back') : null;
   // Sleeve detail is only relevant when the customer actually added a sleeve print.
   // Find the item carrying that placement so its own sleeve mockup/artwork is used.
   const sleeveItem=items.find(item=>(item.customPlacements||[]).some(placement=>getPlacementView(placement)==='sleeve'));
