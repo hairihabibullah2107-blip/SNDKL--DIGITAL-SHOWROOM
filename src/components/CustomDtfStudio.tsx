@@ -165,6 +165,7 @@ export function CustomDtfStudio({
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [fabricId, setFabricId] = useState<string>('');
   const [requestedColor, setRequestedColor] = useState('');
+  const [jerseyReference, setJerseyReference] = useState<{ name: string; dataUrl: string } | null>(null);
   const [size, setSize] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [removingBg, setRemovingBg] = useState(false);
@@ -226,8 +227,9 @@ export function CustomDtfStudio({
   const selectedProduct = selectedProductId
     ? customBaseProducts.find((p) => p.id === selectedProductId) || null
     : null;
+  const isJerseyProduct = Boolean(selectedProduct && /jersey/i.test([selectedProduct.categorySlug, selectedProduct.categoryName, selectedProduct.name].join(' ')));
   const previewColorHex = resolveGarmentColorPreview(requestedColor);
-  const selectedColor = requestedColor.trim() ? { name: requestedColor.trim(), hex: previewColorHex || '#777777' } : null;
+  const selectedColor = isJerseyProduct ? { name: 'Sesuai referensi jersey', hex: '#777777' } : requestedColor.trim() ? { name: requestedColor.trim(), hex: previewColorHex || '#777777' } : null;
   const activeSilhouette = selectedProduct?.silhouette || 'boxy-tee';
   const referenceGarmentWidthCm = GARMENT_WIDTH_CM_BY_SIZE[size] || 50;
   const getZonePreviewWidth = (zone: DtfZonePrice) =>
@@ -235,9 +237,9 @@ export function CustomDtfStudio({
   const selectedFabric = fabricId ? fabrics.find((f) => f.id === fabricId) || null : null;
   const activePlacement = placements.find((p) => p.zoneId === selectedZoneId) || null;
 
-  const isStudioReady = Boolean(selectedProduct && selectedFabric && selectedColor && size && placements.length > 0);
+  const isStudioReady = Boolean(selectedProduct && selectedFabric && size && (isJerseyProduct ? jerseyReference : selectedColor && placements.length > 0));
 
-  const dtfTotalPerShirt = placements.reduce((sum, p) => sum + p.price, 0);
+  const dtfTotalPerShirt = isJerseyProduct ? 0 : placements.reduce((sum, p) => sum + p.price, 0);
   const currentProductImage = !selectedProduct ? '' : activeView === 'sleeve'
     ? selectedProduct.sleeveImage || selectedProduct.frontImage || selectedProduct.images[0]
     : activeView === 'back'
@@ -300,7 +302,7 @@ export function CustomDtfStudio({
   }, [selectedProductId, activeView, currentProductImage]);
   const baseGarmentPrice = selectedProduct?.price || 0;
   const selectedSizeSurcharge = selectedProduct?.sizeSurcharges?.[size] || 0;
-  const selectedVariantKey = selectedColor && size ? selectedColor.name.toLowerCase() + '::' + size : '';
+  const selectedVariantKey = !isJerseyProduct && selectedColor && size ? selectedColor.name.toLowerCase() + '::' + size : '';
   const selectedVariantAdjustment = selectedVariantKey
     ? Math.max(0, Number(selectedProduct?.variantPrices?.[selectedVariantKey] || 0))
     : 0;
@@ -618,19 +620,15 @@ export function CustomDtfStudio({
       onToast('Pilih model baju dari katalog terlebih dahulu.');
       return;
     }
-    if (!selectedFabric || !selectedColor) {
-      onToast('Pilih bahan kain dan warna baju terlebih dahulu.');
-      return;
-    }
+    if (!selectedFabric) { onToast('Pilih jenis bahan terlebih dahulu.'); return; }
+    if (isJerseyProduct && !jerseyReference) { onToast('Unggah contoh atau desain jersey terlebih dahulu.'); return; }
+    if (!isJerseyProduct && !selectedColor) { onToast('Pilih warna baju terlebih dahulu.'); return; }
     if (!size) {
       onToast('Pilih ukuran baju (S / M / L / XL / XXL) terlebih dahulu.');
       return;
     }
-    if (placements.length === 0) {
-      onToast('Pilih minimal 1 zona sablon DTF & unggah desain terlebih dahulu.');
-      return;
-    }
-    const previewSnapshots = {
+    if (!isJerseyProduct && placements.length === 0) { onToast('Pilih minimal 1 zona sablon DTF & unggah desain terlebih dahulu.'); return; }
+    const previewSnapshots = isJerseyProduct ? undefined : {
       front: await buildExactStudioSnapshot('front'),
       back: await buildExactStudioSnapshot('back'),
       sleeve: placements.some((placement) => dtfZones.find((zone) => zone.id === placement.zoneId)?.view === 'sleeve') ? await buildExactStudioSnapshot('sleeve') : undefined,
@@ -643,8 +641,10 @@ export function CustomDtfStudio({
       sku: selectedProduct.sku,
       name: `Custom DTF ${selectedProduct.name}`,
       image: selectedProduct.frontImage || selectedProduct.images[0],
-      colorName: selectedColor.name,
-      colorHex: selectedColor.hex,
+      colorName: isJerseyProduct ? 'Sesuai referensi jersey' : selectedColor!.name,
+      colorHex: isJerseyProduct ? '#777777' : selectedColor!.hex,
+      jerseyReferenceImage: isJerseyProduct ? jerseyReference?.dataUrl : undefined,
+      jerseyReferenceName: isJerseyProduct ? jerseyReference?.name : undefined,
       backImage: selectedProduct.backImage || selectedProduct.images[1] || selectedProduct.images[0],
       sleeveImage: selectedProduct.sleeveImage || undefined,
       size,
@@ -653,7 +653,7 @@ export function CustomDtfStudio({
       fabricName: selectedFabric.name,
       fabricId: selectedFabric.id,
       customModel: `${activeSilhouette} ${selectedProduct.name}`,
-      customPlacements: placements.map(({ originalDataUrl: _orig, ...rest }) => rest),
+      customPlacements: isJerseyProduct ? [] : placements.map(({ originalDataUrl: _orig, ...rest }) => rest),
     });
   };
 
@@ -1015,11 +1015,19 @@ export function CustomDtfStudio({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-black/10 dark:border-white/10">
-                <div className="space-y-2">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Warna yang diinginkan</div>
-                  <input type="text" value={requestedColor} onChange={(e) => setRequestedColor(e.target.value)} maxLength={60} placeholder="Contoh: hitam, navy, maroon, sage..." className="w-full h-10 px-3 rounded-md text-xs bg-neutral-50 dark:bg-[#181818] border border-black/15 dark:border-white/15" />
-                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Tulis warna sesuai keinginan. Admin akan mengecek stok dan mengonfirmasi melalui WhatsApp. Warna khusus di bawah 6 pcs perlu persetujuan admin.</p>
-                </div>
+                {isJerseyProduct ? (
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Upload contoh / desain jersey</div>
+                    <label className="flex min-h-12 items-center gap-3 rounded-md border border-dashed border-[#7A1F2B]/50 bg-[#7A1F2B]/5 px-3 py-3 text-xs cursor-pointer hover:bg-[#7A1F2B]/10">
+                      <Upload className="h-4 w-4 shrink-0 text-[#7A1F2B]" /><span className="min-w-0 flex-1">{jerseyReference ? jerseyReference.name : 'Pilih foto atau desain jersey dari perangkat'}</span>
+                      <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(event) => { const input=event.currentTarget; const file=input.files?.[0]; if(!file)return; if(!['image/png','image/jpeg','image/webp'].includes(file.type)){onToast('Referensi jersey harus berupa PNG, JPG, atau WEBP.');input.value='';return;} if(file.size>8*1024*1024){onToast('Ukuran file referensi maksimal 8MB.');input.value='';return;} const reader=new FileReader(); reader.onerror=()=>onToast('File referensi gagal dibaca. Coba unggah kembali.'); reader.onload=()=>{const dataUrl=String(reader.result||'');if(dataUrl){setJerseyReference({name:file.name,dataUrl});onToast('Referensi jersey berhasil ditambahkan.');}input.value='';};reader.readAsDataURL(file); }} />
+                    </label>
+                    {jerseyReference && <div className="flex items-center gap-3 rounded-lg border border-black/10 dark:border-white/10 p-2"><img src={jerseyReference.dataUrl} alt="Referensi jersey" className="h-16 w-16 rounded object-contain bg-neutral-100 dark:bg-black/30"/><div className="min-w-0 flex-1"><div className="text-xs font-semibold">Referensi terpasang</div><div className="truncate text-[11px] text-neutral-500">{jerseyReference.name}</div></div><button type="button" onClick={()=>setJerseyReference(null)} className="text-xs text-red-600">Hapus</button></div>}
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400">Admin menggunakan gambar ini sebagai acuan warna, motif, panel, dan detail jersey. Format PNG/JPG/WEBP, maksimal 8MB.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2"><div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Warna yang diinginkan</div><input type="text" value={requestedColor} onChange={(e) => setRequestedColor(e.target.value)} maxLength={60} placeholder="Contoh: hitam, navy, maroon, sage..." className="w-full h-10 px-3 rounded-md text-xs bg-neutral-50 dark:bg-[#181818] border border-black/15 dark:border-white/15"/><p className="text-[11px] text-neutral-500 dark:text-neutral-400">Tulis warna sesuai keinginan. Admin akan mengecek stok dan mengonfirmasi melalui WhatsApp. Warna khusus di bawah 6 pcs perlu persetujuan admin.</p></div>
+                )}
 
                 <div className="space-y-2">
                   <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
@@ -1045,7 +1053,7 @@ export function CustomDtfStudio({
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 rounded-xl p-5 space-y-4">
+            {!isJerseyProduct && <div className="bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 rounded-xl p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div><p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#7A1F2B]">Langkah 3 dari 4</p><h3 className="font-display text-2xl font-bold uppercase tracking-wide">
                   3. Pilih posisi &amp; unggah desain DTF
@@ -1196,7 +1204,7 @@ export function CustomDtfStudio({
                   ))}
                 </div>
               )}
-            </div>
+            </div>}
 
             <div className="bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 rounded-xl p-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1237,7 +1245,7 @@ export function CustomDtfStudio({
 
               </div>
 
-              <div className="rounded-xl border border-[#7A1F2B]/25 bg-[#7A1F2B]/5 p-4 space-y-1.5"><p className="text-xs font-bold uppercase tracking-wider text-[#7A1F2B]">Langkah 4 · Periksa pesanan</p><p className="text-sm font-semibold">{selectedProduct?.name || 'Produk belum dipilih'}</p><p className="text-xs text-neutral-500">{selectedColor?.name || 'Warna belum diisi'} · {selectedFabric?.name || 'Bahan belum dipilih'} · {size || 'Ukuran belum dipilih'} · {quantity} pcs · {placements.length} posisi desain</p><div className="flex items-center justify-between pt-2 border-t border-[#7A1F2B]/15 text-xs"><span>Harga per kaos</span><strong>{formatRupiah(unitPrice)}</strong></div><div className="flex items-center justify-between text-sm"><span className="font-semibold">Subtotal estimasi</span><strong className="font-mono-tabular text-[#7A1F2B]">{formatRupiah(unitPrice * quantity)}</strong></div><p className="text-[11px] text-neutral-500">Estimasi berdasarkan bahan dan ukuran DTF terpilih. Ketersediaan warna, harga final, dan waktu produksi dikonfirmasi admin melalui WhatsApp.</p></div>
+              <div className="rounded-xl border border-[#7A1F2B]/25 bg-[#7A1F2B]/5 p-4 space-y-1.5"><p className="text-xs font-bold uppercase tracking-wider text-[#7A1F2B]">Periksa pesanan</p><p className="text-sm font-semibold">{selectedProduct?.name || 'Produk belum dipilih'}</p><p className="text-xs text-neutral-500">{isJerseyProduct ? (jerseyReference ? 'Referensi: ' + jerseyReference.name : 'Referensi jersey belum diunggah') : (selectedColor?.name || 'Warna belum diisi')} · {selectedFabric?.name || 'Bahan belum dipilih'} · {size || 'Ukuran belum dipilih'} · {quantity} pcs{!isJerseyProduct ? ' · ' + placements.length + ' posisi desain' : ''}</p><div className="flex items-center justify-between pt-2 border-t border-[#7A1F2B]/15 text-xs"><span>Harga per kaos</span><strong>{formatRupiah(unitPrice)}</strong></div><div className="flex items-center justify-between text-sm"><span className="font-semibold">Subtotal estimasi</span><strong className="font-mono-tabular text-[#7A1F2B]">{formatRupiah(unitPrice * quantity)}</strong></div><p className="text-[11px] text-neutral-500">Estimasi berdasarkan bahan dan ukuran DTF terpilih. Ketersediaan warna, harga final, dan waktu produksi dikonfirmasi admin melalui WhatsApp.</p></div>
 
               <button
                 type="button"
