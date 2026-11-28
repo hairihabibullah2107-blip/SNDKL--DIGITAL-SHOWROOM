@@ -7,22 +7,17 @@ import {
   PackageSearch,
   ShoppingBag,
   Sun,
-  User,
   WifiOff,
   X,
 } from 'lucide-react';
 import { useState } from 'react';
-import type { UserProfile } from '../types';
 import sandikaleLogo from '../assets/sandikale-logo.svg';
 
 interface NavbarProps {
   activeSection: string;
   onNavigate: (section: string) => void;
   cartCount: number;
-  wishlistCount: number;
   onOpenCart: () => void;
-  onOpenAccount: () => void;
-  user: UserProfile | null;
   darkMode: boolean;
   onToggleDark: () => void;
   isOnline: boolean;
@@ -38,10 +33,7 @@ export function Navbar({
   activeSection,
   onNavigate,
   cartCount,
-  wishlistCount,
   onOpenCart,
-  onOpenAccount,
-  user,
   darkMode,
   onToggleDark,
   isOnline,
@@ -137,16 +129,6 @@ export function Navbar({
 
               <button
                 type="button"
-                onClick={onOpenAccount}
-                aria-label="Akun Pelanggan"
-                className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-md text-xs font-medium text-neutral-700 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/10 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
-              >
-                <User className="w-4 h-4" />
-                <span className="max-w-[96px] truncate">{user ? user.name.split(' ')[0] : 'Masuk'}</span>
-              </button>
-
-              <button
-                type="button"
                 onClick={onOpenCart}
                 className="h-9 px-4 rounded-md bg-[#080808] dark:bg-white text-white dark:text-[#080808] hover:bg-[#7A1F2B] dark:hover:bg-[#7A1F2B] dark:hover:text-white text-xs font-semibold uppercase tracking-wider flex items-center gap-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
               >
@@ -179,19 +161,6 @@ export function Navbar({
                 <span>{link.label}</span>
               </button>
             ))}
-            <div className="pt-2 border-t border-black/10 dark:border-white/10 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenAccount();
-                }}
-                className="py-2 px-3 text-sm font-medium text-neutral-700 dark:text-neutral-200 flex items-center gap-2"
-              >
-                <User className="w-4 h-4" />
-                <span>{user ? `${user.name} (${wishlistCount} wishlist)` : `Akun & Wishlist (${wishlistCount})`}</span>
-              </button>
-            </div>
           </div>
         )}
       </div>
@@ -199,7 +168,7 @@ export function Navbar({
       {/* Mobile Bottom Navigation (56px height, respects <= 15% mobile sticky cap) */}
       <nav
         aria-label="Navigasi Cepat Ponsel"
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 h-14 bg-white/95 dark:bg-[#080808]/95 backdrop-blur-md border-t border-black/10 dark:border-white/10 grid grid-cols-5"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 h-14 bg-white/95 dark:bg-[#080808]/95 backdrop-blur-md border-t border-black/10 dark:border-white/10 grid grid-cols-4"
       >
         <button
           type="button"
@@ -230,14 +199,6 @@ export function Navbar({
         >
           <PackageSearch className="w-4 h-4" />
           <span>Lacak</span>
-        </button>
-        <button
-          type="button"
-          onClick={onOpenAccount}
-          className="flex flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400"
-        >
-          <User className="w-4 h-4" />
-          <span>Akun</span>
         </button>
         <button
           type="button"
