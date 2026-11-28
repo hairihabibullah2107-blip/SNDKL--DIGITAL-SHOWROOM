@@ -308,7 +308,12 @@ export default function App() {
   const scrollToSection = (id: string) => {
     setActiveSection(id);
     const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth' });
+    if (!el) return;
+    // Keep section headings below the real sticky header height on desktop and mobile.
+    const stickyHeader = document.querySelector<HTMLElement>('[data-site-sticky-header]');
+    const headerHeight = stickyHeader?.getBoundingClientRect().height ?? 0;
+    const top = Math.max(0, window.scrollY + el.getBoundingClientRect().top - headerHeight - 20);
+    window.scrollTo({ top, behavior: 'smooth' });
   };
 
   const handleOpenQuickView = (product: Product) => {
