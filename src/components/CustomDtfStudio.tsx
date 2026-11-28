@@ -639,7 +639,7 @@ export function CustomDtfStudio({
       type: 'custom_dtf',
       productId: selectedProduct.id,
       sku: selectedProduct.sku,
-      name: `Custom DTF ${selectedProduct.name}`,
+      name: isJerseyProduct ? `Jersey Custom ${selectedProduct.name}` : `Custom DTF ${selectedProduct.name}`, 
       image: selectedProduct.frontImage || selectedProduct.images[0],
       colorName: isJerseyProduct ? 'Sesuai referensi jersey' : selectedColor!.name,
       colorHex: isJerseyProduct ? '#777777' : selectedColor!.hex,
@@ -686,7 +686,7 @@ export function CustomDtfStudio({
         <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-200">
           <Info className="w-4 h-4 shrink-0 mt-0.5 text-[#7A1F2B]" />
           <span>
-            <strong>Mulai dengan 4 langkah sederhana:</strong> pilih produk, tentukan bahan/warna/ukuran, pilih posisi sablon, lalu unggah desain. Pratinjau menggunakan <strong>foto produk dari katalog</strong>. Harga akhir dan detail produksi dibahas langsung dengan Admin melalui WhatsApp.
+            <strong>{isJerseyProduct ? 'Mulai dengan 3 langkah sederhana:' : 'Mulai dengan 4 langkah sederhana:'}</strong> pilih produk, tentukan bahan{isJerseyProduct ? '/ukuran/qty' : '/warna/ukuran'}, {isJerseyProduct ? 'unggah referensi jersey.' : 'pilih posisi sablon, lalu unggah desain.'} Pratinjau menggunakan <strong>foto produk dari katalog</strong>. Harga akhir dan detail produksi dibahas langsung dengan Admin melalui WhatsApp.
           </span>
         </div>
 
@@ -955,7 +955,7 @@ export function CustomDtfStudio({
                     <button
                       key={prod.id}
                       type="button"
-                      onClick={() => setSelectedProductId(prod.id)}
+                      onClick={() => { if (selectedProductId !== prod.id) setJerseyReference(null); setSelectedProductId(prod.id); }}
                       className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer flex items-center gap-3 ${
                         selectedProduct?.id === prod.id
                           ? 'border-[#7A1F2B] bg-[#7A1F2B]/10'
@@ -1245,7 +1245,7 @@ export function CustomDtfStudio({
 
               </div>
 
-              <div className="rounded-xl border border-[#7A1F2B]/25 bg-[#7A1F2B]/5 p-4 space-y-1.5"><p className="text-xs font-bold uppercase tracking-wider text-[#7A1F2B]">Periksa pesanan</p><p className="text-sm font-semibold">{selectedProduct?.name || 'Produk belum dipilih'}</p><p className="text-xs text-neutral-500">{isJerseyProduct ? (jerseyReference ? 'Referensi: ' + jerseyReference.name : 'Referensi jersey belum diunggah') : (selectedColor?.name || 'Warna belum diisi')} · {selectedFabric?.name || 'Bahan belum dipilih'} · {size || 'Ukuran belum dipilih'} · {quantity} pcs{!isJerseyProduct ? ' · ' + placements.length + ' posisi desain' : ''}</p><div className="flex items-center justify-between pt-2 border-t border-[#7A1F2B]/15 text-xs"><span>Harga per kaos</span><strong>{formatRupiah(unitPrice)}</strong></div><div className="flex items-center justify-between text-sm"><span className="font-semibold">Subtotal estimasi</span><strong className="font-mono-tabular text-[#7A1F2B]">{formatRupiah(unitPrice * quantity)}</strong></div><p className="text-[11px] text-neutral-500">Estimasi berdasarkan bahan dan ukuran DTF terpilih. Ketersediaan warna, harga final, dan waktu produksi dikonfirmasi admin melalui WhatsApp.</p></div>
+              <div className="rounded-xl border border-[#7A1F2B]/25 bg-[#7A1F2B]/5 p-4 space-y-1.5"><p className="text-xs font-bold uppercase tracking-wider text-[#7A1F2B]">Periksa pesanan</p><p className="text-sm font-semibold">{selectedProduct?.name || 'Produk belum dipilih'}</p><p className="text-xs text-neutral-500">{isJerseyProduct ? (jerseyReference ? 'Referensi: ' + jerseyReference.name : 'Referensi jersey belum diunggah') : (selectedColor?.name || 'Warna belum diisi')} · {selectedFabric?.name || 'Bahan belum dipilih'} · {size || 'Ukuran belum dipilih'} · {quantity} pcs{!isJerseyProduct ? ' · ' + placements.length + ' posisi desain' : ''}</p><div className="flex items-center justify-between pt-2 border-t border-[#7A1F2B]/15 text-xs"><span>Harga per kaos</span><strong>{formatRupiah(unitPrice)}</strong></div><div className="flex items-center justify-between text-sm"><span className="font-semibold">Subtotal estimasi</span><strong className="font-mono-tabular text-[#7A1F2B]">{formatRupiah(unitPrice * quantity)}</strong></div><p className="text-[11px] text-neutral-500">{isJerseyProduct ? 'Estimasi berdasarkan bahan dan ukuran jersey. Warna, motif, harga final, dan waktu produksi mengikuti referensi serta dikonfirmasi admin melalui WhatsApp.' : 'Estimasi berdasarkan bahan dan ukuran DTF terpilih. Ketersediaan warna, harga final, dan waktu produksi dikonfirmasi admin melalui WhatsApp.'}</p></div>
 
               <button
                 type="button"
@@ -1259,11 +1259,11 @@ export function CustomDtfStudio({
                     ? 'Pilihan bahan belum tersedia'
                     : !selectedProduct
                     ? 'Pilih Model Baju Terlebih Dahulu'
-                    : !selectedFabric || !selectedColor || !size
-                    ? 'Pilih Bahan, Isi Warna & Ukuran'
-                    : placements.length === 0
+                    : !selectedFabric || (!isJerseyProduct && !selectedColor) || !size || (isJerseyProduct && !jerseyReference)
+                    ? (isJerseyProduct ? 'Pilih Bahan, Ukuran & Upload Referensi' : 'Pilih Bahan, Isi Warna & Ukuran')
+                    : !isJerseyProduct && placements.length === 0
                     ? 'Pilih Zona Sablon & Unggah Desain'
-                    : 'Masukkan Custom DTF ke Tas'}
+                    : isJerseyProduct ? 'Masukkan Jersey Custom ke Tas' : 'Masukkan Custom DTF ke Tas'}
                 </span>
               </button>
             </div>
