@@ -629,9 +629,7 @@ export default function App() {
         activeSection={activeSection}
         onNavigate={scrollToSection}
         cartCount={cartCount}
-        wishlistCount={wishlistIds.length}
         onOpenCart={() => setCartOpen(true)}
-        user={customerUser}
         darkMode={darkMode}
         onToggleDark={() => setDarkMode((d) => !d)}
         isOnline={isOnline}
