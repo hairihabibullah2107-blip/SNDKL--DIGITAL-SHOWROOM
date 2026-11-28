@@ -144,6 +144,9 @@ export interface CartItem {
   estimatedDays?: number;
   customModel?: string;
   customPlacements?: CustomDesignPlacement[];
+  /** Customer-uploaded jersey reference image, separate from DTF artwork. */
+  jerseyReferenceImage?: string;
+  jerseyReferenceName?: string;
   /** Exact front/back/sleeve preview captures from Custom DTF Studio. */
   previewSnapshots?: { front?: string; back?: string; sleeve?: string };
 }

@@ -367,7 +367,7 @@ export default function App() {
 
   const handleAddCustomToCart = (item: CartItem) => {
     setCart((prev) => [...prev, item]);
-    showToast(`Desain Custom DTF (${item.customPlacements?.length || 1} zona) ditambahkan ke tas.`);
+    showToast(item.jerseyReferenceImage ? 'Jersey custom beserta referensi desain ditambahkan ke tas.' : `Desain Custom DTF (${item.customPlacements?.length || 1} zona) ditambahkan ke tas.`);
     setCartOpen(true);
   };
 

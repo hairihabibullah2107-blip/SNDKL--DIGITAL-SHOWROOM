@@ -227,7 +227,7 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const W = 210, m = 10, R = 200, items = order.items || [];
   const first = items[0], qty = items.reduce((sum, item) => sum + item.quantity, 0);
   const sizes = items.map((item) => item.size + ':' + item.quantity).join(', ');
-  const colors = Array.from(new Set(items.map((item) => item.colorName))).join(', ');
+  const colors = Array.from(new Set(items.map((item) => item.jerseyReferenceName ? 'Sesuai referensi jersey' : item.colorName))).join(', ');
   const materials = Array.from(new Set(items.map((item) => item.fabricName || '-'))).join(', ');
   const models = Array.from(new Set(items.map((item) => item.customModel || item.name))).join(', ');
   const date = new Date(order.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
@@ -245,7 +245,7 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   for(let i=1;i<3;i++) doc.line(m,29+rowH*i,R,29+rowH*i);
   const cells=[
     [['NAMA',order.customerName||'CUSTOMER'],['COLOR',colors||'-'],['SIZE',sizes||'-']],
-    [['MODEL',models],['DESIGNER','SANDIKALE'],['SABLON','DTF']],
+    [['MODEL',models],['DESIGNER','SANDIKALE'],['SABLON',items.some((item) => item.jerseyReferenceImage) ? 'JERSEY CUSTOM' : 'DTF']],
     [['MATERIAL',materials],['DATE',date],['QTY',qty+' PCS']]
   ];
   cells.forEach((row,ri)=>row.forEach((cell,ci)=>{
@@ -283,11 +283,13 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const notesY=hasSleeveDesign?258:205;
   doc.setDrawColor(20,20,20);doc.setLineWidth(0.35);doc.line(m,notesY,R,notesY);
   doc.setFont('helvetica','bold');doc.setFontSize(8.2);
-  doc.text('KETERANGAN SABLON',m,notesY+5);doc.text('CATATAN PRODUKSI',105,notesY+5);
+  const hasJerseyReference=items.some((item)=>Boolean(item.jerseyReferenceImage));
+  doc.text(hasJerseyReference?'KETERANGAN DESAIN JERSEY':'KETERANGAN SABLON',m,notesY+5);doc.text('CATATAN PRODUKSI',105,notesY+5);
   doc.setFont('helvetica','normal');doc.setFontSize(7.2);
   const printLines=items.flatMap((item,index)=>(item.customPlacements||[]).map((placement,pi)=>(index+1)+'.'+(pi+1)+' '+placement.zoneLabel+' ('+placementWidthCm(placement)+' cm) - '+placement.artworkName));
-  doc.text(doc.splitTextToSize(printLines.length?printLines.join('\\n'):'1. Desain DTF sesuai file lampiran customer',88).slice(0,5),m,notesY+9);
-  const production='Press 160°C selama 15 detik, kupas dingin (Cold Peel).\\nPacking plastik klip.\\nNo. SPK '+(order.spkNumber||order.id)+'\\nPenerima: Admin SANDIKALE\\nEstimasi: konfirmasi admin via WhatsApp';
+  const designNotes=hasJerseyReference?'Referensi jersey: '+items.filter((item)=>item.jerseyReferenceImage).map((item)=>item.jerseyReferenceName||'file terlampir').join(', ')+'\\nWarna, motif, panel, dan detail mengikuti file referensi.':'1. Desain DTF sesuai file lampiran customer';
+  doc.text(doc.splitTextToSize(printLines.length?printLines.join('\\n'):designNotes,88).slice(0,5),m,notesY+9);
+  const production=(hasJerseyReference?'Produksi jersey mengikuti referensi terlampir.\\nKonfirmasi bahan dan detail dengan admin.':'Press 160°C selama 15 detik, kupas dingin (Cold Peel).\\nPacking plastik klip.')+'\\nNo. SPK '+(order.spkNumber||order.id)+'\\nPenerima: Admin SANDIKALE\\nEstimasi: konfirmasi admin via WhatsApp';
   doc.text(doc.splitTextToSize(production,88).slice(0,4),105,notesY+10);
   doc.setDrawColor(170,170,170);doc.setLineWidth(0.25);doc.line(m,283,R,283);
   doc.setFont('helvetica','normal');doc.setFontSize(8);
@@ -436,7 +438,7 @@ export function CartCheckoutDrawer({
                     className="p-3 rounded-lg bg-neutral-50 dark:bg-[#181818] border border-black/10 dark:border-white/10 flex gap-3"
                   >
                     <img
-                      src={item.customPlacements?.[0]?.artworkDataUrl || item.image}
+                      src={item.jerseyReferenceImage || item.customPlacements?.[0]?.artworkDataUrl || item.image}
                       alt={item.name}
                       referrerPolicy="no-referrer"
                       className="w-16 h-16 rounded-md object-cover bg-neutral-900 shrink-0"
@@ -454,14 +456,14 @@ export function CartCheckoutDrawer({
                         </button>
                       </div>
                       <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                        {item.colorName} · Size {item.size}
+                        {item.jerseyReferenceImage ? 'Sesuai referensi jersey' : item.colorName} · Size {item.size}
                         {item.fabricName ? ` · ${item.fabricName}` : ''}
                       </div>
-                      {item.customPlacements && (
-                        <div className="text-[11px] text-[#7A1F2B]">
-                          DTF {item.customPlacements.length} posisi ({item.customPlacements.map((p) => p.zoneLabel).join(', ')})
-                        </div>
-                      )}
+                      {item.jerseyReferenceImage ? (
+                        <div className="text-[11px] text-[#7A1F2B]">Referensi jersey: {item.jerseyReferenceName || 'File terlampir'}</div>
+                      ) : (item.customPlacements?.length || 0) > 0 ? (
+                        <div className="text-[11px] text-[#7A1F2B]">DTF {item.customPlacements!.length} posisi ({item.customPlacements!.map((p) => p.zoneLabel).join(', ')})</div>
+                      ) : null}
                       <div className="flex items-center justify-between pt-1">
                         <div className="flex items-center border border-black/15 dark:border-white/15 rounded h-7">
                           <button type="button" onClick={() => onUpdateQty(item.id, -1)} className="w-6 h-full text-xs cursor-pointer">
@@ -592,7 +594,7 @@ export function CartCheckoutDrawer({
             const waMessage = [
               'Halo Admin SANDIKALE, saya ingin mengonfirmasi pesanan '+createdOrder.id+'.',
               'Nomor SPK: '+(createdOrder.spkNumber||createdOrder.id)+'.',
-              'Saya akan melampirkan SPK dan file desain pesanan ini.',
+              'Saya akan melampirkan SPK, desain DTF, dan referensi jersey (jika ada).',
               needsPaymentProof?'Bukti transfer/QRIS juga saya lampirkan.':'Mohon konfirmasi detail pesanan dan pembayaran.'
             ].join('\n');
             const whatsappUrl='https://wa.me/'+cleanWa+'?text='+encodeURIComponent(waMessage);
@@ -606,11 +608,13 @@ export function CartCheckoutDrawer({
                   const source=entry.placement.originalDataUrl||entry.placement.artworkDataUrl;
                   if(source)designFiles.push(await dataUrlToFile(source,safeFileName(entry.placement.artworkName||('desain-'+(index+1)+'.png'))));
                 }
-                const files=[spk,...designFiles,...(paymentProofFile?[paymentProofFile]:[])];
+                const jerseyReferenceFiles: File[]=[];
+                for (const [index,item] of createdOrder.items.entries()) if(item.jerseyReferenceImage) jerseyReferenceFiles.push(await dataUrlToFile(item.jerseyReferenceImage,safeFileName(item.jerseyReferenceName||('referensi-jersey-'+(index+1)+'.png'))));
+                const files=[spk,...designFiles,...jerseyReferenceFiles,...(paymentProofFile?[paymentProofFile]:[])];
                 files.forEach((file,index)=>window.setTimeout(()=>downloadGeneratedFile(file),index*350));
                 if(chatWindow&&!chatWindow.closed)chatWindow.location.href=whatsappUrl;
                 else window.location.href=whatsappUrl;
-                setErrorMsg('Chat admin dibuka. Lampirkan file SPK dan desain yang baru diunduh, lalu tekan Kirim di WhatsApp.');
+                setErrorMsg('Chat admin dibuka. Lampirkan file SPK, desain DTF, dan referensi jersey yang baru diunduh, lalu tekan Kirim di WhatsApp.');
               }catch(error){
                 if(chatWindow&&!chatWindow.closed)chatWindow.location.href=whatsappUrl;
                 else window.open(whatsappUrl,'_blank','noopener,noreferrer');
