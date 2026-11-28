@@ -65,66 +65,7 @@ export function ProductCatalog({
 
   return (
     <section id="katalog" className="pt-20 pb-14 md:pt-24 md:pb-20 border-b border-black/10 dark:border-white/10">
-      <div className="max-w-[1360px] mx-auto px-4 md:px-6 space-y-12">
-        {/* Category Editorial Grid */}
-        <div className="space-y-6">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#7A1F2B]">Koleksi &amp; Siluet</p>
-              <h2 className="font-display text-3xl md:text-5xl font-bold uppercase tracking-tight mt-1">
-                Kategori Streetwear
-              </h2>
-            </div>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400 max-w-md">
-              Setiap potongan dirancang dengan gramasi kain terukur agar nyaman dipakai harian dan optimal untuk cetak DTF resolusi tinggi.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            {categories.map((cat) => {
-              const active = selectedCategory === cat.slug;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setSelectedCategory(active ? 'all' : cat.slug)}
-                  className={`group text-left rounded-lg overflow-hidden border transition-all cursor-pointer ${
-                    active
-                      ? 'border-[#7A1F2B] ring-1 ring-[#7A1F2B]'
-                      : 'border-black/10 dark:border-white/10 hover:border-black/30 dark:hover:border-white/30'
-                  } bg-white dark:bg-[#141414]`}
-                >
-                  <div className="aspect-[4/3] overflow-hidden bg-neutral-100 dark:bg-[#171717]">
-                    {cat.image ? (
-                      <img
-                        src={cat.image}
-                        alt={cat.name}
-                        loading="lazy"
-                        decoding="async"
-                        referrerPolicy="no-referrer"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-neutral-500 dark:text-neutral-400">
-                        <span className="text-3xl font-bold">S</span>
-                        <span className="text-[10px] uppercase tracking-[.18em]">Foto kategori belum tersedia</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-3.5 md:p-4 space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="font-display text-xl font-bold uppercase tracking-wide truncate">{cat.name}</h3>
-                      <span className="text-xs font-mono-tabular text-[#7A1F2B] shrink-0">Eksplor →</span>
-                    </div>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-2">{cat.description}</p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
+      <div className="max-w-[1360px] mx-auto px-4 md:px-6 space-y-6">
         {/* Smart Product Filter Bar */}
         <div className="space-y-6">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-black/10 dark:border-white/10">

@@ -68,18 +68,6 @@ async function svgIconToPngDataUrl(svg: string): Promise<string | null> {
     return canvas.toDataURL('image/png');
   } catch { return null; }
 }
-function escapeReceiptText(value: unknown): string {
-  return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char] || char));
-}
-function printCustomerReceipt(order: Order) {
-  const popup = window.open('', '_blank', 'width=420,height=720');
-  if (!popup) { window.alert('Izinkan pop-up untuk mencetak nota struk.'); return; }
-  const itemRows = order.items.map((item) => '<div class="item"><b>' + escapeReceiptText(item.name) + '</b><div>' + escapeReceiptText(item.colorName) + ' · ' + escapeReceiptText(item.size) + ' · ' + item.quantity + ' pcs</div><div class="row"><span>' + item.quantity + ' × ' + formatRupiah(item.unitPrice) + '</span><b>' + formatRupiah(item.quantity * item.unitPrice) + '</b></div></div>').join('');
-  const html = '<!doctype html><html lang="id"><meta charset="utf-8"><title>Nota Struk ' + escapeReceiptText(order.id) + '</title><style>body{font:12px Arial,sans-serif;color:#111;width:72mm;margin:0 auto;padding:4mm}h1{text-align:center;font-size:19px;letter-spacing:2px;margin:0}p{text-align:center;margin:4px 0}.line{border-top:1px dashed #555;margin:9px 0}.row{display:flex;justify-content:space-between;gap:8px;margin:4px 0}.item{margin:8px 0}.muted{font-size:10px;color:#555}.total{font-weight:bold;font-size:14px}.stamp{border:1px solid #9a2434;color:#9a2434;text-align:center;padding:7px;font-weight:bold;margin:10px 0}@media print{@page{size:80mm auto;margin:3mm}body{width:auto;padding:0}}</style><body><h1>SANDIKALE</h1><p>CUSTOM APPAREL · DTF STUDIO</p><p class="muted">NOTA STRUK PESANAN</p><div class="line"></div><div class="row"><span>No. Pesanan</span><b>' + escapeReceiptText(order.id) + '</b></div><div class="row"><span>Tanggal</span><span>' + escapeReceiptText(new Date(order.createdAt).toLocaleString('id-ID')) + '</span></div><div class="row"><span>Customer</span><span>' + escapeReceiptText(order.customerName) + '</span></div><div class="row"><span>Pengambilan</span><span>' + (order.shippingCourier === 'Ambil Sendiri di Store' ? 'Ambil di Store' : 'Kurir') + '</span></div><div class="line"></div>' + itemRows + '<div class="line"></div><div class="row total"><span>TOTAL</span><span>' + formatRupiah(order.total) + '</span></div><div class="stamp">' + (order.paymentStatus === 'paid' ? 'PEMBAYARAN TERVERIFIKASI' : 'MENUNGGU KONFIRMASI ADMIN') + '</div><p class="muted">Nota ini adalah ringkasan pesanan, bukan bukti pembayaran lunas.</p><p>Terima kasih · SANDIKALE</p><script>window.onload=()=>window.print()<\\/script></body></html>';
-  popup.document.write(html);
-  popup.document.close();
-}
-
 type SpkView = 'front' | 'back' | 'sleeve';
 const SPK_GARMENT_WIDTH_CM: Record<string, number> = { S: 48, M: 50, L: 52, XL: 54, XXL: 56 };
 
@@ -626,7 +614,6 @@ export function CartCheckoutDrawer({
 
             return (
               <div className="space-y-4">
-                <button type="button" onClick={() => printCustomerReceipt(createdOrder)} className="w-full h-10 rounded-md border border-black/15 dark:border-white/15 text-xs font-semibold uppercase tracking-wider">Cetak Nota Struk</button>
                 <button type="button" onClick={async () => {
                   const previewWindow = window.open('about:blank', '_blank');
                   if (previewWindow) { previewWindow.document.write('<!doctype html><title>Menyiapkan SPK</title><body style="font:16px Arial;padding:24px">Menyiapkan SPK SANDIKALE…</body>'); previewWindow.document.close(); }
