@@ -64,7 +64,7 @@ export function ProductCatalog({
   }, [products, selectedCategory, onlyCustomBase, searchQuery, sortBy]);
 
   return (
-    <section id="katalog" className="py-14 md:py-20 border-b border-black/10 dark:border-white/10">
+    <section id="katalog" className="pt-20 pb-14 md:pt-24 md:pb-20 border-b border-black/10 dark:border-white/10">
       <div className="max-w-[1360px] mx-auto px-4 md:px-6 space-y-12">
         {/* Category Editorial Grid */}
         <div className="space-y-6">
