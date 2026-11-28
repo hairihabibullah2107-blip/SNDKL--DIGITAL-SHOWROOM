@@ -625,7 +625,7 @@ export default function App() {
   const cartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F2F2F2] text-[#080808] dark:bg-[#080808] dark:text-white pb-14 md:pb-0" style={{ "--brand-accent": siteContent.theme.accent || "#7A1F2B", "--site-background": siteContent.theme.background, "--site-surface": siteContent.theme.surface, "--site-text": siteContent.theme.text, "--site-muted": siteContent.theme.muted, backgroundColor: siteContent.theme.background, color: siteContent.theme.text } as React.CSSProperties}>
+    <div className="min-h-screen flex flex-col bg-[#F7F7F5] text-[#171717] dark:bg-[#080808] dark:text-white pb-14 md:pb-0" style={{ "--brand-accent": siteContent.theme.accent || "#7A1F2B", "--site-background": darkMode ? siteContent.theme.background : "#F7F7F5", "--site-surface": darkMode ? siteContent.theme.surface : "#FFFFFF", "--site-text": darkMode ? siteContent.theme.text : "#171717", "--site-muted": darkMode ? siteContent.theme.muted : "#525252", backgroundColor: darkMode ? siteContent.theme.background : "#F7F7F5", color: darkMode ? siteContent.theme.text : "#171717" } as React.CSSProperties}>
       <Navbar
         activeSection={activeSection}
         onNavigate={scrollToSection}
