@@ -175,13 +175,13 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
       return;
     }
     const confirmed = window.confirm(
-      'HAPUS RIWAYAT PESANAN?\\n\\n' +
-      order.order_number + '\\n' +
-      'Pelanggan: ' + (order.showroom_customers?.name || 'Pelanggan') + '\\n\\n' +
-      'Data pesanan, item, pembayaran, riwayat status, produksi, QC, dan dokumen SPK terkait akan dihapus permanen. Tindakan ini tidak dapat dibatalkan. File desain di penyimpanan tidak ikut dihapus.\\n\\nLanjutkan?'
+      'HAPUS RIWAYAT PESANAN?\n\n' +
+      order.order_number + '\n' +
+      'Pelanggan: ' + (order.showroom_customers?.name || 'Pelanggan') + '\n\n' +
+      'Data pesanan, item, pembayaran, riwayat status, produksi, QC, dan dokumen SPK terkait akan dihapus permanen. Tindakan ini tidak dapat dibatalkan. File desain di penyimpanan tidak ikut dihapus.\n\nLanjutkan?'
     );
     if (!confirmed) return;
-    const typedNumber = window.prompt('Ketik nomor pesanan berikut untuk mengonfirmasi penghapusan:\\n' + order.order_number);
+    const typedNumber = window.prompt('Ketik nomor pesanan berikut untuk mengonfirmasi penghapusan:\n' + order.order_number);
     if (typedNumber?.trim() !== order.order_number) {
       if (typedNumber !== null) onToast('Nomor pesanan tidak cocok. Penghapusan dibatalkan.');
       return;
