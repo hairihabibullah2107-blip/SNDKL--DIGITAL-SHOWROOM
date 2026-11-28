@@ -257,7 +257,11 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const imgY=67,imgH=118,imgW=87;
   const front=first?await makeSpkMockup(first,'front'):null;
   const back=first?await makeSpkMockup(first,'back'):null;
-  const sleeve=first?await makeSpkMockup(first,'sleeve'):null;
+  // Sleeve detail is only relevant when the customer actually added a sleeve print.
+  // Find the item carrying that placement so its own sleeve mockup/artwork is used.
+  const sleeveItem=items.find(item=>(item.customPlacements||[]).some(placement=>getPlacementView(placement)==='sleeve'));
+  const hasSleeveDesign=Boolean(sleeveItem);
+  const sleeve=sleeveItem?await makeSpkMockup(sleeveItem,'sleeve'):null;
   doc.setDrawColor(225,225,225);doc.setLineWidth(0.2);
   const renderView=(data:string|null,x:number,y:number,w:number,h:number,label:string)=>{
     doc.rect(x,y,w,h);
@@ -273,16 +277,18 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   };
   renderView(front,14,imgY,imgW,imgH,'TAMPAK DEPAN');
   renderView(back,109,imgY,imgW,imgH,'TAMPAK BELAKANG');
-  renderView(sleeve,61,191,87,61,'DETAIL LENGAN');
+  if(hasSleeveDesign) renderView(sleeve,61,191,87,61,'DETAIL LENGAN');
 
-  doc.setDrawColor(20,20,20);doc.setLineWidth(0.35);doc.line(m,258,R,258);
+  // Move the production notes upward when no sleeve-print panel is needed.
+  const notesY=hasSleeveDesign?258:205;
+  doc.setDrawColor(20,20,20);doc.setLineWidth(0.35);doc.line(m,notesY,R,notesY);
   doc.setFont('helvetica','bold');doc.setFontSize(8.2);
-  doc.text('KETERANGAN SABLON',m,263);doc.text('CATATAN PRODUKSI',105,263);
+  doc.text('KETERANGAN SABLON',m,notesY+5);doc.text('CATATAN PRODUKSI',105,notesY+5);
   doc.setFont('helvetica','normal');doc.setFontSize(7.2);
   const printLines=items.flatMap((item,index)=>(item.customPlacements||[]).map((placement,pi)=>(index+1)+'.'+(pi+1)+' '+placement.zoneLabel+' ('+placementWidthCm(placement)+' cm) - '+placement.artworkName));
-  doc.text(doc.splitTextToSize(printLines.length?printLines.join('\\n'):'1. Desain DTF sesuai file lampiran customer',88).slice(0,5),m,267);
+  doc.text(doc.splitTextToSize(printLines.length?printLines.join('\\n'):'1. Desain DTF sesuai file lampiran customer',88).slice(0,5),m,notesY+9);
   const production='Press 160°C selama 15 detik, kupas dingin (Cold Peel).\\nPacking plastik klip.\\nNo. SPK '+(order.spkNumber||order.id)+'\\nPenerima: Admin SANDIKALE\\nEstimasi: konfirmasi admin via WhatsApp';
-  doc.text(doc.splitTextToSize(production,88).slice(0,4),105,268);
+  doc.text(doc.splitTextToSize(production,88).slice(0,4),105,notesY+10);
   doc.setDrawColor(170,170,170);doc.setLineWidth(0.25);doc.line(m,283,R,283);
   doc.setFont('helvetica','normal');doc.setFontSize(8);
   const instagramIcon=await svgIconToPngDataUrl(instagramIconSvg),whatsappIcon=await svgIconToPngDataUrl(whatsappIconSvg);
