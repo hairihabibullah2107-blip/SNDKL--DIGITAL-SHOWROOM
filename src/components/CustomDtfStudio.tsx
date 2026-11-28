@@ -813,7 +813,7 @@ export function CustomDtfStudio({
                 </div>
               )}
 
-              {visiblePlacements.map((pl) => {
+              {!isJerseyProduct && visiblePlacements.map((pl) => {
                 const zMeta = dtfZones.find((z) => z.id === pl.zoneId);
                 if (!zMeta) return null;
                 const isSelected = pl.zoneId === selectedZoneId;
@@ -851,7 +851,7 @@ export function CustomDtfStudio({
               <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[11px] font-mono-tabular px-3 py-1.5 rounded-md bg-black/75 text-white">
                 <span className="flex items-center gap-1.5">
                   <Move className="w-3.5 h-3.5 text-[#7A1F2B]" />
-                  {removingBg ? 'Menghapus background otomatis...' : 'Geser posisi desain pada foto produk'}
+                  {isJerseyProduct ? 'Mockup produk sebagai referensi' : removingBg ? 'Menghapus background otomatis...' : 'Geser posisi desain pada foto produk'}
                 </span>
                 <span className="truncate max-w-[160px]">
                   {activeZoneMeta ? `Auto ${activeZoneMeta.dimensionsCm}` : selectedProduct?.fit || 'Custom'}
@@ -859,7 +859,7 @@ export function CustomDtfStudio({
               </div>
             </div>
 
-            {activePlacement && (
+            {!isJerseyProduct && activePlacement && (
               <div className="p-3.5 rounded-lg bg-neutral-100 dark:bg-[#1C1C1C] space-y-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="text-xs font-semibold truncate">
@@ -946,7 +946,7 @@ export function CustomDtfStudio({
           {/* RIGHT: Catalog Garment Selector + Admin-Configured Material & Colors */}
           <div className="lg:col-span-6 space-y-5">
             <div className="bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 rounded-xl p-5 space-y-4">
-              <div className="space-y-1"><p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#7A1F2B]">Langkah 1 dari 4</p><h3 className="font-display text-2xl font-bold uppercase tracking-wide">Pilih produk &amp; bahan</h3><p className="text-xs text-neutral-500">Pilih foto produk yang ingin kamu custom. Foto ini akan menjadi dasar pratinjau desain.</p></div>
+              <div className="space-y-1"><p className="text-[11px] font-bold uppercase tracking-[.16em] text-[#7A1F2B]">Langkah 1 dari {isJerseyProduct ? 3 : 4}</p><h3 className="font-display text-2xl font-bold uppercase tracking-wide">Pilih produk &amp; bahan</h3><p className="text-xs text-neutral-500">Pilih foto produk yang ingin kamu custom. Foto ini akan menjadi dasar pratinjau desain.</p></div>
 
               <div className="space-y-2">
                 <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Pilih foto produk dari katalog</div>
@@ -980,7 +980,7 @@ export function CustomDtfStudio({
 
               <div className="space-y-2">
                 <div className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">
-                  Langkah 2 · Pilih bahan kain
+                  {isJerseyProduct ? 'Langkah 1 · Pilih bahan jersey' : 'Langkah 2 · Pilih bahan kain'}
                 </div>
                 {fabrics.length === 0 ? (
                   <div className="p-3.5 rounded-lg border border-dashed border-amber-500/40 bg-amber-500/5 text-xs flex items-start gap-2 text-amber-700 dark:text-amber-300">
@@ -1273,7 +1273,7 @@ export function CustomDtfStudio({
           <div className="fixed top-[76px] right-3 z-[90] lg:hidden w-[112px] rounded-xl border border-black/15 dark:border-white/20 bg-white/95 dark:bg-[#141414]/95 shadow-2xl p-1.5 pointer-events-none">
             <div className="relative aspect-[4/4.2] overflow-hidden rounded-lg bg-neutral-200 dark:bg-[#101010]">
               <img src={mockupImageSrc || currentProductImage} alt="Preview baju custom" className="absolute inset-0 w-full h-full object-contain p-1" />
-              {visiblePlacements.map((placement) => {
+              {!isJerseyProduct && visiblePlacements.map((placement) => {
                 const zone = dtfZones.find((item) => item.id === placement.zoneId);
                 if (!zone) return null;
                 const width = getZonePreviewWidth(zone);
