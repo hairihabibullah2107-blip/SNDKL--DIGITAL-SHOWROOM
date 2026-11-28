@@ -227,7 +227,7 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const W = 210, m = 10, R = 200, items = order.items || [];
   const first = items[0], qty = items.reduce((sum, item) => sum + item.quantity, 0);
   const sizes = items.map((item) => item.size + ':' + item.quantity).join(', ');
-  const colors = Array.from(new Set(items.map((item) => item.colorName))).join(', ');
+  const colors = Array.from(new Set(items.map((item) => item.jerseyReferenceName ? 'Sesuai referensi jersey' : item.colorName))).join(', ');
   const materials = Array.from(new Set(items.map((item) => item.fabricName || '-'))).join(', ');
   const models = Array.from(new Set(items.map((item) => item.customModel || item.name))).join(', ');
   const date = new Date(order.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
@@ -245,7 +245,7 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   for(let i=1;i<3;i++) doc.line(m,29+rowH*i,R,29+rowH*i);
   const cells=[
     [['NAMA',order.customerName||'CUSTOMER'],['COLOR',colors||'-'],['SIZE',sizes||'-']],
-    [['MODEL',models],['DESIGNER','SANDIKALE'],['SABLON','DTF']],
+    [['MODEL',models],['DESIGNER','SANDIKALE'],['SABLON',items.some((item) => item.jerseyReferenceImage) ? 'JERSEY CUSTOM' : 'DTF']],
     [['MATERIAL',materials],['DATE',date],['QTY',qty+' PCS']]
   ];
   cells.forEach((row,ri)=>row.forEach((cell,ci)=>{
