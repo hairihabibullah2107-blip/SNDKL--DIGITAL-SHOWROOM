@@ -169,6 +169,42 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     const link = document.createElement('a'); link.href=url; link.download='SANDIKALE-laporan-pesanan.csv'; link.click(); URL.revokeObjectURL(url);
   };
 
+  const deleteOrderHistory = async (order: OrderRow) => {
+    if (!profile || !['owner', 'admin'].includes(profile.role)) {
+      onToast('Hanya Owner/Admin yang dapat menghapus riwayat pesanan.');
+      return;
+    }
+    const confirmed = window.confirm(
+      'HAPUS RIWAYAT PESANAN?\\n\\n' +
+      order.order_number + '\\n' +
+      'Pelanggan: ' + (order.showroom_customers?.name || 'Pelanggan') + '\\n\\n' +
+      'Data pesanan, item, pembayaran, riwayat status, produksi, QC, dan dokumen SPK terkait akan dihapus permanen. Tindakan ini tidak dapat dibatalkan. File desain di penyimpanan tidak ikut dihapus.\\n\\nLanjutkan?'
+    );
+    if (!confirmed) return;
+    const typedNumber = window.prompt('Ketik nomor pesanan berikut untuk mengonfirmasi penghapusan:\\n' + order.order_number);
+    if (typedNumber?.trim() !== order.order_number) {
+      if (typedNumber !== null) onToast('Nomor pesanan tidak cocok. Penghapusan dibatalkan.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const { data, error: deleteError } = await supabase
+        .from('showroom_orders')
+        .delete()
+        .eq('id', order.id)
+        .select('id')
+        .maybeSingle();
+      if (deleteError) throw deleteError;
+      if (!data?.id) throw new Error('Pesanan tidak terhapus. Periksa hak akses Owner/Admin atau muat ulang data.');
+      setOrders((current) => current.filter((item) => item.id !== order.id));
+      onToast('Riwayat pesanan ' + order.order_number + ' berhasil dihapus.');
+    } catch (error) {
+      onToast(error instanceof Error ? 'Gagal menghapus pesanan: ' + error.message : 'Gagal menghapus riwayat pesanan.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const savePaymentSettings = async (next: typeof paymentMethods): Promise<boolean> => {
     if (!profile || !['owner','admin'].includes(profile.role)) return false;
     const { error: saveError } = await supabase.from('showroom_settings').update({ value: { mode: 'manual', methods: next, verification: 'admin' }, updated_by: profile.id, updated_at: new Date().toISOString() }).eq('key','payment');
@@ -462,7 +498,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
           {!paymentMethods.length&&<p className="text-sm text-white/45">Belum ada metode. Tambahkan metode pembayaran pertama di atas.</p>}
         </section>}
         {tab === 'orders' && <section className="space-y-4"><div className="flex flex-wrap justify-between gap-3"><h2 className="text-xl font-bold">Pesanan masuk ({orders.length})</h2><div className="flex gap-2"><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nomor / nama / WhatsApp" className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm" /><button onClick={exportOrdersCsv} className="rounded-lg border border-white/15 px-3 py-2 text-xs whitespace-nowrap">Export CSV</button></div></div>
-          {visibleOrders.map((order) => <article key={order.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 md:p-5 space-y-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="font-bold">{order.order_number}</div><div className="text-xs text-white/50">{order.spk_number} · {new Date(order.created_at).toLocaleString('id-ID')}</div></div><div className="text-right"><div className="font-bold">{money(Number(order.total_amount))}</div><div className="text-xs text-white/50">DP {money(Number(order.deposit_amount))} · {order.payment_status}</div></div></div><div className="text-sm">{order.showroom_customers?.name || 'Pelanggan'} · {order.showroom_customers?.whatsapp || '—'}</div><div className="text-xs text-white/60">Pengiriman: {order.shipping_method==='pickup'?'Ambil sendiri di store':order.shipping_method==='courier'?'Diantar kurir':'Belum tercatat'}{order.shipping_method==='courier'&&[order.shipping_address,order.shipping_city].filter(Boolean).length?' · '+[order.shipping_address,order.shipping_city].filter(Boolean).join(', '):''}</div><div className="text-xs text-white/60">{(order.showroom_order_items || []).map((item) => `${item.product_name_snapshot} × ${item.quantity}`).join(' · ')}</div><div className="flex flex-wrap items-center gap-3"><span className="text-xs text-white/50">Status: {order.status}</span><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => openReceiptDesk(order)} className="border border-[#7A1F2B]/60 text-[#D58B95] rounded-lg px-3 py-2 text-xs">Cetak Nota Struk</button><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => void generateSpk(order)} className="border border-white/15 rounded-lg px-3 py-2 text-xs">Buat SPK PDF</button>{order.payment_status !== 'paid' && <button disabled={!['owner','admin'].includes(profile.role)} onClick={() => void markPaid(order)} className="bg-emerald-700 rounded-lg px-3 py-2 text-xs">Konfirmasi pembayaran</button>}<select disabled={busy || !['owner','admin','staff'].includes(profile.role)} defaultValue="" onChange={(e) => { if (e.target.value) void updateStage(order, e.target.value); }} className="bg-black border border-white/15 rounded-lg px-3 py-2 text-sm"><option value="">Ubah status produksi…</option>{Object.keys(STATUS).map((s) => <option key={s} value={s}>{s}</option>)}</select><a className="text-xs text-[#A33A48]" href={`https://wa.me/${order.showroom_customers?.whatsapp || ''}`} target="_blank" rel="noreferrer">Hubungi pelanggan via WhatsApp</a></div></article>)}
+          {visibleOrders.map((order) => <article key={order.id} className="bg-[#121212] border border-white/10 rounded-xl p-4 md:p-5 space-y-3"><div className="flex flex-wrap justify-between gap-3"><div><div className="font-bold">{order.order_number}</div><div className="text-xs text-white/50">{order.spk_number} · {new Date(order.created_at).toLocaleString('id-ID')}</div></div><div className="text-right"><div className="font-bold">{money(Number(order.total_amount))}</div><div className="text-xs text-white/50">DP {money(Number(order.deposit_amount))} · {order.payment_status}</div></div></div><div className="text-sm">{order.showroom_customers?.name || 'Pelanggan'} · {order.showroom_customers?.whatsapp || '—'}</div><div className="text-xs text-white/60">Pengiriman: {order.shipping_method==='pickup'?'Ambil sendiri di store':order.shipping_method==='courier'?'Diantar kurir':'Belum tercatat'}{order.shipping_method==='courier'&&[order.shipping_address,order.shipping_city].filter(Boolean).length?' · '+[order.shipping_address,order.shipping_city].filter(Boolean).join(', '):''}</div><div className="text-xs text-white/60">{(order.showroom_order_items || []).map((item) => `${item.product_name_snapshot} × ${item.quantity}`).join(' · ')}</div><div className="flex flex-wrap items-center gap-3"><span className="text-xs text-white/50">Status: {order.status}</span><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => openReceiptDesk(order)} className="border border-[#7A1F2B]/60 text-[#D58B95] rounded-lg px-3 py-2 text-xs">Cetak Nota Struk</button><button disabled={busy || !['owner','admin'].includes(profile.role)} onClick={() => void generateSpk(order)} className="border border-white/15 rounded-lg px-3 py-2 text-xs">Buat SPK PDF</button>{order.payment_status !== 'paid' && <button disabled={!['owner','admin'].includes(profile.role)} onClick={() => void markPaid(order)} className="bg-emerald-700 rounded-lg px-3 py-2 text-xs">Konfirmasi pembayaran</button>}<select disabled={busy || !['owner','admin','staff'].includes(profile.role)} defaultValue="" onChange={(e) => { if (e.target.value) void updateStage(order, e.target.value); }} className="bg-black border border-white/15 rounded-lg px-3 py-2 text-sm"><option value="">Ubah status produksi…</option>{Object.keys(STATUS).map((s) => <option key={s} value={s}>{s}</option>)}</select><a className="text-xs text-[#A33A48]" href={`https://wa.me/${order.showroom_customers?.whatsapp || ''}`} target="_blank" rel="noreferrer">Hubungi pelanggan via WhatsApp</a>{['owner','admin'].includes(profile.role) && <button type="button" disabled={busy} onClick={() => void deleteOrderHistory(order)} className="rounded-lg border border-red-500/40 bg-red-950/30 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-900/40 disabled:cursor-not-allowed disabled:opacity-50">Hapus Riwayat</button>}</div></article>)}
           {!visibleOrders.length && <p className="text-sm text-white/50">Belum ada pesanan yang cocok.</p>}</section>}
 
       </div>
