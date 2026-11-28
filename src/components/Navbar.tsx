@@ -68,7 +68,7 @@ export function Navbar({
 
   return (
     <>
-      <div className="sticky top-0 z-40">
+      <div data-site-sticky-header className="sticky top-0 z-40 bg-white dark:bg-[#080808]">
         {showAnnouncement && (
           <div className="h-8 bg-[#7A1F2B] text-white px-4 flex items-center justify-between text-xs font-medium">
             <span className="truncate mx-auto">
