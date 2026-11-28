@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import sandikaleLogo from '../assets/sandikale-logo.svg';
 import { supabase } from '../lib/supabase';
 import { AdminContentManager } from './AdminContentManager';
 
@@ -299,16 +298,6 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     await load(); onToast(approved ? 'Ulasan diterbitkan.' : 'Ulasan ditolak dan dihapus.');
   };
 
-  const loadSandikaleLogoPng = async (): Promise<string | null> => {
-    try {
-      const image = new Image(); image.src = sandikaleLogo; await image.decode();
-      const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 384;
-      const context = canvas.getContext('2d'); if (!context) return null;
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL('image/png');
-    } catch { return null; }
-  };
-
   const renderPanchangTitlePng = async (text: string, color = '#ffffff'): Promise<string | null> => {
     try {
       await document.fonts.load('800 120px "Panchang"');
@@ -332,15 +321,15 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     try{
       const {jsPDF}=await import('jspdf'),doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4',compress:true});
       const customer=order.showroom_customers,paid=await getVerifiedPaymentTotal(order.id),w=doc.internal.pageSize.getWidth(),m=10,r=w-m,items=order.showroom_order_items||[];
-      doc.setFillColor(8,8,8);doc.rect(0,0,w,27,'F');doc.setTextColor(255,255,255);const logoPng=await loadSandikaleLogoPng();if(logoPng)doc.addImage(logoPng,'PNG',m+1,4,12,18);const adminTitle=await renderPanchangTitlePng('SANDIKALE','#ffffff');if(adminTitle)doc.addImage(adminTitle,'PNG',m+18,5,57,9);else{doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('SANDIKALE',m+18,13);}doc.setTextColor(215,150,158);doc.setFont('helvetica','normal');doc.setFontSize(7);doc.text('SURAT PERINTAH KERJA · CUSTOM APPAREL & DTF',m+18,21);
+      doc.setFillColor(8,8,8);doc.rect(0,0,w,27,'F');doc.setTextColor(255,255,255);const adminTitle=await renderPanchangTitlePng('SNDKL PROJECT','#ffffff');if(adminTitle)doc.addImage(adminTitle,'PNG',w/2-48,4.5,96,10.5);else{doc.setFont('helvetica','bold');doc.setFontSize(20);doc.text('SNDKL PROJECT',w/2,13,{align:'center'});}doc.setTextColor(215,150,158);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text('DESIGN & PRODUCTIONS',w/2,21,{align:'center'});
       doc.setTextColor(20,20,20);doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('SPK PRODUKSI',m,31);doc.setFontSize(7);doc.text(order.spk_number,r,31,{align:'right'});
       const fields:Array<[string,string]>=[['Pesanan',order.order_number],['Customer',customer?.name||'-'],['WhatsApp',customer?.whatsapp||'-'],['Tanggal',new Date(order.created_at).toLocaleString('id-ID')],['Pengambilan',order.shipping_method==='pickup'?'Ambil di store':'Diantar kurir'],['Alamat',order.shipping_method==='courier'?[order.shipping_address,order.shipping_city].filter(Boolean).join(', '):'Konfirmasi jadwal via WhatsApp']];
-      let y=38;doc.setFontSize(7);for(let i=0;i<fields.length;i+=2){doc.setFont('helvetica','bold');doc.text(fields[i][0],m,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(fields[i][1]||'-',66),m+20,y);if(fields[i+1]){doc.setFont('helvetica','bold');doc.text(fields[i+1][0],110,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(fields[i+1][1]||'-',78),130,y);}y+=6;}
+      let y=38;doc.setFontSize(8);for(let i=0;i<fields.length;i+=2){doc.setFont('helvetica','bold');doc.text(fields[i][0],m,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(fields[i][1]||'-',66),m+20,y);if(fields[i+1]){doc.setFont('helvetica','bold');doc.text(fields[i+1][0],110,y);doc.setFont('helvetica','normal');doc.text(doc.splitTextToSize(fields[i+1][1]||'-',78),130,y);}y+=6;}
       y+=2;doc.setDrawColor(190,190,190);doc.line(m,y,r,y);y+=5;doc.setFont('helvetica','bold');doc.setFontSize(8);doc.text('RINCIAN ITEM & SPESIFIKASI',m,y);y+=5;
       const room=272-y,rowHeight=Math.max(7,Math.min(14,room/Math.max(1,items.length))),fs=items.length>8?5.5:6.5;
-      for(const [i,item] of items.entries()){if(y>270)break;const spec=item.specification||{},sizes=(item.showroom_order_variants||[]).map(v=>v.size+'×'+v.quantity).join(', ')||'-',prints=Array.isArray(spec.dtf_prints)?(spec.dtf_prints as Array<{position?:string;size_label?:string}>).map(p=>(p.position||'DTF')+(p.size_label?' '+p.size_label:'')).join(', '):String(spec.placement||'Tanpa cetak');doc.setFont('helvetica','bold');doc.setFontSize(fs);doc.text((i+1)+'. '+String(item.product_name_snapshot).slice(0,65),m,y);doc.setFont('helvetica','normal');doc.text(String(item.quantity)+' pcs · '+money(Number(item.subtotal)),r,y,{align:'right'});doc.setFontSize(Math.max(5,fs-.5));doc.text(doc.splitTextToSize('Warna: '+String(spec.color||item.showroom_order_variants?.[0]?.color||'-')+' · Ukuran: '+sizes+' · DTF: '+prints,r-m-2).slice(0,2),m+2,y+3);doc.setTextColor(105,105,105);doc.text((item.showroom_order_designs||[]).length+' file desain tercatat',m+2,y+6);doc.setTextColor(20,20,20);y+=rowHeight;}
+      for(const [i,item] of items.entries()){if(y>270)break;const spec=item.specification||{},sizes=(item.showroom_order_variants||[]).map(v=>v.size+'×'+v.quantity).join(', ')||'-',prints=Array.isArray(spec.dtf_prints)?(spec.dtf_prints as Array<{position?:string;size_label?:string}>).map(p=>(p.position||'DTF')+(p.size_label?' '+p.size_label:'')).join(', '):String(spec.placement||'Tanpa cetak');doc.setFont('helvetica','bold');doc.setFontSize(Math.max(7.2,fs));doc.text((i+1)+'. '+String(item.product_name_snapshot).slice(0,65),m,y);doc.setFont('helvetica','normal');doc.text(String(item.quantity)+' pcs · '+money(Number(item.subtotal)),r,y,{align:'right'});doc.setFontSize(Math.max(6.5,fs));doc.text(doc.splitTextToSize('Warna: '+String(spec.color||item.showroom_order_variants?.[0]?.color||'-')+' · Ukuran: '+sizes+' · DTF: '+prints,r-m-2).slice(0,2),m+2,y+3);doc.setTextColor(105,105,105);doc.text((item.showroom_order_designs||[]).length+' file desain tercatat',m+2,y+6);doc.setTextColor(20,20,20);y+=rowHeight;}
       y=Math.max(y+2,235);y=Math.min(y,273);doc.line(m,y,r,y);y+=6;doc.setFont('helvetica','bold');doc.setFontSize(7);doc.text('TOTAL: '+money(Number(order.total_amount)),m,y);doc.text('DIBAYAR: '+money(paid),r,y,{align:'right'});y+=5;doc.text('SISA: '+money(Math.max(0,Number(order.total_amount)-paid)),m,y);y+=6;doc.setFont('helvetica','normal');doc.setFontSize(6);const notes='Desain: '+(order.design_notes||'-')+' | Produksi: '+(order.production_notes||order.notes||'-')+' | Finishing: '+(order.finishing_instructions||'-');doc.text(doc.splitTextToSize(notes,r-m).slice(0,2),m,y);
-      y=286;doc.line(m,y,85,y);doc.line(125,y,r,y);doc.setFontSize(6);doc.text('Pelanggan',m+25,290);doc.text('SANDIKALE',145,290);
+      y=286;doc.line(m,y,85,y);doc.line(125,y,r,y);doc.setFontSize(7);doc.text('Pelanggan',m+25,290);doc.text('SANDIKALE',145,290);
       const blob=doc.output('blob'),bytes=await blob.arrayBuffer(),digest=await crypto.subtle.digest('SHA-256',bytes),hash=Array.from(new Uint8Array(digest)).map(v=>v.toString(16).padStart(2,'0')).join('');
       const count=await supabase.from('showroom_spk_documents').select('id',{count:'exact',head:true}).eq('order_id',order.id).eq('document_type','admin_confirmed');if(count.error)throw count.error;
       const revision=(count.count||0)+1,storagePath='orders/'+order.order_number+'/'+order.spk_number+'-admin-r'+revision+'.pdf',upload=await supabase.storage.from('showroom-spk-documents').upload(storagePath,blob,{contentType:'application/pdf',upsert:false});if(upload.error)throw upload.error;
