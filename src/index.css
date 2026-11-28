@@ -164,7 +164,23 @@ body {
 /* Connect every theme control to the rendered storefront surfaces */
 .dark [class~="dark:bg-[#141414]"], [class~="bg-[#141414]"] { background-color: var(--site-surface, #171717) !important; }
 .dark [class~="dark:bg-[#171717]"], [class~="bg-[#171717]"] { background-color: color-mix(in srgb, var(--site-surface, #171717) 78%, var(--site-background, #080808)) !important; }
-[class~="text-neutral-500"], [class~="dark:text-neutral-400"] { color: var(--site-muted, #a3a3a3) !important; }
+/* Theme-aware muted text: never reuse the low-contrast dark palette in light mode. */
+:root:not(.dark) [class~="text-neutral-500"],
+:root:not(.dark) [class~="text-neutral-600"],
+:root:not(.dark) [class~="dark:text-neutral-400"] { color: #525252 !important; }
+.dark [class~="text-neutral-500"],
+.dark [class~="dark:text-neutral-400"] { color: var(--site-muted, #a3a3a3) !important; }
+
+/* Accessible form controls and placeholders in both themes. */
+:root:not(.dark) input,
+:root:not(.dark) textarea,
+:root:not(.dark) select { color: #171717; }
+:root:not(.dark) input::placeholder,
+:root:not(.dark) textarea::placeholder { color: #737373; opacity: 1; }
+.dark input::placeholder,
+.dark textarea::placeholder { color: #a3a3a3; opacity: 1; }
+:root:not(.dark) [class~="border-white/10"],
+:root:not(.dark) [class~="border-white/15"] { border-color: rgba(0,0,0,.16) !important; }
 
 
 /* Keep in-page destinations clear of the sticky announcement + navigation bars. */
