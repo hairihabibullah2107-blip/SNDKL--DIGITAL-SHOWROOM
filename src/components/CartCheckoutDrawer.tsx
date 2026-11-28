@@ -592,7 +592,7 @@ export function CartCheckoutDrawer({
             const waMessage = [
               'Halo Admin SANDIKALE, saya ingin mengonfirmasi pesanan '+createdOrder.id+'.',
               'Nomor SPK: '+(createdOrder.spkNumber||createdOrder.id)+'.',
-              'Saya akan melampirkan SPK dan file desain pesanan ini.',
+              'Saya akan melampirkan SPK, desain DTF, dan referensi jersey (jika ada).',
               needsPaymentProof?'Bukti transfer/QRIS juga saya lampirkan.':'Mohon konfirmasi detail pesanan dan pembayaran.'
             ].join('\n');
             const whatsappUrl='https://wa.me/'+cleanWa+'?text='+encodeURIComponent(waMessage);
@@ -606,11 +606,13 @@ export function CartCheckoutDrawer({
                   const source=entry.placement.originalDataUrl||entry.placement.artworkDataUrl;
                   if(source)designFiles.push(await dataUrlToFile(source,safeFileName(entry.placement.artworkName||('desain-'+(index+1)+'.png'))));
                 }
-                const files=[spk,...designFiles,...(paymentProofFile?[paymentProofFile]:[])];
+                const jerseyReferenceFiles: File[]=[];
+                for (const [index,item] of createdOrder.items.entries()) if(item.jerseyReferenceImage) jerseyReferenceFiles.push(await dataUrlToFile(item.jerseyReferenceImage,safeFileName(item.jerseyReferenceName||('referensi-jersey-'+(index+1)+'.png'))));
+                const files=[spk,...designFiles,...jerseyReferenceFiles,...(paymentProofFile?[paymentProofFile]:[])];
                 files.forEach((file,index)=>window.setTimeout(()=>downloadGeneratedFile(file),index*350));
                 if(chatWindow&&!chatWindow.closed)chatWindow.location.href=whatsappUrl;
                 else window.location.href=whatsappUrl;
-                setErrorMsg('Chat admin dibuka. Lampirkan file SPK dan desain yang baru diunduh, lalu tekan Kirim di WhatsApp.');
+                setErrorMsg('Chat admin dibuka. Lampirkan file SPK, desain DTF, dan referensi jersey yang baru diunduh, lalu tekan Kirim di WhatsApp.');
               }catch(error){
                 if(chatWindow&&!chatWindow.closed)chatWindow.location.href=whatsappUrl;
                 else window.open(whatsappUrl,'_blank','noopener,noreferrer');
