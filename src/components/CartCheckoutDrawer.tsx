@@ -191,6 +191,18 @@ async function makeSpkMockup(item: CartItem, side: SpkView): Promise<string | nu
     return null;
   }
 }
+async function normalizeReferenceImageToPng(dataUrl: string): Promise<string> {
+  const image = new Image();
+  image.src = dataUrl;
+  await image.decode();
+  const canvas = document.createElement('canvas');
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Tidak dapat menyiapkan gambar referensi jersey untuk SPK.');
+  ctx.drawImage(image, 0, 0);
+  return canvas.toDataURL('image/png');
+}
 function downloadGeneratedFile(file: File) {
   const url = URL.createObjectURL(file), link = document.createElement('a');
   link.href = url; link.download = file.name; link.style.display = 'none';
@@ -255,8 +267,14 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
     doc.text(doc.splitTextToSize(String(cell[1]||'-'),colW-17).slice(0,2),x+17,y);
   }));
   const imgY=67,imgH=118,imgW=87;
-  const front=first?await makeSpkMockup(first,'front'):null;
-  const back=first?await makeSpkMockup(first,'back'):null;
+  const firstHasJerseyReference=Boolean(first?.jerseyReferenceImage);
+  // For Jersey, the customer-uploaded reference is the actual design source.
+  // Never substitute the catalog garment mockup in the SPK design panel.
+  const jerseyReferencePng=firstHasJerseyReference
+    ? await normalizeReferenceImageToPng(first!.jerseyReferenceImage!)
+    : null;
+  const front=first && !firstHasJerseyReference ? await makeSpkMockup(first,'front') : null;
+  const back=first && !firstHasJerseyReference ? await makeSpkMockup(first,'back') : null;
   // Sleeve detail is only relevant when the customer actually added a sleeve print.
   // Find the item carrying that placement so its own sleeve mockup/artwork is used.
   const sleeveItem=items.find(item=>(item.customPlacements||[]).some(placement=>getPlacementView(placement)==='sleeve'));
@@ -275,8 +293,19 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
       doc.text(label==='DETAIL LENGAN'?'Foto lengan belum tersedia':'Mockup tidak tersedia',x+w/2,y+h/2,{align:'center'});
     }
   };
-  renderView(front,14,imgY,imgW,imgH,'TAMPAK DEPAN');
-  renderView(back,109,imgY,imgW,imgH,'TAMPAK BELAKANG');
+  if (jerseyReferencePng) {
+    const x=14, y=imgY, w=182, h=imgH;
+    doc.rect(x,y,w,h);
+    doc.setFont('helvetica','bold');doc.setFontSize(7.5);doc.setTextColor(65,65,65);
+    doc.text('REFERENSI DESAIN JERSEY CUSTOMER',x+w/2,y+4,{align:'center'});
+    const props=doc.getImageProperties(jerseyReferencePng);
+    const ratio=props.width/props.height;
+    const fitW=Math.min(w-8,(h-10)*ratio),fitH=fitW/ratio;
+    doc.addImage(jerseyReferencePng,'PNG',x+(w-fitW)/2,y+6+(h-8-fitH)/2,fitW,fitH,undefined,'FAST');
+  } else {
+    renderView(front,14,imgY,imgW,imgH,'TAMPAK DEPAN');
+    renderView(back,109,imgY,imgW,imgH,'TAMPAK BELAKANG');
+  }
   if(hasSleeveDesign) renderView(sleeve,61,191,87,61,'DETAIL LENGAN');
 
   // Move the production notes upward when no sleeve-print panel is needed.
