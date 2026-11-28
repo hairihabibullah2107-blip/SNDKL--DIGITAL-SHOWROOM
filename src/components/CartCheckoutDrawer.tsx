@@ -283,11 +283,13 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   const notesY=hasSleeveDesign?258:205;
   doc.setDrawColor(20,20,20);doc.setLineWidth(0.35);doc.line(m,notesY,R,notesY);
   doc.setFont('helvetica','bold');doc.setFontSize(8.2);
-  doc.text('KETERANGAN SABLON',m,notesY+5);doc.text('CATATAN PRODUKSI',105,notesY+5);
+  const hasJerseyReference=items.some((item)=>Boolean(item.jerseyReferenceImage));
+  doc.text(hasJerseyReference?'KETERANGAN DESAIN JERSEY':'KETERANGAN SABLON',m,notesY+5);doc.text('CATATAN PRODUKSI',105,notesY+5);
   doc.setFont('helvetica','normal');doc.setFontSize(7.2);
   const printLines=items.flatMap((item,index)=>(item.customPlacements||[]).map((placement,pi)=>(index+1)+'.'+(pi+1)+' '+placement.zoneLabel+' ('+placementWidthCm(placement)+' cm) - '+placement.artworkName));
-  doc.text(doc.splitTextToSize(printLines.length?printLines.join('\\n'):'1. Desain DTF sesuai file lampiran customer',88).slice(0,5),m,notesY+9);
-  const production='Press 160°C selama 15 detik, kupas dingin (Cold Peel).\\nPacking plastik klip.\\nNo. SPK '+(order.spkNumber||order.id)+'\\nPenerima: Admin SANDIKALE\\nEstimasi: konfirmasi admin via WhatsApp';
+  const designNotes=hasJerseyReference?'Referensi jersey: '+items.filter((item)=>item.jerseyReferenceImage).map((item)=>item.jerseyReferenceName||'file terlampir').join(', ')+'\\nWarna, motif, panel, dan detail mengikuti file referensi.':'1. Desain DTF sesuai file lampiran customer';
+  doc.text(doc.splitTextToSize(printLines.length?printLines.join('\\n'):designNotes,88).slice(0,5),m,notesY+9);
+  const production=(hasJerseyReference?'Produksi jersey mengikuti referensi terlampir.\\nKonfirmasi bahan dan detail dengan admin.':'Press 160°C selama 15 detik, kupas dingin (Cold Peel).\\nPacking plastik klip.')+'\\nNo. SPK '+(order.spkNumber||order.id)+'\\nPenerima: Admin SANDIKALE\\nEstimasi: konfirmasi admin via WhatsApp';
   doc.text(doc.splitTextToSize(production,88).slice(0,4),105,notesY+10);
   doc.setDrawColor(170,170,170);doc.setLineWidth(0.25);doc.line(m,283,R,283);
   doc.setFont('helvetica','normal');doc.setFontSize(8);
@@ -436,7 +438,7 @@ export function CartCheckoutDrawer({
                     className="p-3 rounded-lg bg-neutral-50 dark:bg-[#181818] border border-black/10 dark:border-white/10 flex gap-3"
                   >
                     <img
-                      src={item.customPlacements?.[0]?.artworkDataUrl || item.image}
+                      src={item.jerseyReferenceImage || item.customPlacements?.[0]?.artworkDataUrl || item.image}
                       alt={item.name}
                       referrerPolicy="no-referrer"
                       className="w-16 h-16 rounded-md object-cover bg-neutral-900 shrink-0"
@@ -454,14 +456,14 @@ export function CartCheckoutDrawer({
                         </button>
                       </div>
                       <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                        {item.colorName} · Size {item.size}
+                        {item.jerseyReferenceImage ? 'Sesuai referensi jersey' : item.colorName} · Size {item.size}
                         {item.fabricName ? ` · ${item.fabricName}` : ''}
                       </div>
-                      {item.customPlacements && (
-                        <div className="text-[11px] text-[#7A1F2B]">
-                          DTF {item.customPlacements.length} posisi ({item.customPlacements.map((p) => p.zoneLabel).join(', ')})
-                        </div>
-                      )}
+                      {item.jerseyReferenceImage ? (
+                        <div className="text-[11px] text-[#7A1F2B]">Referensi jersey: {item.jerseyReferenceName || 'File terlampir'}</div>
+                      ) : (item.customPlacements?.length || 0) > 0 ? (
+                        <div className="text-[11px] text-[#7A1F2B]">DTF {item.customPlacements!.length} posisi ({item.customPlacements!.map((p) => p.zoneLabel).join(', ')})</div>
+                      ) : null}
                       <div className="flex items-center justify-between pt-1">
                         <div className="flex items-center border border-black/15 dark:border-white/15 rounded h-7">
                           <button type="button" onClick={() => onUpdateQty(item.id, -1)} className="w-6 h-full text-xs cursor-pointer">
