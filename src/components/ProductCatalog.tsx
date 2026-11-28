@@ -228,7 +228,7 @@ export function ProductCatalog({
                     key={product.id}
                     className="group rounded-lg overflow-hidden bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 hover:-translate-y-0.5 transition-all duration-200 flex flex-col"
                   >
-                    <div className="relative aspect-[4/3] overflow-hidden bg-neutral-100 dark:bg-[#171717]">
+                    <div className="relative aspect-[3/4] overflow-hidden bg-neutral-100 dark:bg-[#171717] p-3 sm:p-4">
                       {primaryImage ? (
                         <img
                           src={primaryImage}
@@ -236,7 +236,7 @@ export function ProductCatalog({
                           loading="lazy"
                           referrerPolicy="no-referrer"
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          className={"w-full h-full object-cover transition-opacity duration-300 " + (secondaryImage ? "group-hover:opacity-0" : "")}
+                          className={"w-full h-full object-contain object-center transition-transform duration-300 group-hover:scale-[1.02] " + (secondaryImage ? "group-hover:opacity-0" : "")}
                         />
                       ) : (
                         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-neutral-500 dark:text-neutral-400">
@@ -251,7 +251,7 @@ export function ProductCatalog({
                           loading="lazy"
                           referrerPolicy="no-referrer"
                           onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          className="w-full h-full object-cover absolute inset-0 opacity-0 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
+                          className="w-full h-full object-contain object-center absolute inset-0 p-3 sm:p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                         />
                       )}
 
@@ -398,9 +398,9 @@ export function ProductCatalog({
                   onClick={() => onQuickView(item)}
                   className="w-48 shrink-0 text-left rounded-lg overflow-hidden bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 hover:border-[#7A1F2B] transition-colors cursor-pointer"
                 >
-                  <div className="aspect-[4/3] bg-neutral-100 dark:bg-[#171717]">
+                  <div className="aspect-[3/4] bg-neutral-100 dark:bg-[#171717] p-3">
                     {item.images[0] ? (
-                      <img src={item.images[0]} alt={item.name} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="w-full h-full object-cover" />
+                      <img src={item.images[0]} alt={item.name} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={(e) => { e.currentTarget.style.display = 'none'; }} className="w-full h-full object-contain object-center" />
                     ) : <div className="w-full h-full flex items-center justify-center text-xs text-neutral-500">Foto belum tersedia</div>}
                   </div>
                   <div className="p-2.5 space-y-0.5">
