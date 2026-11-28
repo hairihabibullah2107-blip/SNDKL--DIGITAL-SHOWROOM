@@ -23,10 +23,7 @@ export function AccountModal({
   onLogout,
   onTrackOrder,
 }: AccountModalProps) {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [orders, setOrders] = useState<Order[]>([]);
@@ -45,20 +42,18 @@ export function AccountModal({
     e.preventDefault();
     setErrorMsg('');
     try {
-      const result = mode === 'login'
-        ? await supabase.auth.signInWithPassword({ email: email.trim(), password })
-        : await supabase.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim(), phone: phone.trim() } } });
+      const result = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (result.error) throw result.error;
       if (!result.data.session || !result.data.user) {
-        setErrorMsg('Pendaftaran diterima. Periksa email untuk verifikasi, lalu masuk kembali.');
+        setErrorMsg('Sesi masuk tidak tersedia. Periksa email dan kata sandi, lalu coba kembali.');
         return;
       }
       const authUser = result.data.user;
       onAuthSuccess({
         id: authUser.id,
-        name: String(authUser.user_metadata?.full_name || name || email.split('@')[0]),
+        name: String(authUser.user_metadata?.full_name || email.split('@')[0]),
         email: authUser.email || email,
-        phone: String(authUser.user_metadata?.phone || phone),
+        phone: String(authUser.user_metadata?.phone || ''),
         role: 'customer',
         createdAt: authUser.created_at,
       }, result.data.session.access_token);
@@ -73,7 +68,7 @@ export function AccountModal({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 font-display text-2xl font-bold uppercase">
             <User className="w-5 h-5 text-[#FF4D00]" />
-            <span>{user ? 'Akun Pelanggan' : mode === 'login' ? 'Masuk Akun' : 'Daftar Pelanggan'}</span>
+            <span>{user ? 'Akun Pelanggan' : 'Masuk Akun'}</span>
           </div>
           <button
             type="button"
@@ -87,49 +82,10 @@ export function AccountModal({
 
         {!user ? (
           <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="flex gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-[#1C1C1C]">
-              <button
-                type="button"
-                onClick={() => setMode('login')}
-                className={`flex-1 h-8 rounded-md text-xs font-semibold cursor-pointer ${
-                  mode === 'login' ? 'bg-white dark:bg-[#080808] shadow-sm' : 'text-neutral-500'
-                }`}
-              >
-                Masuk
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('register')}
-                className={`flex-1 h-8 rounded-md text-xs font-semibold cursor-pointer ${
-                  mode === 'register' ? 'bg-white dark:bg-[#080808] shadow-sm' : 'text-neutral-500'
-                }`}
-              >
-                Daftar Baru
-              </button>
-            </div>
+            <p className="text-xs text-neutral-600 dark:text-neutral-300">Pemesanan dapat dilakukan tanpa membuat akun. Masuk hanya tersedia untuk akun yang sudah terdaftar.</p>
 
             {errorMsg && (
               <div className="p-2.5 rounded bg-red-500/10 border border-red-500/30 text-xs text-red-500">{errorMsg}</div>
-            )}
-
-            {mode === 'register' && (
-              <>
-                <input
-                  type="text"
-                  required
-                  placeholder="Nama Lengkap"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md text-xs bg-neutral-50 dark:bg-[#1A1A1A] border border-black/15 dark:border-white/15"
-                />
-                <input
-                  type="tel"
-                  placeholder="Nomor WhatsApp / HP"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="w-full h-10 px-3 rounded-md text-xs bg-neutral-50 dark:bg-[#1A1A1A] border border-black/15 dark:border-white/15"
-                />
-              </>
             )}
 
             <input
@@ -153,7 +109,7 @@ export function AccountModal({
               type="submit"
               className="w-full h-11 rounded-md bg-[#FF4D00] hover:bg-[#e04400] text-white text-xs font-bold uppercase tracking-widest cursor-pointer"
             >
-              {mode === 'login' ? 'Masuk Sekarang' : 'Buat Akun'}
+              Masuk Sekarang
             </button>
           </form>
         ) : (
