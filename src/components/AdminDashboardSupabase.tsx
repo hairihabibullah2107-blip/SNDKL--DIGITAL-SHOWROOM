@@ -295,7 +295,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
     const { data: created, error: e } = await supabase.from('showroom_products').insert({
       category_id: productCategory, name: productName.trim(), slug: `${slug}-${Date.now().toString().slice(-5)}`,
       description: 'Produk baru SANDIKALE', base_price: Math.max(0, Number(productPrice) || 0),
-      is_published: false, is_featured: false, stock_mode: 'made_to_order', available_colors: ['Hitam', 'Putih'],
+      is_published: true, is_featured: false, stock_mode: 'made_to_order', available_colors: ['Hitam', 'Putih'],
     }).select('id').single();
     if (e || !created) { onToast(e?.message || 'Produk gagal dibuat.'); return; }
     if (productImage) {
@@ -308,7 +308,7 @@ export function AdminDashboardSupabase({ onExitAdmin, onToast }: { onExitAdmin: 
         if (imageError) onToast(`Produk tersimpan, tetapi data foto gagal dicatat: ${imageError.message}`);
       }
     }
-    setProductName(''); setProductImage(null); await load(); onToast(`Produk ditambahkan ke kategori ${category?.name || ''} sebagai draft.`);
+    setProductName(''); setProductImage(null); await load(); onToast(`Produk ${productName.trim()} berhasil ditambahkan dan langsung ditampilkan di katalog publik kategori ${category?.name || ''}.`);
   };
 
   const toggleProduct = async (product: ProductRow) => {
