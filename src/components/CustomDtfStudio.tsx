@@ -694,7 +694,7 @@ export function CustomDtfStudio({
           {/* LEFT: Live Interactive Garment Mockup Canvas */}
           <div className="lg:col-span-6 bg-white dark:bg-[#141414] border border-black/10 dark:border-white/10 rounded-xl p-4 md:p-6 space-y-4 lg:sticky lg:top-20 lg:self-start">
             <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-[#1E1E1E]">
+              {!isJerseyProduct && <div className="flex items-center gap-1 p-1 rounded-lg bg-neutral-100 dark:bg-[#1E1E1E]">
                 {(['front', 'back', 'sleeve'] as const).map((view) => (
                   <button
                     key={view}
@@ -709,10 +709,10 @@ export function CustomDtfStudio({
                     {view === 'front' ? 'Depan' : view === 'back' ? 'Belakang' : 'Lengan'}
                   </button>
                 ))}
-              </div>
+              </div>}
 
               <div className="flex items-center gap-2">
-                {hasSavedDraft && (
+                {!isJerseyProduct && hasSavedDraft && (
                   <button
                     type="button"
                     onClick={handleLoadDraft}
@@ -721,14 +721,14 @@ export function CustomDtfStudio({
                     Muat Draf
                   </button>
                 )}
-                <button
+                {!isJerseyProduct && <button
                   type="button"
                   onClick={handleSaveDraft}
                   className="h-8 px-3 rounded-md border border-black/15 dark:border-white/15 hover:border-[#7A1F2B] text-xs font-medium flex items-center gap-1.5 cursor-pointer"
                 >
                   <Save className="w-3.5 h-3.5" />
                   <span>Simpan Draf</span>
-                </button>
+                </button>}
               </div>
             </div>
 
@@ -780,7 +780,7 @@ export function CustomDtfStudio({
                     onError={() => setMockupImageFailed(true)}
                     className="absolute inset-0 w-full h-full object-contain p-3 pointer-events-none" style={{ filter: "drop-shadow(0 18px 20px rgba(0,0,0,.28)) drop-shadow(0 4px 7px rgba(0,0,0,.18))" }}
                   />
-                  {selectedColor && previewColorHex && mockupHasTransparency && (
+                  {!isJerseyProduct && selectedColor && previewColorHex && mockupHasTransparency && (
                     <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{
                       backgroundColor: selectedColor.hex,
                       opacity: 0.84,
@@ -792,7 +792,7 @@ export function CustomDtfStudio({
                       mixBlendMode: 'multiply',
                     }} />
                   )}
-                  {selectedColor && (
+                  {!isJerseyProduct && selectedColor && (
                     <div className="absolute top-3 left-3 px-2.5 py-1 rounded-md bg-black/75 text-white text-[11px] font-medium flex items-center gap-1.5 backdrop-blur-sm">
                       {previewColorHex && <span className="w-3 h-3 rounded-full border border-white/40" style={{ backgroundColor: previewColorHex }} />}
                       <span>Warna pesanan: {selectedColor.name}{!previewColorHex ? ' · pratinjau warna belum tersedia' : ''}</span>
