@@ -311,15 +311,51 @@ async function buildCustomerSpkPdf(order: Order): Promise<File> {
   // Move the production notes upward when no sleeve-print panel is needed.
   const notesY=hasSleeveDesign?258:205;
   doc.setDrawColor(20,20,20);doc.setLineWidth(0.35);doc.line(m,notesY,R,notesY);
-  doc.setFont('helvetica','bold');doc.setFontSize(8.2);
   const hasJerseyReference=items.some((item)=>Boolean(item.jerseyReferenceImage));
-  doc.text(hasJerseyReference?'KETERANGAN DESAIN JERSEY':'KETERANGAN SABLON',m,notesY+5);doc.text('CATATAN PRODUKSI',105,notesY+5);
-  doc.setFont('helvetica','normal');doc.setFontSize(7.2);
-  const printLines=items.flatMap((item,index)=>(item.customPlacements||[]).map((placement,pi)=>(index+1)+'.'+(pi+1)+' '+placement.zoneLabel+' ('+placementWidthCm(placement)+' cm) - '+placement.artworkName));
-  const designNotes=hasJerseyReference?'Referensi jersey: '+items.filter((item)=>item.jerseyReferenceImage).map((item)=>item.jerseyReferenceName||'file terlampir').join(', ')+'\\nWarna, motif, panel, dan detail mengikuti file referensi.':'1. Desain DTF sesuai file lampiran customer';
-  doc.text(doc.splitTextToSize(printLines.length?printLines.join('\\n'):designNotes,88).slice(0,5),m,notesY+9);
-  const production=(hasJerseyReference?'Produksi jersey mengikuti referensi terlampir.\\nKonfirmasi bahan dan detail dengan admin.':'Press 160°C selama 15 detik, kupas dingin (Cold Peel).\\nPacking plastik klip.')+'\\nNo. SPK '+(order.spkNumber||order.id)+'\\nPenerima: Admin SANDIKALE\\nEstimasi: konfirmasi admin via WhatsApp';
-  doc.text(doc.splitTextToSize(production,88).slice(0,4),105,notesY+10);
+  doc.setFont('helvetica','bold');doc.setFontSize(8.2);
+  doc.text(hasJerseyReference?'KETERANGAN DESAIN JERSEY':'KETERANGAN SABLON',m,notesY+5);
+  doc.text('CATATAN PRODUKSI',105,notesY+5);
+
+  // Keep every instruction as its own paragraph/line so the SPK is easy to scan.
+  const wrapSpkNotes=(paragraphs:string[],width:number)=>{
+    const result:string[]=[];
+    paragraphs.filter(Boolean).forEach((paragraph)=>{
+      const wrapped=doc.splitTextToSize(paragraph,width) as string[];
+      result.push(...wrapped);
+    });
+    return result;
+  };
+  const printLines=items.flatMap((item,index)=>(item.customPlacements||[]).map((placement,pi)=>
+    (index+1)+'.'+(pi+1)+' '+placement.zoneLabel+' — '+placementWidthCm(placement)+' cm — '+placement.artworkName
+  ));
+  const designParagraphs=hasJerseyReference
+    ? [
+        'File referensi: '+items.filter((item)=>item.jerseyReferenceImage).map((item)=>item.jerseyReferenceName||'terlampir').join(', '),
+        'Warna: mengikuti gambar referensi customer.',
+        'Motif, panel, dan detail: mengikuti gambar referensi customer.'
+      ]
+    : (printLines.length?printLines:['Desain DTF mengikuti file lampiran customer.']);
+  const productionParagraphs=hasJerseyReference
+    ? [
+        '1. Produksi mengikuti gambar referensi yang dilampirkan.',
+        '2. Konfirmasi bahan dan detail akhir kepada customer.',
+        '3. Nomor SPK: '+(order.spkNumber||order.id),
+        '4. Penerima: Admin SANDIKALE.',
+        '5. Estimasi: konfirmasi admin melalui WhatsApp.'
+      ]
+    : [
+        '1. Press: 160°C selama 15 detik.',
+        '2. Kupas: kondisi dingin (Cold Peel).',
+        '3. Finishing: packing plastik klip.',
+        '4. Nomor SPK: '+(order.spkNumber||order.id),
+        '5. Penerima: Admin SANDIKALE.',
+        '6. Estimasi: konfirmasi admin melalui WhatsApp.'
+      ];
+  doc.setFont('helvetica','normal');doc.setFontSize(7.0);
+  const designText=wrapSpkNotes(designParagraphs,88);
+  const productionText=wrapSpkNotes(productionParagraphs,88);
+  doc.text(designText,m,notesY+10,{lineHeightFactor:1.3});
+  doc.text(productionText,105,notesY+10,{lineHeightFactor:1.3});
   doc.setDrawColor(170,170,170);doc.setLineWidth(0.25);doc.line(m,283,R,283);
   doc.setFont('helvetica','normal');doc.setFontSize(8);
   const instagramIcon=await svgIconToPngDataUrl(instagramIconSvg),whatsappIcon=await svgIconToPngDataUrl(whatsappIconSvg);
