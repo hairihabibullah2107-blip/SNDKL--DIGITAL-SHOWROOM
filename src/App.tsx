@@ -10,7 +10,7 @@ import { Navbar } from './components/Navbar';
 import { OrderTrackingSection } from './components/OrderTrackingSection';
 import { ProductCatalog } from './components/ProductCatalog';
 import { ProductQuickViewModal } from './components/ProductQuickViewModal';
-import { AccountModal, BugReportModal, LiveChatWidget, TutorialModal } from './components/SupportModals';
+import { BugReportModal, LiveChatWidget, TutorialModal } from './components/SupportModals';
 import { invokeShowroom, artworkForUpload, supabase } from './lib/supabase';
 import { loadShowroomBootstrap } from './lib/showroom-bootstrap';
 import type {
@@ -107,7 +107,6 @@ export default function App() {
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [studioProduct, setStudioProduct] = useState<Product | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
   const [bugOpen, setBugOpen] = useState(false);
   const [tutorialOpen, setTutorialOpen] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -630,10 +629,7 @@ export default function App() {
         activeSection={activeSection}
         onNavigate={scrollToSection}
         cartCount={cartCount}
-        wishlistCount={wishlistIds.length}
         onOpenCart={() => setCartOpen(true)}
-        onOpenAccount={() => setAccountOpen(true)}
-        user={customerUser}
         darkMode={darkMode}
         onToggleDark={() => setDarkMode((d) => !d)}
         isOnline={isOnline}
@@ -914,28 +910,6 @@ export default function App() {
         onRemoveItem={(id) => setCart((prev) => prev.filter((i) => i.id !== id))}
         onCreateOrder={handleCreateOrder}
         onTrackNewOrder={(oid) => {
-          handleTrackOrder(oid);
-          scrollToSection('lacak');
-        }}
-      />
-
-      <AccountModal
-        open={accountOpen}
-        onClose={() => setAccountOpen(false)}
-        user={customerUser}
-        token={customerToken}
-        onAuthSuccess={(u, tok) => {
-          setCustomerUser(u);
-          setCustomerToken(tok);
-          showToast(`Selamat datang kembali, ${u.name}!`);
-        }}
-        onLogout={() => {
-          void supabase.auth.signOut();
-          setCustomerUser(null);
-          setCustomerToken(null);
-          showToast('Anda telah keluar dari akun.');
-        }}
-        onTrackOrder={(oid) => {
           handleTrackOrder(oid);
           scrollToSection('lacak');
         }}
