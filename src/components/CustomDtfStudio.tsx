@@ -1273,7 +1273,7 @@ export function CustomDtfStudio({
           <div className="fixed top-[76px] right-3 z-[90] lg:hidden w-[112px] rounded-xl border border-black/15 dark:border-white/20 bg-white/95 dark:bg-[#141414]/95 shadow-2xl p-1.5 pointer-events-none">
             <div className="relative aspect-[4/4.2] overflow-hidden rounded-lg bg-neutral-200 dark:bg-[#101010]">
               <img src={mockupImageSrc || currentProductImage} alt="Preview baju custom" className="absolute inset-0 w-full h-full object-contain p-1" />
-              {visiblePlacements.map((placement) => {
+              {!isJerseyProduct && visiblePlacements.map((placement) => {
                 const zone = dtfZones.find((item) => item.id === placement.zoneId);
                 if (!zone) return null;
                 const width = getZonePreviewWidth(zone);
