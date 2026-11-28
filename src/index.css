@@ -165,3 +165,23 @@ body {
 .dark [class~="dark:bg-[#141414]"], [class~="bg-[#141414]"] { background-color: var(--site-surface, #171717) !important; }
 .dark [class~="dark:bg-[#171717]"], [class~="bg-[#171717]"] { background-color: color-mix(in srgb, var(--site-surface, #171717) 78%, var(--site-background, #080808)) !important; }
 [class~="text-neutral-500"], [class~="dark:text-neutral-400"] { color: var(--site-muted, #a3a3a3) !important; }
+
+
+/* Keep in-page destinations clear of the sticky announcement + navigation bars. */
+main section[id], main [id="katalog"], main [id="studio"], main [id="lacak"], main [id="tentang"] {
+  scroll-margin-top: 8rem;
+}
+
+/* Prevent long section headings and filter controls from overflowing narrow screens. */
+main section[id] > div,
+main section[id] h1,
+main section[id] h2,
+main section[id] h3 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 767px) {
+  main section[id] { scroll-margin-top: 7rem; }
+  main section[id] h1 { font-size: clamp(2rem, 9vw, 3.5rem); }
+}
